@@ -15,10 +15,10 @@ const categories = {
     name: 'Documents',
     desc: 'Official ID, signature, PDFs',
     tools: [
-      { id:'passport', name:'Passport Photo Maker', desc:'35×45mm, 2×2 inch — instant', type:'crop', img:'https://i.ibb.co/Q7BVycWY/us-passport-size-diagram.webp' },
-      { id:'signature', name:'Signature Maker', desc:'Clean signature on white', type:'info', img:'https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=100&q=60' },
-      { id:'pdf', name:'Photo to PDF', desc:'Convert photos to PDF', type:'info', img:'https://images.unsplash.com/photo-1618044733300-9472054094ee?w=100&q=60' },
-      { id:'scanner', name:'Document Scanner', desc:'Scan documents to PDF', type:'info', img:'https://images.unsplash.com/photo-1568602471122-7832951cc4c5?w=100&q=60' }
+      { id:'passport', name:'Passport Photo Maker', desc:'35×45mm, 2×2 inch — instant', type:'passport', img:'https://i.ibb.co/Q7BVycWY/us-passport-size-diagram.webp' },
+      { id:'signature', name:'Signature Maker', desc:'Clean signature on white', type:'signature', img:'https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=100&q=60' },
+      { id:'pdf', name:'Photo to PDF', desc:'Convert photos to PDF', type:'pdf', img:'https://images.unsplash.com/photo-1618044733300-9472054094ee?w=100&q=60' },
+      { id:'qr', name:'QR Generator', desc:'Generate QR from text', type:'qr', img:'https://images.unsplash.com/photo-1614064641938-3bbee52942c7?w=100&q=60' }
     ]
   },
   edit: {
@@ -29,33 +29,35 @@ const categories = {
       { id:'filters', name:'Filters', desc:'20+ preset filters', type:'filters', img:'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&q=60' },
       { id:'adjust', name:'Adjust', desc:'Brightness, contrast, saturation', type:'adjust', img:'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=100&q=60' },
       { id:'resize', name:'Resize', desc:'Change dimensions', type:'resize', img:'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?w=100&q=60' },
-      { id:'compress', name:'Compress', desc:'Reduce file size', type:'compress', img:'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=100&q=60' }
+      { id:'compress', name:'Compress', desc:'Reduce file size', type:'compress', img:'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=100&q=60' },
+      { id:'convert', name:'Format Converter', desc:'JPG ↔ PNG ↔ WEBP', type:'convert', img:'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?w=100&q=60' }
     ]
   },
   personal: {
     name: 'Personal',
     desc: 'Cards, collage, memories',
     tools: [
-      { id:'collage', name:'Collage', desc:'Combine multiple photos', type:'info', img:'https://images.unsplash.com/photo-1513151233558-d860c5398176?w=100&q=60' },
-      { id:'text', name:'Text on Photo', desc:'Add text with styles', type:'info', img:'https://images.unsplash.com/photo-1530103862676-de8c9debad1d?w=100&q=60' },
-      { id:'stickers', name:'Stickers', desc:'Add emoji stickers', type:'info', img:'https://images.unsplash.com/photo-1519741497674-611481863552?w=100&q=60' }
+      { id:'collage', name:'Collage', desc:'Combine multiple photos', type:'collage', img:'https://images.unsplash.com/photo-1513151233558-d860c5398176?w=100&q=60' },
+      { id:'text', name:'Text on Photo', desc:'Add text with styles', type:'text', img:'https://images.unsplash.com/photo-1530103862676-de8c9debad1d?w=100&q=60' },
+      { id:'stickers', name:'Stickers', desc:'Add emoji stickers', type:'stickers', img:'https://images.unsplash.com/photo-1519741497674-611481863552?w=100&q=60' },
+      { id:'meme', name:'Meme Maker', desc:'Top/bottom text', type:'meme', img:'https://images.unsplash.com/photo-1560972550-aba3456b5564?w=100&q=60' }
     ]
   },
   utility: {
     name: 'Utility',
     desc: 'QR, compress, convert',
     tools: [
-      { id:'qr', name:'QR Generator', desc:'Generate QR from text', type:'info', img:'https://images.unsplash.com/photo-1614064641938-3bbee52942c7?w=100&q=60' },
+      { id:'qr2', name:'QR Generator', desc:'Generate QR from text', type:'qr', img:'https://images.unsplash.com/photo-1614064641938-3bbee52942c7?w=100&q=60' },
       { id:'compress2', name:'Image Compressor', desc:'Compress to any size', type:'compress', img:'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=100&q=60' },
-      { id:'convert', name:'Format Converter', desc:'JPG ↔ PNG ↔ WEBP', type:'info', img:'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?w=100&q=60' }
+      { id:'convert2', name:'Format Converter', desc:'JPG ↔ PNG ↔ WEBP', type:'convert', img:'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?w=100&q=60' }
     ]
   },
   fun: {
     name: 'Fun',
     desc: 'Stickers, effects, memes',
     tools: [
-      { id:'stickers2', name:'Emoji Stickers', desc:'Fun stickers on photos', type:'info', img:'https://images.unsplash.com/photo-1560972550-aba3456b5564?w=100&q=60' },
-      { id:'text2', name:'Meme Maker', desc:'Top/bottom text', type:'info', img:'https://images.unsplash.com/photo-1533228100845-08145b01de14?w=100&q=60' },
+      { id:'stickers2', name:'Emoji Stickers', desc:'Fun stickers on photos', type:'stickers', img:'https://images.unsplash.com/photo-1560972550-aba3456b5564?w=100&q=60' },
+      { id:'text2', name:'Meme Maker', desc:'Top/bottom text', type:'meme', img:'https://images.unsplash.com/photo-1533228100845-08145b01de14?w=100&q=60' },
       { id:'filters2', name:'Fun Filters', desc:'VHS, glitch, neon', type:'filters', img:'https://images.unsplash.com/photo-1578632767115-351597cf2477?w=100&q=60' }
     ]
   }
@@ -65,6 +67,7 @@ let currentCategory = null;
 let currentTool = null;
 let originalImage = null;
 let currentImage = null;
+let selectedSticker = null;
 
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
@@ -171,6 +174,8 @@ function buildControls(type) {
         <button class="ctrl-btn" onclick="applyFilter('brightness')">Bright</button>
         <button class="ctrl-btn" onclick="applyFilter('blur')">Blur</button>
         <button class="ctrl-btn" onclick="applyFilter('invert')">Invert</button>
+        <button class="ctrl-btn" onclick="applyFilter('hue-rotate')">Cool</button>
+        <button class="ctrl-btn" onclick="applyFilter('warm')">Warm</button>
       </div>
       <div class="control-label">Rotate</div>
       <div class="control-row">
@@ -226,7 +231,6 @@ function buildControls(type) {
         <button class="ctrl-btn" onclick="compressImage(0.3)">Low</button>
         <button class="ctrl-btn" onclick="compressImage(0.1)">Min</button>
       </div>
-
       <div class="control-label">Target Size — Manual</div>
       <div class="manual-row">
         <input type="number" id="compressSize" placeholder="Ex: 50" min="0.1" step="0.1" class="manual-input">
@@ -236,7 +240,6 @@ function buildControls(type) {
         </select>
         <button class="ctrl-btn primary" onclick="manualCompress()">Compress</button>
       </div>
-
       <div class="control-label">Quick KB Presets</div>
       <div class="control-row">
         <button class="ctrl-btn" onclick="compressToKB(20)">20KB</button>
@@ -245,13 +248,138 @@ function buildControls(type) {
         <button class="ctrl-btn" onclick="compressToKB(200)">200KB</button>
         <button class="ctrl-btn" onclick="compressToKB(500)">500KB</button>
       </div>
-
       <div class="control-label">Quick MB Presets</div>
       <div class="control-row">
         <button class="ctrl-btn" onclick="compressToKB(1024)">1MB</button>
         <button class="ctrl-btn" onclick="compressToKB(2048)">2MB</button>
         <button class="ctrl-btn" onclick="compressToKB(3072)">3MB</button>
         <button class="ctrl-btn" onclick="compressToKB(5120)">5MB</button>
+      </div>`;
+  } else if (type === 'text') {
+    c.innerHTML = `
+      <div class="control-label">Add Text</div>
+      <div class="manual-row">
+        <input type="text" id="textInput" placeholder="Type your text..." class="manual-input" style="flex:2;">
+      </div>
+      <div class="control-label">Font Size</div>
+      <div class="manual-row">
+        <input type="number" id="textSize" placeholder="Size" value="60" min="10" max="300" class="manual-input">
+        <button class="ctrl-btn primary" onclick="addText()">Add Text</button>
+      </div>
+      <div class="control-label">Text Color</div>
+      <div class="control-row">
+        <button class="ctrl-btn" style="background:#fff;color:#000;" onclick="setTextColor('#ffffff')">White</button>
+        <button class="ctrl-btn" style="background:#000;color:#fff;" onclick="setTextColor('#000000')">Black</button>
+        <button class="ctrl-btn" style="background:#ff0080;color:#fff;" onclick="setTextColor('#ff0080')">Pink</button>
+        <button class="ctrl-btn" style="background:#a855f7;color:#fff;" onclick="setTextColor('#a855f7')">Purple</button>
+        <button class="ctrl-btn" style="background:#00d4ff;color:#000;" onclick="setTextColor('#00d4ff')">Cyan</button>
+        <button class="ctrl-btn" style="background:#aaff00;color:#000;" onclick="setTextColor('#aaff00')">Lime</button>
+      </div>
+      <div class="control-label">Position</div>
+      <div class="control-row">
+        <button class="ctrl-btn" onclick="setTextPosition('top')">Top</button>
+        <button class="ctrl-btn" onclick="setTextPosition('center')">Center</button>
+        <button class="ctrl-btn" onclick="setTextPosition('bottom')">Bottom</button>
+      </div>`;
+  } else if (type === 'stickers') {
+    c.innerHTML = `
+      <div class="control-label">Pick a Sticker</div>
+      <div class="sticker-grid">
+        ${['😀','😍','🥰','😎','🤩','😂','❤️','💕','💖','⭐','✨','🔥','💯','👍','🙌','🎉','🌈','☀️','🌙','⚡','💎','🏆','👑','🎯'].map(e => 
+          `<button class="sticker-btn" onclick="addSticker('${e}')">${e}</button>`
+        ).join('')}
+      </div>
+      <div class="control-label">Sticker Size</div>
+      <div class="manual-row">
+        <input type="number" id="stickerSize" placeholder="Size" value="80" min="20" max="300" class="manual-input">
+      </div>`;
+  } else if (type === 'qr') {
+    c.innerHTML = `
+      <div class="control-label">QR Content</div>
+      <div class="manual-row">
+        <input type="text" id="qrText" placeholder="Enter text or URL..." class="manual-input" style="flex:2;">
+      </div>
+      <div class="control-label">QR Size</div>
+      <div class="manual-row">
+        <input type="number" id="qrSize" placeholder="Size" value="400" min="100" max="1000" class="manual-input">
+        <button class="ctrl-btn primary" onclick="generateQR()">Generate QR</button>
+      </div>
+      <div class="control-label">Quick Presets</div>
+      <div class="control-row">
+        <button class="ctrl-btn" onclick="document.getElementById('qrSize').value=200;generateQR()">200px</button>
+        <button class="ctrl-btn" onclick="document.getElementById('qrSize').value=400;generateQR()">400px</button>
+        <button class="ctrl-btn" onclick="document.getElementById('qrSize').value=800;generateQR()">800px</button>
+      </div>`;
+  } else if (type === 'pdf') {
+    c.innerHTML = `
+      <div class="control-label">Convert to PDF</div>
+      <p style="font-size:12px;color:#b0a0c8;margin-bottom:12px;">Photo upload karo, phir PDF download karo. Multiple photos ke liye baar baar upload karke "Add to PDF" karo.</p>
+      <div class="control-row">
+        <button class="ctrl-btn primary" onclick="exportPDF()">Download PDF</button>
+      </div>
+      <div class="control-label">PDF Size</div>
+      <div class="control-row">
+        <button class="ctrl-btn" onclick="pdfSize='a4';showToast('A4 selected')">A4</button>
+        <button class="ctrl-btn" onclick="pdfSize='a5';showToast('A5 selected')">A5</button>
+        <button class="ctrl-btn" onclick="pdfSize='letter';showToast('Letter selected')">Letter</button>
+      </div>`;
+  } else if (type === 'passport') {
+    c.innerHTML = `
+      <div class="control-label">Passport Size</div>
+      <div class="control-row">
+        <button class="ctrl-btn" onclick="makePassport(35,45)">35×45mm</button>
+        <button class="ctrl-btn" onclick="makePassport(51,51)">2×2 inch</button>
+        <button class="ctrl-btn" onclick="makePassport(25,35)">25×35mm</button>
+        <button class="ctrl-btn" onclick="makePassport(35,35)">35×35mm</button>
+        <button class="ctrl-btn" onclick="makePassport(50,70)">50×70mm</button>
+      </div>
+      <div class="control-label">Print Sheet (8 photos)</div>
+      <div class="control-row">
+        <button class="ctrl-btn primary" onclick="printSheet()">4×6 inch Sheet</button>
+      </div>`;
+  } else if (type === 'signature') {
+    c.innerHTML = `
+      <div class="control-label">Signature Maker</div>
+      <p style="font-size:12px;color:#b0a0c8;margin-bottom:12px;">White background pe photo upload karo. Auto-clean karke signature bana dega.</p>
+      <div class="control-row">
+        <button class="ctrl-btn primary" onclick="cleanSignature()">Clean Signature</button>
+      </div>`;
+  } else if (type === 'collage') {
+    c.innerHTML = `
+      <div class="control-label">Collage Layout</div>
+      <div class="control-row">
+        <button class="ctrl-btn" onclick="setCollageLayout('2x2')">2×2 (4 photos)</button>
+        <button class="ctrl-btn" onclick="setCollageLayout('2x1')">2×1 (2 photos)</button>
+        <button class="ctrl-btn" onclick="setCollageLayout('3x3')">3×3 (9 photos)</button>
+        <button class="ctrl-btn" onclick="setCollageLayout('1x2')">1×2 (2 photos)</button>
+      </div>
+      <div class="control-label">Upload Photos</div>
+      <div class="manual-row">
+        <input type="file" id="collageUpload" accept="image/*" multiple onchange="addCollagePhoto(this)" class="manual-input">
+      </div>
+      <div class="control-row">
+        <button class="ctrl-btn primary" onclick="buildCollage()">Build Collage</button>
+      </div>`;
+  } else if (type === 'meme') {
+    c.innerHTML = `
+      <div class="control-label">Top Text</div>
+      <div class="manual-row">
+        <input type="text" id="memeTop" placeholder="Top text..." class="manual-input" style="flex:2;">
+      </div>
+      <div class="control-label">Bottom Text</div>
+      <div class="manual-row">
+        <input type="text" id="memeBottom" placeholder="Bottom text..." class="manual-input" style="flex:2;">
+      </div>
+      <div class="control-row">
+        <button class="ctrl-btn primary" onclick="addMeme()">Add Meme Text</button>
+      </div>`;
+  } else if (type === 'convert') {
+    c.innerHTML = `
+      <div class="control-label">Convert Format</div>
+      <div class="control-row">
+        <button class="ctrl-btn" onclick="convertFormat('jpeg')">JPG</button>
+        <button class="ctrl-btn" onclick="convertFormat('png')">PNG</button>
+        <button class="ctrl-btn" onclick="convertFormat('webp')">WEBP</button>
       </div>`;
   } else {
     c.innerHTML = `<div class="control-label">Coming Soon</div><p style="font-size:13px;color:#888;padding:12px 0;">This feature is under development.</p>`;
@@ -303,7 +431,6 @@ function resetImage() {
     showToast('Reset done');
   }
 }
-
 // ==================== CROP ====================
 function cropImage(w, h) {
   if (!currentImage) return;
@@ -365,9 +492,16 @@ function flipImage(dir) {
 // ==================== FILTERS ====================
 function applyFilter(type) {
   const filters = {
-    'none': 'none', 'grayscale': 'grayscale(100%)', 'sepia': 'sepia(80%)',
-    'saturate': 'saturate(180%)', 'contrast': 'contrast(150%)',
-    'brightness': 'brightness(130%)', 'blur': 'blur(2px)', 'invert': 'invert(100%)'
+    'none': 'none',
+    'grayscale': 'grayscale(100%)',
+    'sepia': 'sepia(80%)',
+    'saturate': 'saturate(180%)',
+    'contrast': 'contrast(150%)',
+    'brightness': 'brightness(130%)',
+    'blur': 'blur(2px)',
+    'invert': 'invert(100%)',
+    'hue-rotate': 'hue-rotate(180deg)',
+    'warm': 'sepia(30%) saturate(140%)'
   };
   canvas.style.filter = filters[type] || 'none';
   showToast('Filter applied');
@@ -427,12 +561,10 @@ function compressToKB(targetKB) {
   if (!currentImage) return;
   const targetBytes = targetKB * 1024;
   let low = 0.01, high = 1.0, best = null;
-  
   for (let i = 0; i < 15; i++) {
     const mid = (low + high) / 2;
     const dataUrl = canvas.toDataURL('image/jpeg', mid);
     const bytes = Math.round(dataUrl.length * 0.75);
-    
     if (bytes <= targetBytes) {
       best = { dataUrl, size: bytes };
       low = mid;
@@ -440,12 +572,10 @@ function compressToKB(targetKB) {
       high = mid;
     }
   }
-  
   if (!best) {
     const dataUrl = canvas.toDataURL('image/jpeg', 0.01);
     best = { dataUrl, size: Math.round(dataUrl.length * 0.75) };
   }
-  
   const newImg = new Image();
   newImg.onload = () => {
     currentImage = newImg;
@@ -464,15 +594,302 @@ function manualCompress() {
   const size = parseFloat(document.getElementById('compressSize').value);
   const unit = document.getElementById('compressUnit').value;
   if (!size || size <= 0) { showToast('Enter valid size'); return; }
-  
   let kb;
-  if (unit === 'MB') {
-    kb = size * 1024;
+  if (unit === 'MB') { kb = size * 1024; } else { kb = size; }
+  compressToKB(kb);
+}
+
+// ==================== TEXT ====================
+let textColor = '#ffffff';
+let textPosition = 'center';
+
+function setTextColor(color) {
+  textColor = color;
+  showToast('Color set');
+}
+
+function setTextPosition(pos) {
+  textPosition = pos;
+  showToast('Position: ' + pos);
+}
+
+function addText() {
+  const text = document.getElementById('textInput').value;
+  const size = parseInt(document.getElementById('textSize').value) || 60;
+  if (!text) { showToast('Enter text first'); return; }
+  ctx.font = 'bold ' + size + 'px sans-serif';
+  ctx.fillStyle = textColor;
+  ctx.strokeStyle = textColor === '#000000' ? '#ffffff' : '#000000';
+  ctx.lineWidth = Math.round(size / 15);
+  ctx.textAlign = 'center';
+  
+  let y;
+  if (textPosition === 'top') y = size + 20;
+  else if (textPosition === 'bottom') y = canvas.height - 20;
+  else y = canvas.height / 2;
+  
+  ctx.strokeText(text, canvas.width / 2, y);
+  ctx.fillText(text, canvas.width / 2, y);
+  showToast('Text added');
+}
+
+// ==================== STICKERS ====================
+function addSticker(emoji) {
+  const size = parseInt(document.getElementById('stickerSize').value) || 80;
+  ctx.font = size + 'px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(emoji, canvas.width / 2, canvas.height / 2);
+  showToast('Sticker added');
+}
+
+// ==================== QR ====================
+function generateQR() {
+  const text = document.getElementById('qrText').value;
+  const size = parseInt(document.getElementById('qrSize').value) || 400;
+  if (!text) { showToast('Enter text'); return; }
+  const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=' + size + 'x' + size + '&data=' + encodeURIComponent(text);
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.onload = () => {
+    canvas.width = size;
+    canvas.height = size;
+    ctx.drawImage(img, 0, 0);
+    document.getElementById('uploadArea').style.display = 'none';
+    document.getElementById('canvasWrap').style.display = 'block';
+    showToast('QR generated');
+  };
+  img.onerror = () => showToast('QR generation failed');
+  img.src = qrUrl;
+}
+
+// ==================== PDF ====================
+let pdfSize = 'a4';
+
+function exportPDF() {
+  if (!window.jspdf) { showToast('PDF library loading...'); return; }
+  if (!currentImage) { showToast('Upload a photo first'); return; }
+  const { jsPDF } = window.jspdf;
+  const sizes = { 'a4': [595, 842], 'a5': [420, 595], 'letter': [612, 792] };
+  const [w, h] = sizes[pdfSize] || sizes['a4'];
+  const pdf = new jsPDF({ unit: 'pt', format: pdfSize });
+  const imgData = canvas.toDataURL('image/jpeg', 0.92);
+  const imgW = w - 40;
+  const imgH = (canvas.height / canvas.width) * imgW;
+  pdf.addImage(imgData, 'JPEG', 20, 20, imgW, imgH);
+  pdf.save('picly-' + Date.now() + '.pdf');
+  showToast('PDF downloaded');
+}
+
+// ==================== PASSPORT ====================
+function makePassport(wMM, hMM) {
+  if (!currentImage) { showToast('Upload a photo first'); return; }
+  const pxPerMM = 11.8;
+  const targetW = Math.round(wMM * pxPerMM);
+  const targetH = Math.round(hMM * pxPerMM);
+  const temp = document.createElement('canvas');
+  temp.width = targetW;
+  temp.height = targetH;
+  const tempCtx = temp.getContext('2d');
+  const imgRatio = currentImage.width / currentImage.height;
+  const targetRatio = targetW / targetH;
+  let drawW, drawH, offsetX, offsetY;
+  if (imgRatio > targetRatio) {
+    drawH = targetH; drawW = targetH * imgRatio;
+    offsetX = (targetW - drawW) / 2; offsetY = 0;
   } else {
-    kb = size;
+    drawW = targetW; drawH = targetW / imgRatio;
+    offsetX = 0; offsetY = (targetH - drawH) / 2;
+  }
+  tempCtx.fillStyle = '#ffffff';
+  tempCtx.fillRect(0, 0, targetW, targetH);
+  tempCtx.drawImage(currentImage, offsetX, offsetY, drawW, drawH);
+  const newImg = new Image();
+  newImg.onload = () => {
+    currentImage = newImg;
+    redraw();
+    showToast('Passport ' + wMM + '×' + hMM + 'mm ready');
+  };
+  newImg.src = temp.toDataURL();
+}
+
+function printSheet() {
+  if (!currentImage) { showToast('Make passport photo first'); return; }
+  // 4×6 inch sheet at 300 DPI = 1200×1800 px
+  const sheetW = 1200;
+  const sheetH = 1800;
+  const temp = document.createElement('canvas');
+  temp.width = sheetW;
+  temp.height = sheetH;
+  const tctx = temp.getContext('2d');
+  tctx.fillStyle = '#ffffff';
+  tctx.fillRect(0, 0, sheetW, sheetH);
+  
+  const photoW = currentImage.width;
+  const photoH = currentImage.height;
+  const cols = 2;
+  const rows = 4;
+  const padX = (sheetW - cols * photoW) / (cols + 1);
+  const padY = (sheetH - rows * photoH) / (rows + 1);
+  
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const x = padX + c * (photoW + padX);
+      const y = padY + r * (photoH + padY);
+      tctx.drawImage(currentImage, x, y, photoW, photoH);
+      // Border
+      tctx.strokeStyle = '#cccccc';
+      tctx.lineWidth = 1;
+      tctx.strokeRect(x, y, photoW, photoH);
+    }
   }
   
-  compressToKB(kb);
+  const newImg = new Image();
+  newImg.onload = () => {
+    currentImage = newImg;
+    redraw();
+    showToast('Print sheet ready — download karo');
+  };
+  newImg.src = temp.toDataURL();
+}
+
+// ==================== SIGNATURE ====================
+function cleanSignature() {
+  if (!currentImage) { showToast('Upload signature photo'); return; }
+  const temp = document.createElement('canvas');
+  temp.width = currentImage.width;
+  temp.height = currentImage.height;
+  const tctx = temp.getContext('2d');
+  tctx.drawImage(currentImage, 0, 0);
+  const imgData = tctx.getImageData(0, 0, temp.width, temp.height);
+  const data = imgData.data;
+  for (let i = 0; i < data.length; i += 4) {
+    const brightness = (data[i] + data[i+1] + data[i+2]) / 3;
+    if (brightness > 180) {
+      data[i] = 255; data[i+1] = 255; data[i+2] = 255;
+    } else {
+      data[i] = 0; data[i+1] = 0; data[i+2] = 0;
+    }
+  }
+  tctx.putImageData(imgData, 0, 0);
+  const newImg = new Image();
+  newImg.onload = () => { currentImage = newImg; redraw(); showToast('Signature cleaned'); };
+  newImg.src = temp.toDataURL();
+}
+
+// ==================== COLLAGE ====================
+let collagePhotos = [];
+let collageLayout = '2x2';
+
+function setCollageLayout(layout) {
+  collageLayout = layout;
+  showToast('Layout: ' + layout);
+}
+
+function addCollagePhoto(input) {
+  if (!input.files || input.files.length === 0) return;
+  Array.from(input.files).forEach(file => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        collagePhotos.push(img);
+        showToast('Added: ' + collagePhotos.length + ' photos');
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function buildCollage() {
+  if (collagePhotos.length === 0) { showToast('Upload photos first'); return; }
+  let cols, rows;
+  if (collageLayout === '2x2') { cols = 2; rows = 2; }
+  else if (collageLayout === '2x1') { cols = 2; rows = 1; }
+  else if (collageLayout === '3x3') { cols = 3; rows = 3; }
+  else if (collageLayout === '1x2') { cols = 1; rows = 2; }
+  else { cols = 2; rows = 2; }
+  
+  const cellSize = 500;
+  const gap = 10;
+  const canvasW = cols * cellSize + (cols + 1) * gap;
+  const canvasH = rows * cellSize + (rows + 1) * gap;
+  
+  const temp = document.createElement('canvas');
+  temp.width = canvasW;
+  temp.height = canvasH;
+  const tctx = temp.getContext('2d');
+  tctx.fillStyle = '#0a0a0f';
+  tctx.fillRect(0, 0, canvasW, canvasH);
+  
+  const needed = cols * rows;
+  for (let i = 0; i < needed; i++) {
+    const col = i % cols;
+    const row = Math.floor(i / cols);
+    const x = gap + col * (cellSize + gap);
+    const y = gap + row * (cellSize + gap);
+    
+    if (i < collagePhotos.length) {
+      const img = collagePhotos[i];
+      const imgRatio = img.width / img.height;
+      let drawW, drawH, offsetX, offsetY;
+      if (imgRatio > 1) {
+        drawH = cellSize; drawW = cellSize * imgRatio;
+        offsetX = (cellSize - drawW) / 2; offsetY = 0;
+      } else {
+        drawW = cellSize; drawH = cellSize / imgRatio;
+        offsetX = 0; offsetY = (cellSize - drawH) / 2;
+      }
+      tctx.save();
+      tctx.beginPath();
+      tctx.rect(x, y, cellSize, cellSize);
+      tctx.clip();
+      tctx.drawImage(img, x + offsetX, y + offsetY, drawW, drawH);
+      tctx.restore();
+    } else {
+      tctx.fillStyle = '#1a1a24';
+      tctx.fillRect(x, y, cellSize, cellSize);
+    }
+  }
+  
+  const newImg = new Image();
+  newImg.onload = () => { currentImage = newImg; redraw(); showToast('Collage built'); };
+  newImg.src = temp.toDataURL();
+}
+
+// ==================== MEME ====================
+function addMeme() {
+  if (!currentImage) { showToast('Upload photo first'); return; }
+  const topText = document.getElementById('memeTop').value || '';
+  const bottomText = document.getElementById('memeBottom').value || '';
+  const fontSize = Math.round(canvas.width / 10);
+  ctx.font = 'bold ' + fontSize + 'px Impact, Arial Black, sans-serif';
+  ctx.fillStyle = '#ffffff';
+  ctx.strokeStyle = '#000000';
+  ctx.lineWidth = Math.round(fontSize / 12);
+  ctx.textAlign = 'center';
+  
+  if (topText) {
+    ctx.strokeText(topText.toUpperCase(), canvas.width / 2, fontSize + 20);
+    ctx.fillText(topText.toUpperCase(), canvas.width / 2, fontSize + 20);
+  }
+  if (bottomText) {
+    ctx.strokeText(bottomText.toUpperCase(), canvas.width / 2, canvas.height - 30);
+    ctx.fillText(bottomText.toUpperCase(), canvas.width / 2, canvas.height - 30);
+  }
+  showToast('Meme text added');
+}
+
+// ==================== CONVERT ====================
+function convertFormat(format) {
+  if (!currentImage) { showToast('Upload photo first'); return; }
+  const mime = 'image/' + format;
+  const dataUrl = canvas.toDataURL(mime, 0.95);
+  const link = document.createElement('a');
+  link.download = 'picly-' + Date.now() + '.' + (format === 'jpeg' ? 'jpg' : format);
+  link.href = dataUrl;
+  link.click();
+  showToast('Converted to ' + format.toUpperCase());
 }
 
 // ==================== DOWNLOAD ====================
@@ -535,9 +952,4 @@ if (slider) {
   slider.addEventListener('touchend', () => setTimeout(startAutoSlide, 4000));
   slider.addEventListener('mouseenter', stopAutoSlide);
   slider.addEventListener('mouseleave', startAutoSlide);
-  slider.setAttribute('tabindex', '0');
-  slider.addEventListener('keydown', (e) => {
-    if (e.key === 'ArrowRight') { stopAutoSlide(); currentSlide = Math.min(currentSlide + 1, slider.children.length - 1); scrollToSlide(currentSlide); }
-    if (e.key === 'ArrowLeft') { stopAutoSlide(); currentSlide = Math.max(currentSlide - 1, 0); scrollToSlide(currentSlide); }
-  });
 }
