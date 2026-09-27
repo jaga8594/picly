@@ -290,6 +290,7 @@ function selectEnhanceType(t, btn) {
 
 // ==================== FFMPEG 0.12.x MULTI-THREADED — R2 ====================
 let wakeLock = null;
+let lastProgressUpdate = 0;
 
 async function requestWakeLock() {
   try {
@@ -317,12 +318,22 @@ async function getFFmpeg() {
   
   const R2_URL = 'https://pub-64e5babc43fc4b14b6a7ba94e61796db.r2.dev';
   
+  // Progress — throttled 200ms (PC + Mobile friendly)
   ffmpeg.on('progress', ({ progress }) => {
+    const now = Date.now();
+    if (now - lastProgressUpdate < 200) return;
+    lastProgressUpdate = now;
+    
     let percent = Math.round(progress * 100);
     if (!isFinite(percent) || percent < 0) percent = 0;
     if (percent > 100) percent = 99;
     const msg = document.getElementById('videoLoaderMsg');
     if (msg) msg.textContent = `Processing... ${percent}%`;
+  });
+  
+  // Debug log
+  ffmpeg.on('log', ({ message }) => {
+    console.log('[FFmpeg]', message);
   });
   
   await ffmpeg.load({
@@ -363,6 +374,7 @@ function hideLoader() {
   if (el) el.style.display = 'none';
 }
 
+// ========== TRIM — Fast & Quality ==========
 async function trimVideo(mode = 'fast') {
   if (!currentVideoFile) { showToast('Upload video first'); return; }
   const s = parseFloat(document.getElementById('trimStartSlider').value);
@@ -379,7 +391,7 @@ async function trimVideo(mode = 'fast') {
   
   const timeoutId = setTimeout(() => {
     hideLoader();
-    showToast('⚠️ Timeout — video format issue ho sakta hai. Chhota video ya Quality mode try karo.');
+    showToast('⚠️ Timeout — video format issue. Chhota video try karo.');
     releaseWakeLock();
   }, 180000);
   
