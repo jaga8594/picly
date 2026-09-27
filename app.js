@@ -1,4 +1,4 @@
-const SERVER_URL = 'https://picly-server.onrender.com';
+const SERVER_URL = 'https://picly-server-production.up.railway.app';
 
 const categories = {
   edit: { name:'Edit', desc:'Crop · filters · text · stickers', tools:[
@@ -335,7 +335,7 @@ function showLoader(msg) {
       <div style="width:60px;height:60px;border:4px solid rgba(168,85,247,0.2);border-top-color:#a855f7;border-radius:50%;animation:spin 1s linear infinite;"></div>
       <p id="videoLoaderMsg" style="color:#fff;font-weight:800;font-size:16px;text-align:center;max-width:400px;line-height:1.5;">Processing...</p>
       <p id="videoProgress" style="color:#a855f7;font-size:18px;font-weight:900;text-align:center;font-family:monospace;">0 sec</p>
-      <p style="color:#ff6b6b;font-size:13px;text-align:center;max-width:400px;line-height:1.6;font-weight:700;">⚠️ 20-40 sec lag sakte hain<br>Pehli baar zyada (cold start)</p>
+      <p style="color:#ff6b6b;font-size:13px;text-align:center;max-width:400px;line-height:1.6;font-weight:700;">⚠️ 10-30 sec lag sakte hain</p>
       <p style="color:#a99bc4;font-size:12px;text-align:center;max-width:400px;line-height:1.6;">✅ 720p HD · Multi-thread server</p>
     `;
     document.body.appendChild(el);
@@ -627,8 +627,8 @@ function buildControls(type) {
           <button class="ctrl-btn primary" onclick="trimVideo()" style="width:100%;">✂️ Trim & Download</button>
         </div>
         <p style="font-size:11px;color:#a99bc4;margin-top:12px;line-height:1.6;">
-          ⏱️ 20-40 sec (pehli baar zyada)<br>
-          ✅ 720p HD · Multi-thread server
+          ⏱️ 10-30 sec (fast server)<br>
+          ✅ 720p HD · Multi-thread
         </p>
       </div>`;
   } else if (type === 'video-compress') {
