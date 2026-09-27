@@ -332,10 +332,10 @@ function updateProgress(percent) {
   const percentEl = document.getElementById('progressPercent');
   const stageEl = document.getElementById('progressStage');
   const p = Math.max(0, Math.min(100, percent));
-  if (circle) circle.style.strokeDashoffset = 377 - (377 * p / 100);
+  if (circle) circle.style.strokeDashoffset = 440 - (440 * p / 100);
   if (percentEl) percentEl.textContent = Math.floor(p) + '%';
   if (stageEl) {
-    if (p < 50) stageEl.textContent = '📤 Uploading to server';
+    if (p < 40) stageEl.textContent = '📤 Uploading to server';
     else if (p < 90) stageEl.textContent = '⚙️ Processing on server';
     else if (p < 100) stageEl.textContent = '📥 Downloading result';
     else stageEl.textContent = '✨ Complete';
@@ -414,20 +414,16 @@ function uploadWithProgress(url, formData, onProgress) {
     xhr.open('POST', url, true);
     xhr.responseType = 'blob';
     
-    // Upload progress
     xhr.upload.onprogress = (e) => {
       if (e.lengthComputable) {
         const uploadPercent = (e.loaded / e.total) * 100;
-        // Upload 0-40% of total progress
         const overall = uploadPercent * 0.4;
         onProgress(overall);
       }
     };
     
-    // Upload complete — server processing starts
     xhr.upload.onload = () => {
       onProgress(45);
-      // While server processes, slowly move from 45 to 90
       let fake = 45;
       window.serverProgressInterval = setInterval(() => {
         if (fake < 90) {
@@ -585,7 +581,34 @@ async function videoToGif() {
 }
 
 async function getFFmpeg() { return null; }
-async function enhanceVideo() { showToast('Enhance — coming soon'); }
+
+async function enhanceVideo() {
+  if (isProcessing) return;
+  if (!currentVideoFile) { showToast('Upload video first'); return; }
+  isProcessing = true;
+  await requestWakeLock();
+  showLoader('✨ Enhancing your video');
+  try {
+    const formData = new FormData();
+    formData.append('video', currentVideoFile);
+    formData.append('type', selectedEnhanceType);
+    
+    const blob = await uploadWithProgress(SERVER_URL + '/api/enhance', formData, updateProgress);
+    
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'picly-enhanced-' + Date.now() + '.mp4';
+    a.click();
+    hideLoader();
+    showToast('✅ Enhanced! ' + (blob.size/1024/1024).toFixed(1) + 'MB');
+  } catch (err) {
+    hideLoader();
+    console.error('❌', err);
+    showToast('Error: ' + err.message);
+  }
+  await releaseWakeLock();
+  isProcessing = false;
+}
 
 function buildControls(type) {
   const c = document.getElementById('dynamicControls');
@@ -790,7 +813,12 @@ function buildControls(type) {
         <div style="padding:16px;background:linear-gradient(135deg, rgba(168,85,247,0.15), rgba(236,72,153,0.1));border:1.5px solid rgba(168,85,247,0.3);border-radius:18px;margin-bottom:16px;">
           <div class="control-row"><button class="ctrl-btn" onclick="selectEnhanceType('sharpen',this)">🔍 Sharpen</button><button class="ctrl-btn" onclick="selectEnhanceType('denoise',this)">🧹 Denoise</button><button class="ctrl-btn active" onclick="selectEnhanceType('bright',this)">☀️ Brighten</button><button class="ctrl-btn" onclick="selectEnhanceType('contrast',this)">🎨 Contrast</button></div>
         </div>
-        <div class="control-row"><button class="ctrl-btn primary" onclick="enhanceVideo()">✨ Enhance & Download</button></div>
+        <div class="control-row" style="position:relative;">
+          <button class="ctrl-btn primary" onclick="enhanceVideo()" style="width:100%;padding:18px;font-size:15px;letter-spacing:0.5px;position:relative;overflow:hidden;">
+            <span style="position:relative;z-index:2;">✨ Enhance & Download</span>
+            <span style="position:absolute;top:6px;right:8px;font-size:8px;font-weight:900;letter-spacing:1px;background:linear-gradient(135deg,#aaff00,#00d4ff);color:#000;padding:2px 6px;border-radius:6px;z-index:2;">FAST & PREMIUM</span>
+          </button>
+        </div>
       </div>`;
   } else {
     c.innerHTML = `<div class="control-label">Coming Soon</div><p style="font-size:13px;color:#888;padding:12px 0;">Under development.</p>`;
