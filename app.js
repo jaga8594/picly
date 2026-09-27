@@ -69,6 +69,7 @@ let selectedCompressQuality = 'medium';
 let selectedEnhanceType = 'bright';
 let selectedResolution = '1080';
 let selectedAiMagic = 'enhance';
+let selectedAiRatio = '1:1';
 let currentAiImage = null;
 let currentAiImageResult = null;
 let wakeLock = null;
@@ -133,6 +134,7 @@ function openTool(toolId) {
   currentVideoDuration = 0;
   currentAiImage = null;
   currentAiImageResult = null;
+  selectedAiRatio = '1:1';
   
   document.getElementById('editorTitle').textContent = tool.name;
   const ol = document.getElementById('overlayLayer');
@@ -336,6 +338,12 @@ function selectAiMagic(type, btn) {
   if (hint) hint.textContent = hints[type] || '';
 }
 
+function selectAiRatio(ratio, btn) {
+  selectedAiRatio = ratio;
+  btn.parentElement.querySelectorAll('.ctrl-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
 function loadAiImage(input) {
   const file = input.files ? input.files[0] : input;
   if (!file) return;
@@ -399,6 +407,18 @@ async function generateAiImage() {
   const prompt = promptInput.value.trim();
   if (!prompt) { showToast('Enter prompt first'); return; }
   
+  const ratioMap = {
+    '1:1':  { w: 1024, h: 1024 },
+    '16:9': { w: 1344, h: 768 },
+    '9:16': { w: 768,  h: 1344 },
+    '4:3':  { w: 1152, h: 864 },
+    '3:2':  { w: 1216, h: 832 },
+    '4:5':  { w: 896,  h: 1120 },
+    '3:4':  { w: 864,  h: 1152 },
+    '2:3':  { w: 832,  h: 1216 }
+  };
+  const dims = ratioMap[selectedAiRatio] || ratioMap['1:1'];
+  
   isProcessing = true;
   await requestWakeLock();
   showLoader('🎨 Generating AI image');
@@ -407,12 +427,14 @@ async function generateAiImage() {
     const res = await fetch(SERVER_URL + '/api/cf-image', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt: prompt })
+      body: JSON.stringify({ 
+        prompt: prompt,
+        width: dims.w,
+        height: dims.h
+      })
     });
     
-    if (!res.ok) {
-      throw new Error('Server error: ' + res.status);
-    }
+    if (!res.ok) throw new Error('Server error: ' + res.status);
     
     const data = await res.json();
     
@@ -422,7 +444,6 @@ async function generateAiImage() {
     
     currentAiImageResult = data.result.image;
     
-    // Show preview
     const preview = document.getElementById('aiResultImg');
     if (preview) {
       preview.src = 'data:image/png;base64,' + currentAiImageResult;
@@ -1025,8 +1046,25 @@ function buildControls(type) {
       
       <div style="padding:16px;background:linear-gradient(135deg, rgba(168,85,247,0.15), rgba(236,72,153,0.1));border:1.5px solid rgba(168,85,247,0.3);border-radius:18px;margin-bottom:16px;">
         <label style="font-size:12px;color:#c0b0d8;font-weight:700;display:block;margin-bottom:8px;">PROMPT</label>
-        <input type="text" id="aiPromptInput" placeholder="a beautiful sunset over mountains" class="manual-input" style="width:100%;padding:14px;font-size:14px;margin-bottom:12px;">
+        <input type="text" id="aiPromptInput" placeholder="a beautiful sunset over mountains" class="manual-input" style="width:100%;padding:14px;font-size:14px;margin-bottom:16px;">
+        
+        <label style="font-size:12px;color:#c0b0d8;font-weight:700;display:block;margin-bottom:8px;">ASPECT RATIO</label>
+        
+        <div class="control-row" style="margin-bottom:8px;">
+          <button class="ctrl-btn active" onclick="selectAiRatio('1:1',this)" style="flex:1;font-size:11px;padding:10px 6px;">⬛ 1:1</button>
+          <button class="ctrl-btn" onclick="selectAiRatio('16:9',this)" style="flex:1;font-size:11px;padding:10px 6px;">▬ 16:9</button>
+          <button class="ctrl-btn" onclick="selectAiRatio('9:16',this)" style="flex:1;font-size:11px;padding:10px 6px;">▮ 9:16</button>
+          <button class="ctrl-btn" onclick="selectAiRatio('4:3',this)" style="flex:1;font-size:11px;padding:10px 6px;">▭ 4:3</button>
+        </div>
+        <div class="control-row" style="margin-bottom:16px;">
+          <button class="ctrl-btn" onclick="selectAiRatio('3:2',this)" style="flex:1;font-size:11px;padding:10px 6px;">▭ 3:2</button>
+          <button class="ctrl-btn" onclick="selectAiRatio('4:5',this)" style="flex:1;font-size:11px;padding:10px 6px;">▯ 4:5</button>
+          <button class="ctrl-btn" onclick="selectAiRatio('3:4',this)" style="flex:1;font-size:11px;padding:10px 6px;">▯ 3:4</button>
+          <button class="ctrl-btn" onclick="selectAiRatio('2:3',this)" style="flex:1;font-size:11px;padding:10px 6px;">▯ 2:3</button>
+        </div>
+        
         <p style="font-size:11px;color:#aaff00;margin-bottom:12px;font-weight:700;">💡 Cloudflare FLUX · 5-15 sec · HD quality</p>
+        
         <button class="ctrl-btn primary" onclick="generateAiImage()" style="width:100%;padding:18px;font-size:15px;position:relative;">
           <span style="position:relative;z-index:2;">✨ Generate Image</span>
           <span style="position:absolute;top:6px;right:8px;font-size:8px;font-weight:900;letter-spacing:1px;background:linear-gradient(135deg,#aaff00,#00d4ff);color:#000;padding:2px 6px;border-radius:6px;">AI POWERED</span>
