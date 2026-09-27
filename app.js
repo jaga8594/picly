@@ -288,7 +288,7 @@ function selectEnhanceType(t, btn) {
   btn.classList.add('active');
 }
 
-// ==================== FFMPEG 0.11.6 (SINGLE THREADED) ====================
+// ==================== FFMPEG 0.11.6 (FIXED corePath) ====================
 async function getFFmpeg() {
   if (ffmpegInstance && ffmpegInstance.isLoaded()) return ffmpegInstance;
   const { createFFmpeg } = FFmpeg;
