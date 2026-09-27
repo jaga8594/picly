@@ -30,7 +30,7 @@ const categories = {
   ]},
   aimagic: { name:'AI Magic', desc:'Free photo effects · No API needed', tools:[
     { id:'ai-enhance', name:'Photo Enhance', desc:'Sharper · Brighter · HD', type:'ai-enhance', img:'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=100&q=80' },
-    { id:'ai-anime', name:'Anime Cartoon', desc:'Photo → anime style', type:'ai-anime', img:'https://images.unsplash.com/photo-1578632767115-351597cf2477?w=100&q=80' },
+    { id:'ai-anime', name:'Anime Cartoon', desc:'Anime-style vivid effect', type:'ai-anime', img:'https://images.unsplash.com/photo-1578632767115-351597cf2477?w=100&q=80' },
     { id:'ai-restore', name:'Old Photo Restore', desc:'Vintage · Color boost', type:'ai-restore', img:'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=100&q=80' },
     { id:'ai-glow', name:'Glow Effect', desc:'Dreamy soft glow', type:'ai-glow', img:'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&q=80' }
   ]},
@@ -316,7 +316,7 @@ function selectAiMagic(type, btn) {
   btn.classList.add('active');
   const hints = {
     enhance: '✨ Sharper, brighter, better colors',
-    anime:   '🎭 Cartoon-style edges',
+    anime:   '🎭 Anime-style vivid effect',
     restore: '🎨 Old photo vintage look',
     glow:    '🌟 Soft dreamy glow'
   };
