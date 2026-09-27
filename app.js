@@ -28,8 +28,9 @@ const categories = {
     { id:'video-mp3', name:'Video to MP3', desc:'Extract audio', type:'video-mp3', img:'https://images.unsplash.com/photo-1614064641938-3bbee52942c7?w=100&q=80' },
     { id:'video-enhance', name:'Video Enhance', desc:'Sharpen', type:'video-enhance', img:'https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?w=100&q=80' }
   ]},
-  aistudio: { name:'AI Studio', desc:'Text → HD image', tools:[
-    { id:'ai-text-image', name:'Text to Image', desc:'Prompt → HD image', type:'ai-text-image', img:'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=100&q=80' }
+  aistudio: { name:'AI Studio', desc:'Text → image · BG replace', tools:[
+    { id:'ai-text-image', name:'Text to Image', desc:'Prompt → HD image', type:'ai-text-image', img:'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=100&q=80' },
+    { id:'ai-bg-replace', name:'BG Replace', desc:'Photo + AI background', type:'ai-bg-replace', img:'https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?w=100&q=80' }
   ]},
   aimagic: { name:'AI Magic', desc:'Free photo effects', tools:[
     { id:'ai-enhance', name:'Photo Enhance', desc:'Sharper · Brighter · HD', type:'ai-enhance', img:'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=100&q=80' },
@@ -79,7 +80,7 @@ let isProcessing = false;
 const CALCULATOR_TYPES = ['emi','gst','age','bmi','unit','qr'];
 const VIDEO_TYPES = ['video-trim','video-compress','video-gif','video-mp3','video-enhance'];
 const AI_MAGIC_TYPES = ['ai-enhance','ai-anime','ai-restore','ai-glow'];
-const AI_STUDIO_TYPES = ['ai-text-image'];
+const AI_STUDIO_TYPES = ['ai-text-image','ai-bg-replace'];
 
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
@@ -134,6 +135,7 @@ function openTool(toolId) {
   currentVideoDuration = 0;
   currentAiImage = null;
   currentAiImageResult = null;
+  currentBgImage = null;
   selectedAiRatio = '1:1';
   
   document.getElementById('editorTitle').textContent = tool.name;
@@ -470,6 +472,68 @@ function downloadAiImage() {
   a.download = 'picly-ai-' + Date.now() + '.png';
   a.click();
   showToast('✅ Downloaded!');
+}
+
+// ==================== AI BG REPLACE ====================
+let currentBgImage = null;
+
+function loadBgImage(input) {
+  const file = input.files ? input.files[0] : input;
+  if (!file) return;
+  if (!file.type.startsWith('image/')) {
+    showToast('Please upload an image');
+    return;
+  }
+  currentBgImage = file;
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const preview = document.getElementById('bgImagePreview');
+    if (preview) {
+      preview.src = e.target.result;
+      preview.style.display = 'block';
+    }
+    const uploadArea = document.getElementById('bgUploadArea');
+    if (uploadArea) uploadArea.style.display = 'none';
+    const pending = document.getElementById('bgPendingMsg');
+    if (pending) pending.style.display = 'none';
+    const activeUI = document.getElementById('bgActiveUI');
+    if (activeUI) activeUI.style.display = 'block';
+    showToast('Image loaded ✨');
+  };
+  reader.readAsDataURL(file);
+}
+
+async function replaceBackground() {
+  if (isProcessing) return;
+  if (!currentBgImage) { showToast('Upload image first'); return; }
+  const promptInput = document.getElementById('bgPromptInput');
+  const bgPrompt = promptInput ? promptInput.value.trim() : '';
+  if (!bgPrompt) { showToast('Enter background prompt'); return; }
+
+  isProcessing = true;
+  await requestWakeLock();
+  showLoader('🎨 Replacing background');
+  try {
+    const formData = new FormData();
+    formData.append('image', currentBgImage);
+    formData.append('bgPrompt', bgPrompt);
+
+    const blob = await uploadWithProgress(SERVER_URL + '/api/merge-bg', formData, updateProgress);
+
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'picly-bg-replace-' + Date.now() + '.png';
+    a.click();
+    hideLoader();
+    showToast('✅ Background replaced!');
+  } catch (err) {
+    hideLoader();
+    console.error('❌', err);
+    showToast('Error: ' + err.message);
+  }
+  await releaseWakeLock();
+  isProcessing = false;
 }
 
 async function requestWakeLock() {
@@ -1077,6 +1141,34 @@ function buildControls(type) {
         <button class="ctrl-btn primary" onclick="downloadAiImage()" style="width:100%;padding:18px;font-size:15px;">
           ⬇️ Download Image
         </button>
+      </div>
+    `;
+  } else if (type === 'ai-bg-replace') {
+    c.innerHTML = `
+      <div id="bgPendingMsg">
+        <div class="control-label">🎨 Background Replace</div>
+        <div class="upload-area" id="bgUploadArea" onclick="document.getElementById('bgUploadInput').click()" style="padding:60px 24px;margin-top:16px;">
+          <input type="file" id="bgUploadInput" accept="image/*" onchange="loadBgImage(this)" style="display:none;">
+          <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          <p>Tap to upload photo</p>
+          <span>Person photo — background replace hoga</span>
+        </div>
+      </div>
+
+      <div id="bgActiveUI" style="display:none">
+        <img id="bgImagePreview" style="width:100%;max-height:300px;object-fit:contain;border-radius:18px;margin-bottom:16px;box-shadow:0 20px 40px rgba(168,85,247,0.3);">
+
+        <label style="font-size:12px;color:#c0b0d8;font-weight:700;display:block;margin-bottom:8px;">NEW BACKGROUND PROMPT</label>
+        <input type="text" id="bgPromptInput" placeholder="lion walking in jungle, sunset" class="manual-input" style="width:100%;padding:14px;font-size:14px;margin-bottom:16px;">
+
+        <p style="font-size:11px;color:#aaff00;margin-bottom:12px;font-weight:700;">💡 Cloudflare RMBG + FLUX · 15-30 sec</p>
+
+        <div class="control-row" style="position:relative;">
+          <button class="ctrl-btn primary" onclick="replaceBackground()" style="width:100%;padding:18px;font-size:15px;position:relative;overflow:hidden;">
+            <span style="position:relative;z-index:2;">🎨 Replace Background</span>
+            <span style="position:absolute;top:6px;right:8px;font-size:8px;font-weight:900;letter-spacing:1px;background:linear-gradient(135deg,#aaff00,#00d4ff);color:#000;padding:2px 6px;border-radius:6px;z-index:2;">AI POWERED</span>
+          </button>
+        </div>
       </div>
     `;
   } else if (type === 'ai-enhance' || type === 'ai-anime' || type === 'ai-restore' || type === 'ai-glow') {
