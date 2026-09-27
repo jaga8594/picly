@@ -288,22 +288,24 @@ function selectEnhanceType(t, btn) {
   btn.classList.add('active');
 }
 
-// ==================== FFMPEG ====================
+// ==================== FFMPEG 0.12.x MULTI-THREADED ====================
 async function getFFmpeg() {
-  if (ffmpegInstance && ffmpegInstance.isLoaded()) return ffmpegInstance;
-  const { createFFmpeg } = FFmpeg;
-  const ffmpeg = createFFmpeg({
-    log: false,
-    corePath: window.location.origin + '/ffmpeg-core.js'
-  });
+  if (ffmpegInstance) return ffmpegInstance;
+  const { FFmpeg } = FFmpegWASM;
+  const { toBlobURL } = FFmpegUtil;
+  const ffmpeg = new FFmpeg();
   
-  ffmpeg.setProgress(({ ratio }) => {
-    const percent = Math.round(ratio * 100);
+  ffmpeg.on('progress', ({ progress }) => {
+    const percent = Math.round(progress * 100);
     const msg = document.getElementById('videoLoaderMsg');
     if (msg) msg.textContent = `Processing... ${percent}%`;
   });
   
-  await ffmpeg.load();
+  await ffmpeg.load({
+    coreURL: await toBlobURL('ffmpeg-core.js', 'text/javascript'),
+    wasmURL: await toBlobURL('ffmpeg-core.wasm', 'application/wasm'),
+    workerURL: await toBlobURL('ffmpeg-core.worker.js', 'text/javascript')
+  });
   ffmpegInstance = ffmpeg;
   return ffmpeg;
 }
@@ -317,7 +319,7 @@ function showLoader(msg) {
     el.innerHTML = `
       <div style="width:60px;height:60px;border:4px solid rgba(168,85,247,0.2);border-top-color:#a855f7;border-radius:50%;animation:spin 1s linear infinite;"></div>
       <p id="videoLoaderMsg" style="color:#fff;font-weight:800;font-size:16px;text-align:center;max-width:400px;line-height:1.5;">Processing...</p>
-      <p style="color:#a99bc4;font-size:12px;text-align:center;max-width:400px;line-height:1.6;">⏱️ Bade videos mein 2-5 min lag sakte hain<br>📱 Mobile pe zyada time lagta hai<br>⚠️ Tab active rakho</p>
+      <p style="color:#a99bc4;font-size:12px;text-align:center;max-width:400px;line-height:1.6;">⏱️ Bade videos mein 1-2 min lag sakte hain<br>📱 Mobile pe zyada time lagta hai<br>⚠️ Tab active rakho</p>
     `;
     document.body.appendChild(el);
     if (!document.getElementById('spinKeyframe')) {
@@ -344,10 +346,10 @@ async function trimVideo() {
   showLoader('✂️ Cutting your video...');
   try {
     const ffmpeg = await getFFmpeg();
-    const { fetchFile } = FFmpeg;
-    ffmpeg.FS('writeFile', 'input.mp4', await fetchFile(currentVideoFile));
-    await ffmpeg.run('-i','input.mp4','-ss',String(s),'-t',String(e-s),'-c','copy','output.mp4');
-    const data = ffmpeg.FS('readFile', 'output.mp4');
+    const { fetchFile } = FFmpegUtil;
+    await ffmpeg.writeFile('input.mp4', await fetchFile(currentVideoFile));
+    await ffmpeg.exec(['-i','input.mp4','-ss',String(s),'-t',String(e-s),'-c','copy','output.mp4']);
+    const data = await ffmpeg.readFile('output.mp4');
     const blob = new Blob([data.buffer], { type: 'video/mp4' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
@@ -365,10 +367,10 @@ async function compressVideo() {
   showLoader('🗜️ Making it smaller...');
   try {
     const ffmpeg = await getFFmpeg();
-    const { fetchFile } = FFmpeg;
-    ffmpeg.FS('writeFile', 'input.mp4', await fetchFile(currentVideoFile));
-    await ffmpeg.run('-i','input.mp4','-vcodec','libx264','-crf',crf,'-preset','fast','output.mp4');
-    const data = ffmpeg.FS('readFile', 'output.mp4');
+    const { fetchFile } = FFmpegUtil;
+    await ffmpeg.writeFile('input.mp4', await fetchFile(currentVideoFile));
+    await ffmpeg.exec(['-i','input.mp4','-vcodec','libx264','-crf',crf,'-preset','fast','output.mp4']);
+    const data = await ffmpeg.readFile('output.mp4');
     const blob = new Blob([data.buffer], { type: 'video/mp4' });
     const ns = (blob.size/1024/1024).toFixed(2);
     const os = (currentVideoFile.size/1024/1024).toFixed(2);
@@ -386,10 +388,10 @@ async function extractMp3() {
   showLoader('🎵 Extracting audio...');
   try {
     const ffmpeg = await getFFmpeg();
-    const { fetchFile } = FFmpeg;
-    ffmpeg.FS('writeFile', 'input.mp4', await fetchFile(currentVideoFile));
-    await ffmpeg.run('-i','input.mp4','-vn','-acodec','libmp3lame','-q:a','2','output.mp3');
-    const data = ffmpeg.FS('readFile', 'output.mp3');
+    const { fetchFile } = FFmpegUtil;
+    await ffmpeg.writeFile('input.mp4', await fetchFile(currentVideoFile));
+    await ffmpeg.exec(['-i','input.mp4','-vn','-acodec','libmp3lame','-q:a','2','output.mp3']);
+    const data = await ffmpeg.readFile('output.mp3');
     const blob = new Blob([data.buffer], { type: 'audio/mp3' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
@@ -408,10 +410,10 @@ async function videoToGif() {
   showLoader('🎞️ Creating GIF...');
   try {
     const ffmpeg = await getFFmpeg();
-    const { fetchFile } = FFmpeg;
-    ffmpeg.FS('writeFile', 'input.mp4', await fetchFile(currentVideoFile));
-    await ffmpeg.run('-i','input.mp4','-ss',String(s),'-t',String(d),'-vf','fps='+f+',scale=480:-1:flags=lanczos','output.gif');
-    const data = ffmpeg.FS('readFile', 'output.gif');
+    const { fetchFile } = FFmpegUtil;
+    await ffmpeg.writeFile('input.mp4', await fetchFile(currentVideoFile));
+    await ffmpeg.exec(['-i','input.mp4','-ss',String(s),'-t',String(d),'-vf','fps='+f+',scale=480:-1:flags=lanczos','output.gif']);
+    const data = await ffmpeg.readFile('output.gif');
     const blob = new Blob([data.buffer], { type: 'image/gif' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
@@ -432,10 +434,10 @@ async function enhanceVideo() {
   showLoader('🎨 Enhancing video...');
   try {
     const ffmpeg = await getFFmpeg();
-    const { fetchFile } = FFmpeg;
-    ffmpeg.FS('writeFile', 'input.mp4', await fetchFile(currentVideoFile));
-    await ffmpeg.run('-i','input.mp4','-vf',filter,'-c:a','copy','output.mp4');
-    const data = ffmpeg.FS('readFile', 'output.mp4');
+    const { fetchFile } = FFmpegUtil;
+    await ffmpeg.writeFile('input.mp4', await fetchFile(currentVideoFile));
+    await ffmpeg.exec(['-i','input.mp4','-vf',filter,'-c:a','copy','output.mp4']);
+    const data = await ffmpeg.readFile('output.mp4');
     const blob = new Blob([data.buffer], { type: 'video/mp4' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
