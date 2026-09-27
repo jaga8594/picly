@@ -288,10 +288,10 @@ function selectEnhanceType(t, btn) {
   btn.classList.add('active');
 }
 
-// ==================== FFMPEG 0.11.6 (FIXED corePath) ====================
+// ==================== FFMPEG 0.11.6 — createFFmpeg API ====================
 async function getFFmpeg() {
   if (ffmpegInstance && ffmpegInstance.isLoaded()) return ffmpegInstance;
-  const { createFFmpeg } = FFmpeg;
+  const { createFFmpeg, fetchFile } = FFmpeg;
   const ffmpeg = createFFmpeg({
     log: false,
     corePath: 'ffmpeg-core.js'
