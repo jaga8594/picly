@@ -290,7 +290,6 @@ function selectEnhanceType(t, btn) {
 
 // ==================== FFMPEG 0.12.x MULTI-THREADED — R2 ====================
 let wakeLock = null;
-let lastProgressUpdate = 0;
 
 async function requestWakeLock() {
   try {
@@ -318,17 +317,7 @@ async function getFFmpeg() {
   
   const R2_URL = 'https://pub-64e5babc43fc4b14b6a7ba94e61796db.r2.dev';
   
-  ffmpeg.on('progress', ({ progress }) => {
-    const now = Date.now();
-    if (now - lastProgressUpdate < 200) return;
-    lastProgressUpdate = now;
-    
-    let percent = Math.round(progress * 100);
-    if (!isFinite(percent) || percent < 0) percent = 0;
-    if (percent > 100) percent = 99;
-    const msg = document.getElementById('videoLoaderMsg');
-    if (msg) msg.textContent = `Processing... ${percent}%`;
-  });
+  // NO progress event — avoids fake 99% values
   
   await ffmpeg.load({
     coreURL: await toBlobURL(R2_URL + '/ffmpeg-core.js', 'text/javascript'),
@@ -337,6 +326,23 @@ async function getFFmpeg() {
   });
   ffmpegInstance = ffmpeg;
   return ffmpeg;
+}
+
+// Animated dots helper
+let dotsInterval = null;
+function startDotsAnimation(baseMsg) {
+  let count = 0;
+  const el = document.getElementById('videoLoaderMsg');
+  if (!el) return;
+  clearInterval(dotsInterval);
+  dotsInterval = setInterval(() => {
+    count = (count + 1) % 4;
+    el.textContent = baseMsg + '.'.repeat(count);
+  }, 500);
+}
+function stopDotsAnimation() {
+  clearInterval(dotsInterval);
+  dotsInterval = null;
 }
 
 function showLoader(msg) {
@@ -349,7 +355,7 @@ function showLoader(msg) {
       <div style="width:60px;height:60px;border:4px solid rgba(168,85,247,0.2);border-top-color:#a855f7;border-radius:50%;animation:spin 1s linear infinite;"></div>
       <p id="videoLoaderMsg" style="color:#fff;font-weight:800;font-size:16px;text-align:center;max-width:400px;line-height:1.5;">Processing...</p>
       <p style="color:#ff6b6b;font-size:13px;text-align:center;max-width:400px;line-height:1.6;font-weight:700;">⚠️ Tab MAT minimize karo<br>Warna processing ruk jayegi</p>
-      <p style="color:#a99bc4;font-size:12px;text-align:center;max-width:400px;line-height:1.6;">⏱️ Bade videos mein 1-2 min lag sakte hain</p>
+      <p style="color:#a99bc4;font-size:12px;text-align:center;max-width:400px;line-height:1.6;">⏱️ 30-90 sec lag sakte hain<br>📹 720p HD output</p>
     `;
     document.body.appendChild(el);
     if (!document.getElementById('spinKeyframe')) {
@@ -361,74 +367,67 @@ function showLoader(msg) {
   }
   document.getElementById('videoLoaderMsg').textContent = msg;
   el.style.display = 'flex';
+  startDotsAnimation(msg);
 }
 
 function hideLoader() {
+  stopDotsAnimation();
   const el = document.getElementById('videoLoader');
   if (el) el.style.display = 'none';
 }
 
-async function trimVideo(mode = 'fast') {
+async function trimVideo() {
   if (!currentVideoFile) { showToast('Upload video first'); return; }
   const s = parseFloat(document.getElementById('trimStartSlider').value);
   const e = parseFloat(document.getElementById('trimEndSlider').value);
   if (e <= s) { showToast('Invalid range'); return; }
   
-  if (mode === 'fast') {
-    showLoader('⚡ Fast cutting...');
-  } else {
-    showLoader('✨ Quality trim ho rahi hai... (1-2 min)');
-  }
+  showLoader('✂️ Trimming video');
   
   await requestWakeLock();
   
   const timeoutId = setTimeout(() => {
     hideLoader();
-    showToast('⚠️ Timeout — video bahut heavy hai. Fast mode try karo.');
+    showToast('⚠️ Timeout — chhota video try karo');
     releaseWakeLock();
-  }, 240000);
+  }, 300000);
   
   try {
     const ffmpeg = await getFFmpeg();
     const { fetchFile } = FFmpegUtil;
     await ffmpeg.writeFile('input.mp4', await fetchFile(currentVideoFile));
     
-    if (mode === 'fast') {
-      await ffmpeg.exec([
-        '-i','input.mp4',
-        '-ss',String(s),
-        '-t',String(e-s),
-        '-c','copy',
-        '-avoid_negative_ts','make_zero',
-        '-movflags','+faststart',
-        'output.mp4'
-      ]);
-    } else {
-      await ffmpeg.exec([
-        '-i','input.mp4',
-        '-ss',String(s),
-        '-t',String(e-s),
-        '-vf','scale=1080:-2',
-        '-c:v','libx264',
-        '-preset','ultrafast',
-        '-crf','26',
-        '-c:a','aac',
-        '-b:a','128k',
-        '-movflags','+faststart',
-        'output.mp4'
-      ]);
-    }
+    await ffmpeg.exec([
+      '-i','input.mp4',
+      '-ss',String(s),
+      '-t',String(e-s),
+      '-vf','scale=720:-2',
+      '-c:v','libx264',
+      '-preset','ultrafast',
+      '-crf','28',
+      '-maxrate','2M',
+      '-bufsize','4M',
+      '-c:a','aac',
+      '-b:a','96k',
+      '-movflags','+faststart',
+      'output.mp4'
+    ]);
     
     clearTimeout(timeoutId);
     
     const data = await ffmpeg.readFile('output.mp4');
     const blob = new Blob([data.buffer], { type: 'video/mp4' });
+    
+    if (blob.size < 50000) {
+      throw new Error('Output too small — encoding failed');
+    }
+    
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = 'picly-trimmed-' + Date.now() + '.mp4';
     a.click();
     hideLoader();
-    showToast(mode === 'fast' ? '✅ Fast ready!' : '✅ Quality ready!');
+    showToast('✅ Ready! ' + (blob.size/1024/1024).toFixed(1) + 'MB');
   } catch (err) {
     clearTimeout(timeoutId);
     hideLoader();
@@ -442,20 +441,31 @@ async function compressVideo() {
   if (!currentVideoFile) { showToast('Upload video first'); return; }
   const q = { high:'23', medium:'28', low:'32' };
   const crf = q[selectedCompressQuality] || '28';
-  showLoader('🗜️ Making it smaller...');
+  showLoader('🗜️ Compressing video');
   await requestWakeLock();
   
   const timeoutId = setTimeout(() => {
     hideLoader();
-    showToast('⚠️ Timeout — video format issue.');
+    showToast('⚠️ Timeout');
     releaseWakeLock();
-  }, 240000);
+  }, 300000);
   
   try {
     const ffmpeg = await getFFmpeg();
     const { fetchFile } = FFmpegUtil;
     await ffmpeg.writeFile('input.mp4', await fetchFile(currentVideoFile));
-    await ffmpeg.exec(['-i','input.mp4','-vf','scale=720:-2','-vcodec','libx264','-crf',crf,'-preset','ultrafast','output.mp4']);
+    await ffmpeg.exec([
+      '-i','input.mp4',
+      '-vf','scale=720:-2',
+      '-c:v','libx264',
+      '-preset','ultrafast',
+      '-crf',crf,
+      '-maxrate','2M',
+      '-bufsize','4M',
+      '-c:a','aac',
+      '-b:a','96k',
+      'output.mp4'
+    ]);
     clearTimeout(timeoutId);
     const data = await ffmpeg.readFile('output.mp4');
     const blob = new Blob([data.buffer], { type: 'video/mp4' });
@@ -478,14 +488,14 @@ async function compressVideo() {
 
 async function extractMp3() {
   if (!currentVideoFile) { showToast('Upload video first'); return; }
-  showLoader('🎵 Extracting audio...');
+  showLoader('🎵 Extracting audio');
   await requestWakeLock();
   
   const timeoutId = setTimeout(() => {
     hideLoader();
-    showToast('⚠️ Timeout — video format issue.');
+    showToast('⚠️ Timeout');
     releaseWakeLock();
-  }, 240000);
+  }, 300000);
   
   try {
     const ffmpeg = await getFFmpeg();
@@ -515,14 +525,14 @@ async function videoToGif() {
   const s = parseFloat(document.getElementById('gifStart').value) || 0;
   const d = parseFloat(document.getElementById('gifDuration').value) || 3;
   const f = document.getElementById('gifFps').value || 15;
-  showLoader('🎞️ Creating GIF...');
+  showLoader('🎞️ Creating GIF');
   await requestWakeLock();
   
   const timeoutId = setTimeout(() => {
     hideLoader();
-    showToast('⚠️ Timeout — video format issue.');
+    showToast('⚠️ Timeout');
     releaseWakeLock();
-  }, 240000);
+  }, 300000);
   
   try {
     const ffmpeg = await getFFmpeg();
@@ -554,20 +564,28 @@ async function enhanceVideo() {
   else if (selectedEnhanceType === 'contrast') filter = 'eq=contrast=1.3:saturation=1.2';
   else if (selectedEnhanceType === 'sharpen') filter = 'unsharp=5:5:1.0:5:5:0.0';
   else if (selectedEnhanceType === 'denoise') filter = 'hqdn3d=4:3:6:4.5';
-  showLoader('🎨 Enhancing video...');
+  showLoader('🎨 Enhancing video');
   await requestWakeLock();
   
   const timeoutId = setTimeout(() => {
     hideLoader();
-    showToast('⚠️ Timeout — video format issue.');
+    showToast('⚠️ Timeout');
     releaseWakeLock();
-  }, 240000);
+  }, 300000);
   
   try {
     const ffmpeg = await getFFmpeg();
     const { fetchFile } = FFmpegUtil;
     await ffmpeg.writeFile('input.mp4', await fetchFile(currentVideoFile));
-    await ffmpeg.exec(['-i','input.mp4','-vf',filter+',scale=1080:-2','-c:a','copy','output.mp4']);
+    await ffmpeg.exec([
+      '-i','input.mp4',
+      '-vf',filter+',scale=720:-2',
+      '-c:v','libx264',
+      '-preset','ultrafast',
+      '-crf','28',
+      '-c:a','copy',
+      'output.mp4'
+    ]);
     clearTimeout(timeoutId);
     const data = await ffmpeg.readFile('output.mp4');
     const blob = new Blob([data.buffer], { type: 'video/mp4' });
@@ -727,13 +745,12 @@ async function enhanceVideo() {
             <span>Duration: <b id="trimDuration" style="color:#fff">0.0s</b></span><span>Size: <b id="trimSize" style="color:#fff">0MB</b></span>
           </div>
         </div>
-        <div class="control-row" style="flex-direction:column;gap:10px;">
-          <button class="ctrl-btn primary" onclick="trimVideo('fast')" style="width:100%;">⚡ Fast (3-5 sec)</button>
-          <button class="ctrl-btn primary" onclick="trimVideo('quality')" style="width:100%;">✨ Quality 1080p (1-2 min)</button>
+        <div class="control-row">
+          <button class="ctrl-btn primary" onclick="trimVideo()" style="width:100%;">✂️ Trim & Download</button>
         </div>
         <p style="font-size:11px;color:#a99bc4;margin-top:12px;line-height:1.6;">
-          ⚡ <b>Fast</b> — direct copy, instant, kuch devices pe playback issue<br>
-          ✨ <b>Quality</b> — 1080p re-encode, guaranteed playable, sab jagah chalta hai
+          ⏱️ 30-90 sec lag sakte hain<br>
+          ✅ 720p HD · Guaranteed playable
         </p>
       </div>`;
   } else if (type === 'video-compress') {
