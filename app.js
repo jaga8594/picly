@@ -388,7 +388,7 @@ function showLoader(msg) {
       <div style="display:flex;gap:20px;margin-top:4px;padding:14px 20px;background:rgba(168,85,247,0.08);border:1px solid rgba(168,85,247,0.2);border-radius:14px;backdrop-filter:blur(10px);">
         <div style="display:flex;align-items:center;gap:8px;">
           <div style="width:8px;height:8px;border-radius:50%;background:#aaff00;box-shadow:0 0 10px #aaff00;"></div>
-          <span style="color:#c0b0d8;font-size:11px;font-weight:700;letter-spacing:0.5px;">720p HD</span>
+          <span style="color:#c0b0d8;font-size:11px;font-weight:700;letter-spacing:0.5px;">2K HD</span>
         </div>
         <div style="display:flex;align-items:center;gap:8px;">
           <div style="width:8px;height:8px;border-radius:50%;background:#00d4ff;box-shadow:0 0 10px #00d4ff;"></div>
