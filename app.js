@@ -334,8 +334,9 @@ function showLoader(msg) {
     el.innerHTML = `
       <div style="width:60px;height:60px;border:4px solid rgba(168,85,247,0.2);border-top-color:#a855f7;border-radius:50%;animation:spin 1s linear infinite;"></div>
       <p id="videoLoaderMsg" style="color:#fff;font-weight:800;font-size:16px;text-align:center;max-width:400px;line-height:1.5;">Processing...</p>
-      <p style="color:#ff6b6b;font-size:13px;text-align:center;max-width:400px;line-height:1.6;font-weight:700;">⚠️ Pehli baar 30-50 sec lag sakte hain<br>Server cold start</p>
-      <p style="color:#a99bc4;font-size:12px;text-align:center;max-width:400px;line-height:1.6;">⏱️ 720p HD output<br>✅ Multi-thread server</p>
+      <p id="videoProgress" style="color:#a855f7;font-size:18px;font-weight:900;text-align:center;font-family:monospace;">0 sec</p>
+      <p style="color:#ff6b6b;font-size:13px;text-align:center;max-width:400px;line-height:1.6;font-weight:700;">⚠️ 20-40 sec lag sakte hain<br>Pehli baar zyada (cold start)</p>
+      <p style="color:#a99bc4;font-size:12px;text-align:center;max-width:400px;line-height:1.6;">✅ 720p HD · Multi-thread server</p>
     `;
     document.body.appendChild(el);
     if (!document.getElementById('spinKeyframe')) {
@@ -348,15 +349,26 @@ function showLoader(msg) {
   document.getElementById('videoLoaderMsg').textContent = msg;
   el.style.display = 'flex';
   startDotsAnimation(msg);
+  
+  let sec = 0;
+  if (window.progressTimer) clearInterval(window.progressTimer);
+  window.progressTimer = setInterval(() => {
+    sec++;
+    const p = document.getElementById('videoProgress');
+    if (p) p.textContent = sec + ' sec';
+  }, 1000);
 }
 
 function hideLoader() {
   stopDotsAnimation();
+  if (window.progressTimer) {
+    clearInterval(window.progressTimer);
+    window.progressTimer = null;
+  }
   const el = document.getElementById('videoLoader');
   if (el) el.style.display = 'none';
 }
 
-// ==================== VIDEO FUNCTIONS — SERVER BASED ====================
 async function trimVideo() {
   if (!currentVideoFile) { showToast('Upload video first'); return; }
   const s = parseFloat(document.getElementById('trimStartSlider').value);
@@ -468,7 +480,6 @@ async function videoToGif() {
 async function getFFmpeg() { return null; }
 async function enhanceVideo() { showToast('Enhance — coming soon'); }
 
-// ==================== BUILD CONTROLS ====================
 function buildControls(type) {
   const c = document.getElementById('dynamicControls');
   if (!c) return;
@@ -616,7 +627,7 @@ function buildControls(type) {
           <button class="ctrl-btn primary" onclick="trimVideo()" style="width:100%;">✂️ Trim & Download</button>
         </div>
         <p style="font-size:11px;color:#a99bc4;margin-top:12px;line-height:1.6;">
-          ⏱️ Pehli baar 30-50 sec (cold start)<br>
+          ⏱️ 20-40 sec (pehli baar zyada)<br>
           ✅ 720p HD · Multi-thread server
         </p>
       </div>`;
@@ -638,7 +649,7 @@ function buildControls(type) {
         <div style="padding:16px;background:linear-gradient(135deg, rgba(168,85,247,0.15), rgba(236,72,153,0.1));border:1.5px solid rgba(168,85,247,0.3);border-radius:18px;margin-bottom:16px;">
           <div class="control-label">Start Time (seconds)</div><input type="number" id="gifStart" value="0" step="0.1" class="manual-input" style="width:100%;margin-bottom:12px;">
           <div class="control-label">Duration (seconds)</div><input type="number" id="gifDuration" value="3" step="0.1" class="manual-input" style="width:100%;margin-bottom:12px;">
-          <div class="control-label">FPS</div><select id="gifFps" class="manual-select" style="width:100%;"><option value="10">10 FPS</option><option value="15" selected>15 FPS</option><option value="24">24 FPS</option></select>
+          <div class="control-label">FPS</div><select id="gifFps" class="manual-select" style="width:100%;"><option value="10">10 FPS</option><option value="12" selected>12 FPS</option><option value="15">15 FPS</option></select>
         </div>
         <div class="control-row"><button class="ctrl-btn primary" onclick="videoToGif()">🎞️ Make GIF</button></div>
       </div>`;
