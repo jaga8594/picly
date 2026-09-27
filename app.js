@@ -318,7 +318,9 @@ async function getFFmpeg() {
   const R2_URL = 'https://pub-64e5babc43fc4b14b6a7ba94e61796db.r2.dev';
   
   ffmpeg.on('progress', ({ progress }) => {
-    const percent = Math.round(progress * 100);
+    let percent = Math.round(progress * 100);
+    if (!isFinite(percent) || percent < 0) percent = 0;
+    if (percent > 100) percent = 99;
     const msg = document.getElementById('videoLoaderMsg');
     if (msg) msg.textContent = `Processing... ${percent}%`;
   });
@@ -374,6 +376,13 @@ async function trimVideo(mode = 'fast') {
   }
   
   await requestWakeLock();
+  
+  const timeoutId = setTimeout(() => {
+    hideLoader();
+    showToast('⚠️ Timeout — video format issue ho sakta hai. Chhota video ya Quality mode try karo.');
+    releaseWakeLock();
+  }, 180000);
+  
   try {
     const ffmpeg = await getFFmpeg();
     const { fetchFile } = FFmpegUtil;
@@ -385,6 +394,7 @@ async function trimVideo(mode = 'fast') {
         '-ss',String(s),
         '-t',String(e-s),
         '-c','copy',
+        '-avoid_negative_ts','make_zero',
         '-movflags','+faststart',
         'output.mp4'
       ]);
@@ -397,9 +407,12 @@ async function trimVideo(mode = 'fast') {
         '-c:a','aac',
         '-preset','fast',
         '-crf','23',
+        '-movflags','+faststart',
         'output.mp4'
       ]);
     }
+    
+    clearTimeout(timeoutId);
     
     const data = await ffmpeg.readFile('output.mp4');
     const blob = new Blob([data.buffer], { type: 'video/mp4' });
@@ -409,7 +422,12 @@ async function trimVideo(mode = 'fast') {
     a.click();
     hideLoader();
     showToast(mode === 'fast' ? '✅ Video ready (fast)!' : '✅ Video ready (quality)!');
-  } catch (err) { hideLoader(); console.error(err); showToast('Error: ' + err.message); }
+  } catch (err) {
+    clearTimeout(timeoutId);
+    hideLoader();
+    console.error(err);
+    showToast('Error: ' + err.message);
+  }
   await releaseWakeLock();
 }
 
@@ -419,11 +437,19 @@ async function compressVideo() {
   const crf = q[selectedCompressQuality] || '28';
   showLoader('🗜️ Making it smaller...');
   await requestWakeLock();
+  
+  const timeoutId = setTimeout(() => {
+    hideLoader();
+    showToast('⚠️ Timeout — video format issue.');
+    releaseWakeLock();
+  }, 180000);
+  
   try {
     const ffmpeg = await getFFmpeg();
     const { fetchFile } = FFmpegUtil;
     await ffmpeg.writeFile('input.mp4', await fetchFile(currentVideoFile));
     await ffmpeg.exec(['-i','input.mp4','-vcodec','libx264','-crf',crf,'-preset','fast','output.mp4']);
+    clearTimeout(timeoutId);
     const data = await ffmpeg.readFile('output.mp4');
     const blob = new Blob([data.buffer], { type: 'video/mp4' });
     const ns = (blob.size/1024/1024).toFixed(2);
@@ -434,7 +460,12 @@ async function compressVideo() {
     a.click();
     hideLoader();
     showToast('✅ ' + os + 'MB → ' + ns + 'MB');
-  } catch (err) { hideLoader(); console.error(err); showToast('Error: ' + err.message); }
+  } catch (err) {
+    clearTimeout(timeoutId);
+    hideLoader();
+    console.error(err);
+    showToast('Error: ' + err.message);
+  }
   await releaseWakeLock();
 }
 
@@ -442,11 +473,19 @@ async function extractMp3() {
   if (!currentVideoFile) { showToast('Upload video first'); return; }
   showLoader('🎵 Extracting audio...');
   await requestWakeLock();
+  
+  const timeoutId = setTimeout(() => {
+    hideLoader();
+    showToast('⚠️ Timeout — video format issue.');
+    releaseWakeLock();
+  }, 180000);
+  
   try {
     const ffmpeg = await getFFmpeg();
     const { fetchFile } = FFmpegUtil;
     await ffmpeg.writeFile('input.mp4', await fetchFile(currentVideoFile));
     await ffmpeg.exec(['-i','input.mp4','-vn','-acodec','libmp3lame','-q:a','2','output.mp3']);
+    clearTimeout(timeoutId);
     const data = await ffmpeg.readFile('output.mp3');
     const blob = new Blob([data.buffer], { type: 'audio/mp3' });
     const a = document.createElement('a');
@@ -455,7 +494,12 @@ async function extractMp3() {
     a.click();
     hideLoader();
     showToast('✅ Audio ready!');
-  } catch (err) { hideLoader(); console.error(err); showToast('Error: ' + err.message); }
+  } catch (err) {
+    clearTimeout(timeoutId);
+    hideLoader();
+    console.error(err);
+    showToast('Error: ' + err.message);
+  }
   await releaseWakeLock();
 }
 
@@ -466,11 +510,19 @@ async function videoToGif() {
   const f = document.getElementById('gifFps').value || 15;
   showLoader('🎞️ Creating GIF...');
   await requestWakeLock();
+  
+  const timeoutId = setTimeout(() => {
+    hideLoader();
+    showToast('⚠️ Timeout — video format issue.');
+    releaseWakeLock();
+  }, 180000);
+  
   try {
     const ffmpeg = await getFFmpeg();
     const { fetchFile } = FFmpegUtil;
     await ffmpeg.writeFile('input.mp4', await fetchFile(currentVideoFile));
     await ffmpeg.exec(['-i','input.mp4','-ss',String(s),'-t',String(d),'-vf','fps='+f+',scale=480:-1:flags=lanczos','output.gif']);
+    clearTimeout(timeoutId);
     const data = await ffmpeg.readFile('output.gif');
     const blob = new Blob([data.buffer], { type: 'image/gif' });
     const a = document.createElement('a');
@@ -479,7 +531,12 @@ async function videoToGif() {
     a.click();
     hideLoader();
     showToast('✅ GIF ready!');
-  } catch (err) { hideLoader(); console.error(err); showToast('Error: ' + err.message); }
+  } catch (err) {
+    clearTimeout(timeoutId);
+    hideLoader();
+    console.error(err);
+    showToast('Error: ' + err.message);
+  }
   await releaseWakeLock();
 }
 
@@ -492,11 +549,19 @@ async function enhanceVideo() {
   else if (selectedEnhanceType === 'denoise') filter = 'hqdn3d=4:3:6:4.5';
   showLoader('🎨 Enhancing video...');
   await requestWakeLock();
+  
+  const timeoutId = setTimeout(() => {
+    hideLoader();
+    showToast('⚠️ Timeout — video format issue.');
+    releaseWakeLock();
+  }, 180000);
+  
   try {
     const ffmpeg = await getFFmpeg();
     const { fetchFile } = FFmpegUtil;
     await ffmpeg.writeFile('input.mp4', await fetchFile(currentVideoFile));
     await ffmpeg.exec(['-i','input.mp4','-vf',filter,'-c:a','copy','output.mp4']);
+    clearTimeout(timeoutId);
     const data = await ffmpeg.readFile('output.mp4');
     const blob = new Blob([data.buffer], { type: 'video/mp4' });
     const a = document.createElement('a');
@@ -505,7 +570,12 @@ async function enhanceVideo() {
     a.click();
     hideLoader();
     showToast('✅ Enhanced video ready!');
-  } catch (err) { hideLoader(); console.error(err); showToast('Error: ' + err.message); }
+  } catch (err) {
+    clearTimeout(timeoutId);
+    hideLoader();
+    console.error(err);
+    showToast('Error: ' + err.message);
+  }
   await releaseWakeLock();
 }function buildControls(type) {
   const c = document.getElementById('dynamicControls');
