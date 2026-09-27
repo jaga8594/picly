@@ -288,12 +288,34 @@ function selectEnhanceType(t, btn) {
   btn.classList.add('active');
 }
 
-// ==================== FFMPEG 0.12.x MULTI-THREADED ====================
+// ==================== FFMPEG 0.12.x MULTI-THREADED — R2 ====================
+let wakeLock = null;
+
+async function requestWakeLock() {
+  try {
+    if ('wakeLock' in navigator) {
+      wakeLock = await navigator.wakeLock.request('screen');
+      console.log('Wake Lock active');
+    }
+  } catch (err) {
+    console.log('Wake Lock failed:', err);
+  }
+}
+
+async function releaseWakeLock() {
+  if (wakeLock) {
+    try { await wakeLock.release(); } catch(e) {}
+    wakeLock = null;
+  }
+}
+
 async function getFFmpeg() {
   if (ffmpegInstance) return ffmpegInstance;
   const { FFmpeg } = FFmpegWASM;
   const { toBlobURL } = FFmpegUtil;
   const ffmpeg = new FFmpeg();
+  
+  const R2_URL = 'https://pub-64e5babc43fc4b14b6a7ba94e61796db.r2.dev';
   
   ffmpeg.on('progress', ({ progress }) => {
     const percent = Math.round(progress * 100);
@@ -302,9 +324,9 @@ async function getFFmpeg() {
   });
   
   await ffmpeg.load({
-    coreURL: await toBlobURL('ffmpeg-core.js', 'text/javascript'),
-    wasmURL: await toBlobURL('ffmpeg-core.wasm', 'application/wasm'),
-    workerURL: await toBlobURL('ffmpeg-core.worker.js', 'text/javascript')
+    coreURL: await toBlobURL(R2_URL + '/ffmpeg-core.js', 'text/javascript'),
+    wasmURL: await toBlobURL(R2_URL + '/ffmpeg-core.wasm', 'application/wasm'),
+    workerURL: await toBlobURL(R2_URL + '/ffmpeg-core.worker.js', 'text/javascript')
   });
   ffmpegInstance = ffmpeg;
   return ffmpeg;
@@ -319,7 +341,8 @@ function showLoader(msg) {
     el.innerHTML = `
       <div style="width:60px;height:60px;border:4px solid rgba(168,85,247,0.2);border-top-color:#a855f7;border-radius:50%;animation:spin 1s linear infinite;"></div>
       <p id="videoLoaderMsg" style="color:#fff;font-weight:800;font-size:16px;text-align:center;max-width:400px;line-height:1.5;">Processing...</p>
-      <p style="color:#a99bc4;font-size:12px;text-align:center;max-width:400px;line-height:1.6;">⏱️ Bade videos mein 1-2 min lag sakte hain<br>📱 Mobile pe zyada time lagta hai<br>⚠️ Tab active rakho</p>
+      <p style="color:#ff6b6b;font-size:13px;text-align:center;max-width:400px;line-height:1.6;font-weight:700;">⚠️ Tab MAT minimize karo<br>Warna processing ruk jayegi</p>
+      <p style="color:#a99bc4;font-size:12px;text-align:center;max-width:400px;line-height:1.6;">⏱️ Bade videos mein 1-2 min lag sakte hain</p>
     `;
     document.body.appendChild(el);
     if (!document.getElementById('spinKeyframe')) {
@@ -344,6 +367,7 @@ async function trimVideo() {
   const e = parseFloat(document.getElementById('trimEndSlider').value);
   if (e <= s) { showToast('Invalid range'); return; }
   showLoader('✂️ Cutting your video...');
+  await requestWakeLock();
   try {
     const ffmpeg = await getFFmpeg();
     const { fetchFile } = FFmpegUtil;
@@ -358,6 +382,7 @@ async function trimVideo() {
     hideLoader();
     showToast('✅ Video ready!');
   } catch (err) { hideLoader(); console.error(err); showToast('Error: ' + err.message); }
+  await releaseWakeLock();
 }
 
 async function compressVideo() {
@@ -365,6 +390,7 @@ async function compressVideo() {
   const q = { high:'23', medium:'28', low:'32' };
   const crf = q[selectedCompressQuality] || '28';
   showLoader('🗜️ Making it smaller...');
+  await requestWakeLock();
   try {
     const ffmpeg = await getFFmpeg();
     const { fetchFile } = FFmpegUtil;
@@ -381,11 +407,13 @@ async function compressVideo() {
     hideLoader();
     showToast('✅ ' + os + 'MB → ' + ns + 'MB');
   } catch (err) { hideLoader(); console.error(err); showToast('Error: ' + err.message); }
+  await releaseWakeLock();
 }
 
 async function extractMp3() {
   if (!currentVideoFile) { showToast('Upload video first'); return; }
   showLoader('🎵 Extracting audio...');
+  await requestWakeLock();
   try {
     const ffmpeg = await getFFmpeg();
     const { fetchFile } = FFmpegUtil;
@@ -400,6 +428,7 @@ async function extractMp3() {
     hideLoader();
     showToast('✅ Audio ready!');
   } catch (err) { hideLoader(); console.error(err); showToast('Error: ' + err.message); }
+  await releaseWakeLock();
 }
 
 async function videoToGif() {
@@ -408,6 +437,7 @@ async function videoToGif() {
   const d = parseFloat(document.getElementById('gifDuration').value) || 3;
   const f = document.getElementById('gifFps').value || 15;
   showLoader('🎞️ Creating GIF...');
+  await requestWakeLock();
   try {
     const ffmpeg = await getFFmpeg();
     const { fetchFile } = FFmpegUtil;
@@ -422,6 +452,7 @@ async function videoToGif() {
     hideLoader();
     showToast('✅ GIF ready!');
   } catch (err) { hideLoader(); console.error(err); showToast('Error: ' + err.message); }
+  await releaseWakeLock();
 }
 
 async function enhanceVideo() {
@@ -432,6 +463,7 @@ async function enhanceVideo() {
   else if (selectedEnhanceType === 'sharpen') filter = 'unsharp=5:5:1.0:5:5:0.0';
   else if (selectedEnhanceType === 'denoise') filter = 'hqdn3d=4:3:6:4.5';
   showLoader('🎨 Enhancing video...');
+  await requestWakeLock();
   try {
     const ffmpeg = await getFFmpeg();
     const { fetchFile } = FFmpegUtil;
@@ -446,6 +478,7 @@ async function enhanceVideo() {
     hideLoader();
     showToast('✅ Enhanced video ready!');
   } catch (err) { hideLoader(); console.error(err); showToast('Error: ' + err.message); }
+  await releaseWakeLock();
 }function buildControls(type) {
   const c = document.getElementById('dynamicControls');
   if (!c) return;
