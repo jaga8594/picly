@@ -192,7 +192,7 @@ function loadImage(input) {
       if (canvas) { canvas.width = img.width; canvas.height = img.height; ctx.drawImage(img, 0, 0); }
       document.getElementById('uploadArea').style.display = 'none';
       document.getElementById('canvasWrap').style.display = 'block';
-      showToast('Photo loaded');
+      showToast('Photo loaded ✨');
     };
     img.src = e.target.result;
   };
@@ -272,7 +272,7 @@ function loadVideo(input) {
       if (s) s.textContent = sizeMB + 'MB';
     }
     
-    showToast('Video loaded — ' + sizeMB + 'MB');
+    showToast('Video loaded — ' + sizeMB + 'MB ✨');
   };
 }
 
@@ -288,7 +288,7 @@ function selectEnhanceType(t, btn) {
   btn.classList.add('active');
 }
 
-// ==================== FFMPEG 0.11.6 — FIXED corePath ====================
+// ==================== FFMPEG ====================
 async function getFFmpeg() {
   if (ffmpegInstance && ffmpegInstance.isLoaded()) return ffmpegInstance;
   const { createFFmpeg } = FFmpeg;
@@ -296,6 +296,13 @@ async function getFFmpeg() {
     log: false,
     corePath: window.location.origin + '/ffmpeg-core.js'
   });
+  
+  ffmpeg.setProgress(({ ratio }) => {
+    const percent = Math.round(ratio * 100);
+    const msg = document.getElementById('videoLoaderMsg');
+    if (msg) msg.textContent = `Processing... ${percent}%`;
+  });
+  
   await ffmpeg.load();
   ffmpegInstance = ffmpeg;
   return ffmpeg;
@@ -306,8 +313,12 @@ function showLoader(msg) {
   if (!el) {
     el = document.createElement('div');
     el.id = 'videoLoader';
-    el.style.cssText = 'position:fixed;inset:0;background:rgba(6,3,13,0.92);backdrop-filter:blur(10px);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;';
-    el.innerHTML = '<div style="width:56px;height:56px;border:4px solid rgba(168,85,247,0.2);border-top-color:#a855f7;border-radius:50%;animation:spin 1s linear infinite;"></div><p id="videoLoaderMsg" style="color:#fff;font-weight:800;font-size:14px;text-align:center;padding:0 20px;">Loading...</p>';
+    el.style.cssText = 'position:fixed;inset:0;background:rgba(6,3,13,0.95);backdrop-filter:blur(12px);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;padding:20px;';
+    el.innerHTML = `
+      <div style="width:60px;height:60px;border:4px solid rgba(168,85,247,0.2);border-top-color:#a855f7;border-radius:50%;animation:spin 1s linear infinite;"></div>
+      <p id="videoLoaderMsg" style="color:#fff;font-weight:800;font-size:16px;text-align:center;max-width:400px;line-height:1.5;">Processing...</p>
+      <p style="color:#a99bc4;font-size:12px;text-align:center;max-width:400px;line-height:1.6;">⏱️ Bade videos mein 2-5 min lag sakte hain<br>📱 Mobile pe zyada time lagta hai<br>⚠️ Tab active rakho</p>
+    `;
     document.body.appendChild(el);
     if (!document.getElementById('spinKeyframe')) {
       const s = document.createElement('style');
@@ -330,11 +341,10 @@ async function trimVideo() {
   const s = parseFloat(document.getElementById('trimStartSlider').value);
   const e = parseFloat(document.getElementById('trimEndSlider').value);
   if (e <= s) { showToast('Invalid range'); return; }
-  showLoader('FFmpeg load ho raha hai... (pehli baar 20-30 sec)');
+  showLoader('✂️ Cutting your video...');
   try {
     const ffmpeg = await getFFmpeg();
     const { fetchFile } = FFmpeg;
-    showLoader('Video trim ho rahi hai...');
     ffmpeg.FS('writeFile', 'input.mp4', await fetchFile(currentVideoFile));
     await ffmpeg.run('-i','input.mp4','-ss',String(s),'-t',String(e-s),'-c','copy','output.mp4');
     const data = ffmpeg.FS('readFile', 'output.mp4');
@@ -344,7 +354,7 @@ async function trimVideo() {
     a.download = 'picly-trimmed-' + Date.now() + '.mp4';
     a.click();
     hideLoader();
-    showToast('✅ Trimmed downloaded!');
+    showToast('✅ Video ready!');
   } catch (err) { hideLoader(); console.error(err); showToast('Error: ' + err.message); }
 }
 
@@ -352,11 +362,10 @@ async function compressVideo() {
   if (!currentVideoFile) { showToast('Upload video first'); return; }
   const q = { high:'23', medium:'28', low:'32' };
   const crf = q[selectedCompressQuality] || '28';
-  showLoader('FFmpeg load ho raha hai...');
+  showLoader('🗜️ Making it smaller...');
   try {
     const ffmpeg = await getFFmpeg();
     const { fetchFile } = FFmpeg;
-    showLoader('Video compress ho rahi hai...');
     ffmpeg.FS('writeFile', 'input.mp4', await fetchFile(currentVideoFile));
     await ffmpeg.run('-i','input.mp4','-vcodec','libx264','-crf',crf,'-preset','fast','output.mp4');
     const data = ffmpeg.FS('readFile', 'output.mp4');
@@ -374,11 +383,10 @@ async function compressVideo() {
 
 async function extractMp3() {
   if (!currentVideoFile) { showToast('Upload video first'); return; }
-  showLoader('FFmpeg load ho raha hai...');
+  showLoader('🎵 Extracting audio...');
   try {
     const ffmpeg = await getFFmpeg();
     const { fetchFile } = FFmpeg;
-    showLoader('Audio extract ho raha hai...');
     ffmpeg.FS('writeFile', 'input.mp4', await fetchFile(currentVideoFile));
     await ffmpeg.run('-i','input.mp4','-vn','-acodec','libmp3lame','-q:a','2','output.mp3');
     const data = ffmpeg.FS('readFile', 'output.mp3');
@@ -388,7 +396,7 @@ async function extractMp3() {
     a.download = 'picly-audio-' + Date.now() + '.mp3';
     a.click();
     hideLoader();
-    showToast('✅ MP3 downloaded!');
+    showToast('✅ Audio ready!');
   } catch (err) { hideLoader(); console.error(err); showToast('Error: ' + err.message); }
 }
 
@@ -397,11 +405,10 @@ async function videoToGif() {
   const s = parseFloat(document.getElementById('gifStart').value) || 0;
   const d = parseFloat(document.getElementById('gifDuration').value) || 3;
   const f = document.getElementById('gifFps').value || 15;
-  showLoader('FFmpeg load ho raha hai...');
+  showLoader('🎞️ Creating GIF...');
   try {
     const ffmpeg = await getFFmpeg();
     const { fetchFile } = FFmpeg;
-    showLoader('GIF ban raha hai...');
     ffmpeg.FS('writeFile', 'input.mp4', await fetchFile(currentVideoFile));
     await ffmpeg.run('-i','input.mp4','-ss',String(s),'-t',String(d),'-vf','fps='+f+',scale=480:-1:flags=lanczos','output.gif');
     const data = ffmpeg.FS('readFile', 'output.gif');
@@ -411,7 +418,7 @@ async function videoToGif() {
     a.download = 'picly-' + Date.now() + '.gif';
     a.click();
     hideLoader();
-    showToast('✅ GIF downloaded!');
+    showToast('✅ GIF ready!');
   } catch (err) { hideLoader(); console.error(err); showToast('Error: ' + err.message); }
 }
 
@@ -422,11 +429,10 @@ async function enhanceVideo() {
   else if (selectedEnhanceType === 'contrast') filter = 'eq=contrast=1.3:saturation=1.2';
   else if (selectedEnhanceType === 'sharpen') filter = 'unsharp=5:5:1.0:5:5:0.0';
   else if (selectedEnhanceType === 'denoise') filter = 'hqdn3d=4:3:6:4.5';
-  showLoader('FFmpeg load ho raha hai...');
+  showLoader('🎨 Enhancing video...');
   try {
     const ffmpeg = await getFFmpeg();
     const { fetchFile } = FFmpeg;
-    showLoader('Video enhance ho rahi hai...');
     ffmpeg.FS('writeFile', 'input.mp4', await fetchFile(currentVideoFile));
     await ffmpeg.run('-i','input.mp4','-vf',filter,'-c:a','copy','output.mp4');
     const data = ffmpeg.FS('readFile', 'output.mp4');
@@ -436,7 +442,7 @@ async function enhanceVideo() {
     a.download = 'picly-enhanced-' + Date.now() + '.mp4';
     a.click();
     hideLoader();
-    showToast('✅ Enhanced downloaded!');
+    showToast('✅ Enhanced video ready!');
   } catch (err) { hideLoader(); console.error(err); showToast('Error: ' + err.message); }
 }function buildControls(type) {
   const c = document.getElementById('dynamicControls');
@@ -715,7 +721,7 @@ function cropImage(w, h) {
   t.width = nw; t.height = nh;
   t.getContext('2d').drawImage(currentImage, ox, oy, nw, nh, 0, 0, nw, nh);
   const ni = new Image();
-  ni.onload = () => { currentImage = ni; redraw(); showToast('Cropped'); };
+  ni.onload = () => { currentImage = ni; redraw(); showToast('Cropped ✂️'); };
   ni.src = t.toDataURL();
 }
 
@@ -737,7 +743,7 @@ function rotateImage(deg) {
   tc.translate(t.width/2, t.height/2); tc.rotate(a);
   tc.drawImage(currentImage, -currentImage.width/2, -currentImage.height/2);
   const ni = new Image();
-  ni.onload = () => { currentImage = ni; redraw(); showToast('Rotated'); };
+  ni.onload = () => { currentImage = ni; redraw(); showToast('Rotated ↻'); };
   ni.src = t.toDataURL();
 }
 
@@ -750,14 +756,14 @@ function flipImage(dir) {
   else { tc.translate(0, currentImage.height); tc.scale(1, -1); }
   tc.drawImage(currentImage, 0, 0);
   const ni = new Image();
-  ni.onload = () => { currentImage = ni; redraw(); showToast('Flipped'); };
+  ni.onload = () => { currentImage = ni; redraw(); showToast('Flipped ↔'); };
   ni.src = t.toDataURL();
 }
 
 function applyFilter(type) {
   const f = { 'none':'none','grayscale':'grayscale(100%)','sepia':'sepia(80%)','saturate':'saturate(180%)','contrast':'contrast(150%)','brightness':'brightness(130%)','blur':'blur(2px)','invert':'invert(100%)','cool':'hue-rotate(180deg) saturate(120%)','warm':'sepia(30%) saturate(140%) brightness(110%)','vintage':'sepia(50%) contrast(90%) brightness(105%)','dramatic':'contrast(180%) saturate(80%)','neon':'saturate(300%) contrast(150%) hue-rotate(30deg)','fade':'opacity(0.85) saturate(70%) brightness(115%)' };
   if (canvas) canvas.style.filter = f[type] || 'none';
-  showToast('Filter applied');
+  showToast('Filter applied ✨');
 }
 
 function applyAdjust(type, val) {
@@ -772,7 +778,7 @@ function resizeImage(p) {
   t.height = Math.round(currentImage.height*p/100);
   t.getContext('2d').drawImage(currentImage, 0, 0, t.width, t.height);
   const ni = new Image();
-  ni.onload = () => { currentImage = ni; redraw(); showToast('Resized'); };
+  ni.onload = () => { currentImage = ni; redraw(); showToast('Resized 📐'); };
   ni.src = t.toDataURL();
 }
 
@@ -785,7 +791,7 @@ function manualResize() {
   t.width = w; t.height = h;
   t.getContext('2d').drawImage(currentImage, 0, 0, w, h);
   const ni = new Image();
-  ni.onload = () => { currentImage = ni; redraw(); showToast('Resized'); };
+  ni.onload = () => { currentImage = ni; redraw(); showToast('Resized 📐'); };
   ni.src = t.toDataURL();
 }
 
@@ -799,7 +805,7 @@ function compressImage(q) {
   if (!currentImage) { showToast('Upload photo'); return; }
   const url = canvas.toDataURL('image/jpeg', q);
   const ni = new Image();
-  ni.onload = () => { currentImage = ni; redraw(); showToast('Compressed'); };
+  ni.onload = () => { currentImage = ni; redraw(); showToast('Compressed 🗜️'); };
   ni.src = url;
 }
 
@@ -857,7 +863,7 @@ function addTextDrag() {
   makeDraggable(d);
   if (overlayLayer) overlayLayer.appendChild(d);
   overlayItems.push(d);
-  showToast('Text added');
+  showToast('Text added ✨');
 }
 
 function addStickerDrag(emoji) {
@@ -873,7 +879,7 @@ function addStickerDrag(emoji) {
   makeDraggable(d);
   if (overlayLayer) overlayLayer.appendChild(d);
   overlayItems.push(d);
-  showToast('Sticker added');
+  showToast('Sticker added ✨');
 }
 
 function makeDraggable(el) {
@@ -927,7 +933,7 @@ function applyOverlay() {
   });
   overlayItems = [];
   if (overlayLayer) overlayLayer.innerHTML = '';
-  showToast('Applied!');
+  showToast('Applied! ✨');
 }
 
 function makePassport(wMM, hMM) {
@@ -945,7 +951,7 @@ function makePassport(wMM, hMM) {
   tc.fillStyle = '#fff'; tc.fillRect(0,0,tw,th);
   tc.drawImage(currentImage, ox, oy, dw, dh);
   const ni = new Image();
-  ni.onload = () => { currentImage = ni; redraw(); showToast('Passport ready'); };
+  ni.onload = () => { currentImage = ni; redraw(); showToast('Passport ready 📸'); };
   ni.src = t.toDataURL();
 }
 
@@ -966,7 +972,7 @@ function printSheet() {
     tc.strokeStyle = '#ccc'; tc.strokeRect(x, y, pw, ph);
   }
   const ni = new Image();
-  ni.onload = () => { currentImage = ni; redraw(); showToast('Sheet ready'); };
+  ni.onload = () => { currentImage = ni; redraw(); showToast('Sheet ready 📄'); };
   ni.src = t.toDataURL();
 }
 
@@ -983,7 +989,7 @@ function uploadSignature() {
         signatureData = img;
         const s = document.getElementById('signatureStatus');
         if (s) s.textContent = '✓ Signature loaded';
-        showToast('Signature loaded');
+        showToast('Signature loaded ✨');
       };
       img.src = ev.target.result;
     };
@@ -1016,7 +1022,7 @@ function generatePhotoSignature() {
   tc.drawImage(signatureData, sox, photoH+gap+40+soy, sdw, sdh);
   tc.strokeStyle = '#000'; tc.strokeRect(0, photoH+gap+40, signW, signH);
   const ni = new Image();
-  ni.onload = () => { currentImage = ni; redraw(); showToast('Combo ready'); };
+  ni.onload = () => { currentImage = ni; redraw(); showToast('Combo ready ✨'); };
   ni.src = t.toDataURL();
 }
 
@@ -1035,7 +1041,7 @@ function cleanSignature() {
   }
   tc.putImageData(id, 0, 0);
   const ni = new Image();
-  ni.onload = () => { currentImage = ni; redraw(); showToast('Cleaned'); };
+  ni.onload = () => { currentImage = ni; redraw(); showToast('Cleaned ✨'); };
   ni.src = t.toDataURL();
 }
 
@@ -1060,7 +1066,7 @@ function scanDocument() {
   const imgH = (t.height/t.width)*imgW;
   pdf.addImage(t.toDataURL('image/jpeg', 0.9), 'JPEG', 20, 20, imgW, Math.min(imgH, 800));
   pdf.save('scan-' + Date.now() + '.pdf');
-  showToast('PDF downloaded');
+  showToast('PDF ready 📄');
 }
 
 function makeIDCard(type) { showToast('ID Card — coming soon'); }
@@ -1079,7 +1085,7 @@ function splitPhoto(parts) {
   for (let c=1;c<cols;c++) { tc.beginPath(); tc.moveTo(c*cw,0); tc.lineTo(c*cw,currentImage.height); tc.stroke(); }
   for (let r=1;r<rows;r++) { tc.beginPath(); tc.moveTo(0,r*ch); tc.lineTo(currentImage.width,r*ch); tc.stroke(); }
   const ni = new Image();
-  ni.onload = () => { currentImage = ni; redraw(); showToast(parts + ' parts ready'); };
+  ni.onload = () => { currentImage = ni; redraw(); showToast(parts + ' parts ready ✂️'); };
   ni.src = t.toDataURL();
 }
 
@@ -1096,7 +1102,7 @@ function exportPDF() {
     const imgH = (canvas.height/canvas.width)*imgW;
     pdf.addImage(imgData, 'JPEG', 20, 20, imgW, imgH);
     pdf.save('picly-' + Date.now() + '.pdf');
-    showToast('PDF downloaded');
+    showToast('PDF ready 📄');
   } catch (err) { showToast('PDF error'); }
 }
 
@@ -1106,7 +1112,7 @@ function convertFormat(format) {
   const a = document.createElement('a');
   a.download = 'picly-' + Date.now() + '.' + (format === 'jpeg' ? 'jpg' : format);
   a.href = url; a.click();
-  showToast('Converted');
+  showToast('Converted ✨');
 }
 
 function applyFrame(style) {
@@ -1137,7 +1143,7 @@ function applyFrame(style) {
     tc.drawImage(currentImage, pad, pad);
   }
   const ni = new Image();
-  ni.onload = () => { currentImage = ni; redraw(); showToast('Frame applied'); };
+  ni.onload = () => { currentImage = ni; redraw(); showToast('Frame applied ✨'); };
   ni.src = t.toDataURL();
 }
 
@@ -1192,7 +1198,7 @@ function buildCollage() {
     }
   }
   const ni = new Image();
-  ni.onload = () => { currentImage = ni; redraw(); showToast('Collage built'); };
+  ni.onload = () => { currentImage = ni; redraw(); showToast('Collage built ✨'); };
   ni.src = t.toDataURL();
 }
 
@@ -1203,7 +1209,7 @@ function downloadImage() {
   a.download = 'picly-' + Date.now() + '.jpg';
   a.href = canvas.toDataURL('image/jpeg', 0.95);
   a.click();
-  showToast('Downloaded!');
+  showToast('Downloaded! 🎉');
 }
 
 function startTrial() { showToast('🎉 7-Day Free Trial Activated!'); }
