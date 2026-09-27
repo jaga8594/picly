@@ -48,7 +48,20 @@
   </div>
 
   <div class="featured-scroll" id="slider">
-    <div class="feature-slide fs-1" onclick="openToolFromHome('video-trim')">
+    <div class="feature-slide fs-1" onclick="openToolFromHome('ai-text-image')">
+      <img class="bg-img" src="https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=800&q=80" alt="">
+      <div class="fs-hook">AI NEW</div>
+      <div class="fs-content">
+        <div class="fs-icon"><svg viewBox="0 0 24 24"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg></div>
+        <div class="fs-text">
+          <div class="fs-tag">🤖 AI STUDIO</div>
+          <div class="fs-title">Text to Image</div>
+          <div class="fs-desc">Prompt → HD image in seconds</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="feature-slide fs-2" onclick="openToolFromHome('video-trim')">
       <img class="bg-img" src="https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=800&q=80" alt="">
       <div class="fs-hook">NEW</div>
       <div class="fs-content">
@@ -57,19 +70,6 @@
           <div class="fs-tag">🎬 VIDEO</div>
           <div class="fs-title">Video Trimmer</div>
           <div class="fs-desc">Cut · trim · compress</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="feature-slide fs-2" onclick="openToolFromHome('text')">
-      <img class="bg-img" src="https://images.unsplash.com/photo-1530103862676-de8c9debad1d?w=800&q=80" alt="">
-      <div class="fs-hook">20+ FONTS</div>
-      <div class="fs-content">
-        <div class="fs-icon"><svg viewBox="0 0 24 24"><path d="M4 7V4h16v3M9 20h6M12 4v16"/></svg></div>
-        <div class="fs-text">
-          <div class="fs-tag">✨ NEW</div>
-          <div class="fs-title">Text on Photo</div>
-          <div class="fs-desc">Drag · fonts · colors</div>
         </div>
       </div>
     </div>
@@ -126,6 +126,24 @@
 
   <div class="category-grid">
 
+    <div class="category-card cc-1" onclick="openCategory('aistudio')">
+      <img class="cat-img" src="https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=500&q=80" alt="">
+      <div class="cc-overlay"></div>
+      <div class="cat-hook hot">AI NEW</div>
+      <div class="cat-content">
+        <div class="cat-thumbs">
+          <img class="cat-thumb" src="https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=100&q=80" alt="">
+          <img class="cat-thumb" src="https://images.unsplash.com/photo-1578632767115-351597cf2477?w=100&q=80" alt="">
+          <img class="cat-thumb" src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&q=80" alt="">
+        </div>
+        <div class="cat-bottom">
+          <div class="cat-name">AI Studio</div>
+          <div class="cat-desc">Text → HD image</div>
+          <div class="cat-badge">Cloudflare</div>
+        </div>
+      </div>
+    </div>
+
     <div class="category-card cc-4" onclick="openCategory('video')">
       <img class="cat-img" src="https://images.unsplash.com/photo-1513151233558-d860c5398176?w=500&q=80" alt="">
       <div class="cc-overlay"></div>
@@ -140,24 +158,6 @@
           <div class="cat-name">Video Tools</div>
           <div class="cat-desc">Trim · compress · GIF · MP3</div>
           <div class="cat-badge">5 tools</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="category-card cc-1" onclick="openCategory('aimagic')">
-      <img class="cat-img" src="https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=500&q=80" alt="">
-      <div class="cc-overlay"></div>
-      <div class="cat-hook pro">SOON</div>
-      <div class="cat-content">
-        <div class="cat-thumbs">
-          <img class="cat-thumb" src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&q=80" alt="">
-          <img class="cat-thumb" src="https://images.unsplash.com/photo-1560066984-138dadb4c035?w=100&q=80" alt="">
-          <img class="cat-thumb" src="https://images.unsplash.com/photo-1580489944761-15a19d654956?w=100&q=80" alt="">
-        </div>
-        <div class="cat-bottom">
-          <div class="cat-name">AI Magic</div>
-          <div class="cat-desc">Enhance · BG remove · face</div>
-          <div class="cat-badge">Coming</div>
         </div>
       </div>
     </div>
@@ -198,7 +198,25 @@
       </div>
     </div>
 
-    <div class="category-card cc-7" onclick="openCategory('utility')">
+    <div class="category-card cc-7" onclick="openCategory('aimagic')">
+      <img class="cat-img" src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=500&q=80" alt="">
+      <div class="cc-overlay"></div>
+      <div class="cat-hook new">AI</div>
+      <div class="cat-content">
+        <div class="cat-thumbs">
+          <img class="cat-thumb" src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&q=80" alt="">
+          <img class="cat-thumb" src="https://images.unsplash.com/photo-1580489944761-15a19d654956?w=100&q=80" alt="">
+          <img class="cat-thumb" src="https://images.unsplash.com/photo-1578632767115-351597cf2477?w=100&q=80" alt="">
+        </div>
+        <div class="cat-bottom">
+          <div class="cat-name">AI Magic</div>
+          <div class="cat-desc">Enhance · anime · restore · glow</div>
+          <div class="cat-badge">4 tools</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="category-card cc-1" onclick="openCategory('utility')">
       <img class="cat-img" src="https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=500&q=80" alt="">
       <div class="cc-overlay"></div>
       <div class="cat-content">
@@ -227,7 +245,7 @@
         <div class="cat-bottom">
           <div class="cat-name">Fun</div>
           <div class="cat-desc">Filters · frames · collage</div>
-          <div class="cat-badge">3 tools</div>
+          <div class="cat-badge">2 tools</div>
         </div>
       </div>
     </div>

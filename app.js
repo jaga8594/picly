@@ -28,7 +28,10 @@ const categories = {
     { id:'video-mp3', name:'Video to MP3', desc:'Extract audio', type:'video-mp3', img:'https://images.unsplash.com/photo-1614064641938-3bbee52942c7?w=100&q=80' },
     { id:'video-enhance', name:'Video Enhance', desc:'Sharpen', type:'video-enhance', img:'https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?w=100&q=80' }
   ]},
-  aimagic: { name:'AI Magic', desc:'Free photo effects · No API needed', tools:[
+  aistudio: { name:'AI Studio', desc:'Text → HD image', tools:[
+    { id:'ai-text-image', name:'Text to Image', desc:'Prompt → HD image', type:'ai-text-image', img:'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=100&q=80' }
+  ]},
+  aimagic: { name:'AI Magic', desc:'Free photo effects', tools:[
     { id:'ai-enhance', name:'Photo Enhance', desc:'Sharper · Brighter · HD', type:'ai-enhance', img:'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=100&q=80' },
     { id:'ai-anime', name:'Anime Cartoon', desc:'Anime-style vivid effect', type:'ai-anime', img:'https://images.unsplash.com/photo-1578632767115-351597cf2477?w=100&q=80' },
     { id:'ai-restore', name:'Old Photo Restore', desc:'Vintage · Color boost', type:'ai-restore', img:'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=100&q=80' },
@@ -67,6 +70,7 @@ let selectedEnhanceType = 'bright';
 let selectedResolution = '1080';
 let selectedAiMagic = 'enhance';
 let currentAiImage = null;
+let currentAiImageResult = null;
 let wakeLock = null;
 let dotsInterval = null;
 let isProcessing = false;
@@ -74,6 +78,7 @@ let isProcessing = false;
 const CALCULATOR_TYPES = ['emi','gst','age','bmi','unit','qr'];
 const VIDEO_TYPES = ['video-trim','video-compress','video-gif','video-mp3','video-enhance'];
 const AI_MAGIC_TYPES = ['ai-enhance','ai-anime','ai-restore','ai-glow'];
+const AI_STUDIO_TYPES = ['ai-text-image'];
 
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
@@ -127,6 +132,7 @@ function openTool(toolId) {
   currentVideoFile = null;
   currentVideoDuration = 0;
   currentAiImage = null;
+  currentAiImageResult = null;
   
   document.getElementById('editorTitle').textContent = tool.name;
   const ol = document.getElementById('overlayLayer');
@@ -137,6 +143,7 @@ function openTool(toolId) {
   const isCalculator = CALCULATOR_TYPES.includes(tool.type);
   const isVideo = VIDEO_TYPES.includes(tool.type);
   const isAiMagic = AI_MAGIC_TYPES.includes(tool.type);
+  const isAiStudio = AI_STUDIO_TYPES.includes(tool.type);
 
   const uploadArea = document.getElementById('uploadArea');
   const canvasWrap = document.getElementById('canvasWrap');
@@ -162,6 +169,11 @@ function openTool(toolId) {
       uploadTitle.textContent = 'Tap to upload video';
     }
   } else if (isAiMagic) {
+    if (uploadArea) uploadArea.style.display = 'none';
+    if (canvasWrap) canvasWrap.style.display = 'block';
+    if (canvasContainer) canvasContainer.style.display = 'none';
+    if (actionBtns) actionBtns.style.display = 'none';
+  } else if (isAiStudio) {
     if (uploadArea) uploadArea.style.display = 'none';
     if (canvasWrap) canvasWrap.style.display = 'block';
     if (canvasContainer) canvasContainer.style.display = 'none';
@@ -377,6 +389,66 @@ async function applyAiMagic() {
   }
   await releaseWakeLock();
   isProcessing = false;
+}
+
+// ==================== AI STUDIO — TEXT TO IMAGE ====================
+async function generateAiImage() {
+  if (isProcessing) return;
+  const promptInput = document.getElementById('aiPromptInput');
+  if (!promptInput) { showToast('Input not found'); return; }
+  const prompt = promptInput.value.trim();
+  if (!prompt) { showToast('Enter prompt first'); return; }
+  
+  isProcessing = true;
+  await requestWakeLock();
+  showLoader('🎨 Generating AI image');
+  
+  try {
+    const res = await fetch(SERVER_URL + '/api/cf-image', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt: prompt })
+    });
+    
+    if (!res.ok) {
+      throw new Error('Server error: ' + res.status);
+    }
+    
+    const data = await res.json();
+    
+    if (!data.success || !data.result || !data.result.image) {
+      throw new Error('No image in response');
+    }
+    
+    currentAiImageResult = data.result.image;
+    
+    // Show preview
+    const preview = document.getElementById('aiResultImg');
+    if (preview) {
+      preview.src = 'data:image/png;base64,' + currentAiImageResult;
+      preview.style.display = 'block';
+    }
+    const resultBox = document.getElementById('aiResultBox');
+    if (resultBox) resultBox.style.display = 'block';
+    
+    hideLoader();
+    showToast('✅ Image generated!');
+  } catch (err) {
+    hideLoader();
+    console.error('❌', err);
+    showToast('Error: ' + err.message);
+  }
+  await releaseWakeLock();
+  isProcessing = false;
+}
+
+function downloadAiImage() {
+  if (!currentAiImageResult) { showToast('No image yet'); return; }
+  const a = document.createElement('a');
+  a.href = 'data:image/png;base64,' + currentAiImageResult;
+  a.download = 'picly-ai-' + Date.now() + '.png';
+  a.click();
+  showToast('✅ Downloaded!');
 }
 
 async function requestWakeLock() {
@@ -947,6 +1019,28 @@ function buildControls(type) {
           </button>
         </div>
       </div>`;
+  } else if (type === 'ai-text-image') {
+    c.innerHTML = `
+      <div class="control-label">Text to Image</div>
+      
+      <div style="padding:16px;background:linear-gradient(135deg, rgba(168,85,247,0.15), rgba(236,72,153,0.1));border:1.5px solid rgba(168,85,247,0.3);border-radius:18px;margin-bottom:16px;">
+        <label style="font-size:12px;color:#c0b0d8;font-weight:700;display:block;margin-bottom:8px;">PROMPT</label>
+        <input type="text" id="aiPromptInput" placeholder="a beautiful sunset over mountains" class="manual-input" style="width:100%;padding:14px;font-size:14px;margin-bottom:12px;">
+        <p style="font-size:11px;color:#aaff00;margin-bottom:12px;font-weight:700;">💡 Cloudflare FLUX · 5-15 sec · HD quality</p>
+        <button class="ctrl-btn primary" onclick="generateAiImage()" style="width:100%;padding:18px;font-size:15px;position:relative;">
+          <span style="position:relative;z-index:2;">✨ Generate Image</span>
+          <span style="position:absolute;top:6px;right:8px;font-size:8px;font-weight:900;letter-spacing:1px;background:linear-gradient(135deg,#aaff00,#00d4ff);color:#000;padding:2px 6px;border-radius:6px;">AI POWERED</span>
+        </button>
+      </div>
+      
+      <div id="aiResultBox" style="display:none;">
+        <div class="control-label">Result</div>
+        <img id="aiResultImg" style="width:100%;border-radius:18px;box-shadow:0 20px 40px rgba(168,85,247,0.4);margin-bottom:16px;">
+        <button class="ctrl-btn primary" onclick="downloadAiImage()" style="width:100%;padding:18px;font-size:15px;">
+          ⬇️ Download Image
+        </button>
+      </div>
+    `;
   } else if (type === 'ai-enhance' || type === 'ai-anime' || type === 'ai-restore' || type === 'ai-glow') {
     const magicType = type.replace('ai-', '');
     selectedAiMagic = magicType;
