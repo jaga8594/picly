@@ -65,6 +65,7 @@ let currentVideoFile = null;
 let currentVideoDuration = 0;
 let selectedCompressQuality = 'medium';
 let selectedEnhanceType = 'bright';
+let selectedResolution = '720';
 let wakeLock = null;
 let dotsInterval = null;
 let isProcessing = false;
@@ -292,6 +293,15 @@ function selectEnhanceType(t, btn) {
   btn.classList.add('active');
 }
 
+function selectResolution(res, btn) {
+  selectedResolution = res;
+  btn.parentElement.querySelectorAll('.ctrl-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  if (res === '2k') {
+    showToast('⚠️ 2K me 40-90 sec lagenge');
+  }
+}
+
 async function requestWakeLock() {
   try {
     if ('wakeLock' in navigator) {
@@ -326,7 +336,6 @@ function stopDotsAnimation() {
   dotsInterval = null;
 }
 
-// ==================== PREMIUM LOADER — REAL PROGRESS ====================
 function updateProgress(percent) {
   const circle = document.getElementById('progressCircle');
   const percentEl = document.getElementById('progressPercent');
@@ -407,7 +416,6 @@ function hideLoader() {
   }, 500);
 }
 
-// ==================== XHR UPLOAD WITH REAL PROGRESS ====================
 function uploadWithProgress(url, formData, onProgress) {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
@@ -458,7 +466,6 @@ function uploadWithProgress(url, formData, onProgress) {
   });
 }
 
-// ==================== VIDEO FUNCTIONS ====================
 async function trimVideo() {
   if (isProcessing) return;
   if (!currentVideoFile) { showToast('Upload video first'); return; }
@@ -580,18 +587,28 @@ async function videoToGif() {
   isProcessing = false;
 }
 
-async function getFFmpeg() { return null; }
-
 async function enhanceVideo() {
   if (isProcessing) return;
   if (!currentVideoFile) { showToast('Upload video first'); return; }
   isProcessing = true;
   await requestWakeLock();
+  
+  if (selectedResolution === '2k') {
+    showToast('⚠️ 2K me 40-90 sec lag sakte hain');
+  }
+  if (selectedEnhanceType === 'stabilize') {
+    showToast('🎬 Stabilizing — 30-60 sec lagenge');
+  }
+  if (selectedEnhanceType === 'upscale2k') {
+    showToast('⚡ 2K Upscale — 40-90 sec lagenge');
+  }
+  
   showLoader('✨ Enhancing your video');
   try {
     const formData = new FormData();
     formData.append('video', currentVideoFile);
     formData.append('type', selectedEnhanceType);
+    formData.append('resolution', selectedResolution);
     
     const blob = await uploadWithProgress(SERVER_URL + '/api/enhance', formData, updateProgress);
     
@@ -609,6 +626,8 @@ async function enhanceVideo() {
   await releaseWakeLock();
   isProcessing = false;
 }
+
+async function getFFmpeg() { return null; }
 
 function buildControls(type) {
   const c = document.getElementById('dynamicControls');
@@ -809,10 +828,47 @@ function buildControls(type) {
   } else if (type === 'video-enhance') {
     c.innerHTML = `<div id="videoPendingMsg"><div class="control-label">Video Enhance</div><p style="font-size:13px;color:#b0a0c8;text-align:center;padding:40px 20px;">📹 Video upload karo enhance karne ke liye</p></div>
       <div id="videoActiveUI" style="display:none">
+      
+        <div class="control-label">Resolution</div>
+        <div style="padding:16px;background:linear-gradient(135deg, rgba(168,85,247,0.15), rgba(236,72,153,0.1));border:1.5px solid rgba(168,85,247,0.3);border-radius:18px;margin-bottom:16px;">
+          <div class="control-row">
+            <button class="ctrl-btn" onclick="selectResolution('480',this)">480p</button>
+            <button class="ctrl-btn active" onclick="selectResolution('720',this)">720p HD</button>
+            <button class="ctrl-btn" onclick="selectResolution('1080',this)">1080p FHD</button>
+            <button class="ctrl-btn" onclick="selectResolution('2k',this)">2K QHD</button>
+          </div>
+        </div>
+        
         <div class="control-label">Enhance Type</div>
         <div style="padding:16px;background:linear-gradient(135deg, rgba(168,85,247,0.15), rgba(236,72,153,0.1));border:1.5px solid rgba(168,85,247,0.3);border-radius:18px;margin-bottom:16px;">
-          <div class="control-row"><button class="ctrl-btn" onclick="selectEnhanceType('sharpen',this)">🔍 Sharpen</button><button class="ctrl-btn" onclick="selectEnhanceType('denoise',this)">🧹 Denoise</button><button class="ctrl-btn active" onclick="selectEnhanceType('bright',this)">☀️ Brighten</button><button class="ctrl-btn" onclick="selectEnhanceType('contrast',this)">🎨 Contrast</button></div>
+          
+          <div style="font-size:11px;color:#a99bc4;margin-bottom:8px;font-weight:700;">BASIC</div>
+          <div class="control-row" style="margin-bottom:12px;">
+            <button class="ctrl-btn" onclick="selectEnhanceType('sharpen',this)">🔍 Sharpen</button>
+            <button class="ctrl-btn" onclick="selectEnhanceType('denoise',this)">🧹 Denoise</button>
+            <button class="ctrl-btn active" onclick="selectEnhanceType('bright',this)">☀️ Brighten</button>
+            <button class="ctrl-btn" onclick="selectEnhanceType('contrast',this)">🎨 Contrast</button>
+          </div>
+          
+          <div style="font-size:11px;color:#a99bc4;margin-bottom:8px;font-weight:700;">STYLE</div>
+          <div class="control-row" style="margin-bottom:12px;">
+            <button class="ctrl-btn" onclick="selectEnhanceType('autocolor',this)">🎨 Auto Color</button>
+            <button class="ctrl-btn" onclick="selectEnhanceType('cinematic',this)">🌟 Cinematic</button>
+            <button class="ctrl-btn" onclick="selectEnhanceType('vivid',this)">🌈 Vivid</button>
+            <button class="ctrl-btn" onclick="selectEnhanceType('warm',this)">🌅 Warm</button>
+            <button class="ctrl-btn" onclick="selectEnhanceType('cool',this)">❄️ Cool</button>
+            <button class="ctrl-btn" onclick="selectEnhanceType('vintage',this)">🎞️ Vintage</button>
+            <button class="ctrl-btn" onclick="selectEnhanceType('bw',this)">⚫ B&W</button>
+          </div>
+          
+          <div style="font-size:11px;color:#a99bc4;margin-bottom:8px;font-weight:700;">ADVANCED</div>
+          <div class="control-row">
+            <button class="ctrl-btn" onclick="selectEnhanceType('upscale2k',this)">⚡ 2K Upscale</button>
+            <button class="ctrl-btn" onclick="selectEnhanceType('stabilize',this)">🎬 Stabilize</button>
+          </div>
+          
         </div>
+        
         <div class="control-row" style="position:relative;">
           <button class="ctrl-btn primary" onclick="enhanceVideo()" style="width:100%;padding:18px;font-size:15px;letter-spacing:0.5px;position:relative;overflow:hidden;">
             <span style="position:relative;z-index:2;">✨ Enhance & Download</span>
