@@ -28,12 +28,11 @@ const categories = {
     { id:'video-mp3', name:'Video to MP3', desc:'Extract audio', type:'video-mp3', img:'https://images.unsplash.com/photo-1614064641938-3bbee52942c7?w=100&q=80' },
     { id:'video-enhance', name:'Video Enhance', desc:'Sharpen', type:'video-enhance', img:'https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?w=100&q=80' }
   ]},
-  aimagic: { name:'AI Magic', desc:'AI-powered — coming soon', tools:[
-    { id:'enhance-ai', name:'AI Photo Enhance', desc:'Blurry → HD', type:'info', img:'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=100&q=80' },
-    { id:'bgremove', name:'Background Remove', desc:'1 tap BG remove', type:'info', img:'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=100&q=80' },
-    { id:'restore', name:'Old Photo Restore', desc:'Color + HD', type:'info', img:'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=100&q=80' },
-    { id:'anime', name:'Anime Cartoon', desc:'Photo → anime', type:'info', img:'https://images.unsplash.com/photo-1578632767115-351597cf2477?w=100&q=80' },
-    { id:'faceswap', name:'Face Swap', desc:'Swap faces', type:'info', img:'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=100&q=80' }
+  aimagic: { name:'AI Magic', desc:'Free photo effects · No API needed', tools:[
+    { id:'ai-enhance', name:'Photo Enhance', desc:'Sharper · Brighter · HD', type:'ai-enhance', img:'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=100&q=80' },
+    { id:'ai-anime', name:'Anime Cartoon', desc:'Photo → anime style', type:'ai-anime', img:'https://images.unsplash.com/photo-1578632767115-351597cf2477?w=100&q=80' },
+    { id:'ai-restore', name:'Old Photo Restore', desc:'Vintage · Color boost', type:'ai-restore', img:'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=100&q=80' },
+    { id:'ai-glow', name:'Glow Effect', desc:'Dreamy soft glow', type:'ai-glow', img:'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&q=80' }
   ]},
   utility: { name:'Utility', desc:'Calculators · QR', tools:[
     { id:'emi', name:'EMI Calculator', desc:'Loan EMI monthly', type:'emi', img:'https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=100&q=80' },
@@ -66,12 +65,15 @@ let currentVideoDuration = 0;
 let selectedCompressQuality = 'medium';
 let selectedEnhanceType = 'bright';
 let selectedResolution = '1080';
+let selectedAiMagic = 'enhance';
+let currentAiImage = null;
 let wakeLock = null;
 let dotsInterval = null;
 let isProcessing = false;
 
 const CALCULATOR_TYPES = ['emi','gst','age','bmi','unit','qr'];
 const VIDEO_TYPES = ['video-trim','video-compress','video-gif','video-mp3','video-enhance'];
+const AI_MAGIC_TYPES = ['ai-enhance','ai-anime','ai-restore','ai-glow'];
 
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
@@ -124,6 +126,7 @@ function openTool(toolId) {
   collagePhotos = [];
   currentVideoFile = null;
   currentVideoDuration = 0;
+  currentAiImage = null;
   
   document.getElementById('editorTitle').textContent = tool.name;
   const ol = document.getElementById('overlayLayer');
@@ -133,6 +136,7 @@ function openTool(toolId) {
 
   const isCalculator = CALCULATOR_TYPES.includes(tool.type);
   const isVideo = VIDEO_TYPES.includes(tool.type);
+  const isAiMagic = AI_MAGIC_TYPES.includes(tool.type);
 
   const uploadArea = document.getElementById('uploadArea');
   const canvasWrap = document.getElementById('canvasWrap');
@@ -153,10 +157,15 @@ function openTool(toolId) {
     const uploadInput = document.getElementById('modalUpload');
     const uploadTitle = document.getElementById('uploadTitle');
     if (uploadHint && uploadInput && uploadTitle) {
-      uploadHint.textContent = 'MP4, MOV, WEBM — max 100MB';
+      uploadHint.textContent = 'MP4, MOV, WEBM — max 50MB';
       uploadInput.setAttribute('accept', 'video/*');
       uploadTitle.textContent = 'Tap to upload video';
     }
+  } else if (isAiMagic) {
+    if (uploadArea) uploadArea.style.display = 'none';
+    if (canvasWrap) canvasWrap.style.display = 'block';
+    if (canvasContainer) canvasContainer.style.display = 'none';
+    if (actionBtns) actionBtns.style.display = 'none';
   } else {
     if (uploadArea) uploadArea.style.display = 'block';
     if (canvasWrap) canvasWrap.style.display = 'none';
@@ -301,6 +310,75 @@ function selectResolution(res, btn) {
   if (res === '1080') showToast('🎬 1080p FHD — 15-30 sec lagenge');
 }
 
+function selectAiMagic(type, btn) {
+  selectedAiMagic = type;
+  btn.parentElement.querySelectorAll('.ctrl-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const hints = {
+    enhance: '✨ Sharper, brighter, better colors',
+    anime:   '🎭 Cartoon-style edges',
+    restore: '🎨 Old photo vintage look',
+    glow:    '🌟 Soft dreamy glow'
+  };
+  const hint = document.getElementById('aiMagicHint');
+  if (hint) hint.textContent = hints[type] || '';
+}
+
+function loadAiImage(input) {
+  const file = input.files ? input.files[0] : input;
+  if (!file) return;
+  if (!file.type.startsWith('image/')) {
+    showToast('Please upload an image');
+    return;
+  }
+  currentAiImage = file;
+  
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const preview = document.getElementById('aiImagePreview');
+    if (preview) {
+      preview.src = e.target.result;
+      preview.style.display = 'block';
+    }
+    const uploadArea = document.getElementById('aiUploadArea');
+    if (uploadArea) uploadArea.style.display = 'none';
+    const pending = document.getElementById('aiPendingMsg');
+    if (pending) pending.style.display = 'none';
+    const activeUI = document.getElementById('aiActiveUI');
+    if (activeUI) activeUI.style.display = 'block';
+    showToast('Image loaded ✨');
+  };
+  reader.readAsDataURL(file);
+}
+
+async function applyAiMagic() {
+  if (isProcessing) return;
+  if (!currentAiImage) { showToast('Upload image first'); return; }
+  isProcessing = true;
+  await requestWakeLock();
+  showLoader('🎨 Applying AI Magic');
+  try {
+    const formData = new FormData();
+    formData.append('image', currentAiImage);
+    formData.append('type', selectedAiMagic);
+    
+    const blob = await uploadWithProgress(SERVER_URL + '/api/ai-magic', formData, updateProgress);
+    
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `picly-${selectedAiMagic}-${Date.now()}.jpg`;
+    a.click();
+    hideLoader();
+    showToast('✅ Done! ' + (blob.size/1024).toFixed(0) + ' KB');
+  } catch (err) {
+    hideLoader();
+    console.error('❌', err);
+    showToast('Error: ' + err.message);
+  }
+  await releaseWakeLock();
+  isProcessing = false;
+}
+
 async function requestWakeLock() {
   try {
     if ('wakeLock' in navigator) {
@@ -344,7 +422,7 @@ function updateProgress(percent) {
   if (percentEl) percentEl.textContent = Math.floor(p) + '%';
   if (stageEl) {
     if (p < 40) stageEl.textContent = '📤 Uploading to server';
-    else if (p < 90) stageEl.textContent = '⚡ Enhancing with AI';
+    else if (p < 90) stageEl.textContent = '⚡ Processing with AI';
     else if (p < 100) stageEl.textContent = '📥 Downloading result';
     else stageEl.textContent = '✨ Complete';
   }
@@ -592,12 +670,8 @@ async function enhanceVideo() {
   isProcessing = true;
   await requestWakeLock();
   
-  if (selectedResolution === '2k') {
-    showToast('⚡ 2K HD — 30-60 sec lagenge');
-  }
-  if (selectedEnhanceType === 'stabilize') {
-    showToast('🎬 Stabilizing — 30-60 sec lagenge');
-  }
+  if (selectedResolution === '2k') showToast('⚡ 2K HD — 30-60 sec lagenge');
+  if (selectedEnhanceType === 'stabilize') showToast('🎬 Stabilizing — 30-60 sec lagenge');
   
   showLoader('✨ Enhancing your video');
   try {
@@ -873,6 +947,42 @@ function buildControls(type) {
           </button>
         </div>
       </div>`;
+  } else if (type === 'ai-enhance' || type === 'ai-anime' || type === 'ai-restore' || type === 'ai-glow') {
+    const magicType = type.replace('ai-', '');
+    selectedAiMagic = magicType;
+    c.innerHTML = `
+      <div id="aiPendingMsg">
+        <div class="control-label">${magicType === 'enhance' ? '✨ Photo Enhance' : magicType === 'anime' ? '🎭 Anime Cartoon' : magicType === 'restore' ? '🎨 Old Photo Restore' : '🌟 Glow Effect'}</div>
+        <div class="upload-area" id="aiUploadArea" onclick="document.getElementById('aiUploadInput').click()" style="padding:60px 24px;margin-top:16px;">
+          <input type="file" id="aiUploadInput" accept="image/*" onchange="loadAiImage(this)" style="display:none;">
+          <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          <p>Tap to upload photo</p>
+          <span>JPG, PNG, WEBP — max 10MB</span>
+        </div>
+      </div>
+      
+      <div id="aiActiveUI" style="display:none">
+        <img id="aiImagePreview" style="width:100%;max-height:300px;object-fit:contain;border-radius:18px;margin-bottom:16px;box-shadow:0 20px 40px rgba(168,85,247,0.3);">
+        
+        <div class="control-label">Effect Type</div>
+        <div style="padding:16px;background:linear-gradient(135deg, rgba(168,85,247,0.15), rgba(236,72,153,0.1));border:1.5px solid rgba(168,85,247,0.3);border-radius:18px;margin-bottom:16px;">
+          <div class="control-row">
+            <button class="ctrl-btn ${magicType === 'enhance' ? 'active' : ''}" onclick="selectAiMagic('enhance',this)">✨ Enhance</button>
+            <button class="ctrl-btn ${magicType === 'anime' ? 'active' : ''}" onclick="selectAiMagic('anime',this)">🎭 Anime</button>
+            <button class="ctrl-btn ${magicType === 'restore' ? 'active' : ''}" onclick="selectAiMagic('restore',this)">🎨 Restore</button>
+            <button class="ctrl-btn ${magicType === 'glow' ? 'active' : ''}" onclick="selectAiMagic('glow',this)">🌟 Glow</button>
+          </div>
+          <p id="aiMagicHint" style="font-size:11px;color:#aaff00;margin-top:10px;font-weight:700;letter-spacing:0.3px;"></p>
+        </div>
+        
+        <div class="control-row" style="position:relative;">
+          <button class="ctrl-btn primary" onclick="applyAiMagic()" style="width:100%;padding:18px;font-size:15px;letter-spacing:0.5px;position:relative;overflow:hidden;">
+            <span style="position:relative;z-index:2;">🎨 Apply AI Magic</span>
+            <span style="position:absolute;top:6px;right:8px;font-size:8px;font-weight:900;letter-spacing:1px;background:linear-gradient(135deg,#aaff00,#00d4ff);color:#000;padding:2px 6px;border-radius:6px;z-index:2;">FAST & PREMIUM</span>
+          </button>
+        </div>
+      </div>
+    `;
   } else {
     c.innerHTML = `<div class="control-label">Coming Soon</div><p style="font-size:13px;color:#888;padding:12px 0;">Under development.</p>`;
   }
