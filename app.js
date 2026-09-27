@@ -361,18 +361,46 @@ function hideLoader() {
   if (el) el.style.display = 'none';
 }
 
-async function trimVideo() {
+async function trimVideo(mode = 'fast') {
   if (!currentVideoFile) { showToast('Upload video first'); return; }
   const s = parseFloat(document.getElementById('trimStartSlider').value);
   const e = parseFloat(document.getElementById('trimEndSlider').value);
   if (e <= s) { showToast('Invalid range'); return; }
-  showLoader('✂️ Cutting your video...');
+  
+  if (mode === 'fast') {
+    showLoader('⚡ Fast cutting...');
+  } else {
+    showLoader('✨ Quality trim ho rahi hai... (1-2 min)');
+  }
+  
   await requestWakeLock();
   try {
     const ffmpeg = await getFFmpeg();
     const { fetchFile } = FFmpegUtil;
     await ffmpeg.writeFile('input.mp4', await fetchFile(currentVideoFile));
-    await ffmpeg.exec(['-i','input.mp4','-ss',String(s),'-t',String(e-s),'-c:v','libx264','-c:a','aac','-preset','fast','-crf','23','output.mp4']);
+    
+    if (mode === 'fast') {
+      await ffmpeg.exec([
+        '-i','input.mp4',
+        '-ss',String(s),
+        '-t',String(e-s),
+        '-c','copy',
+        '-movflags','+faststart',
+        'output.mp4'
+      ]);
+    } else {
+      await ffmpeg.exec([
+        '-i','input.mp4',
+        '-ss',String(s),
+        '-t',String(e-s),
+        '-c:v','libx264',
+        '-c:a','aac',
+        '-preset','fast',
+        '-crf','23',
+        'output.mp4'
+      ]);
+    }
+    
     const data = await ffmpeg.readFile('output.mp4');
     const blob = new Blob([data.buffer], { type: 'video/mp4' });
     const a = document.createElement('a');
@@ -380,7 +408,7 @@ async function trimVideo() {
     a.download = 'picly-trimmed-' + Date.now() + '.mp4';
     a.click();
     hideLoader();
-    showToast('✅ Video ready!');
+    showToast(mode === 'fast' ? '✅ Video ready (fast)!' : '✅ Video ready (quality)!');
   } catch (err) { hideLoader(); console.error(err); showToast('Error: ' + err.message); }
   await releaseWakeLock();
 }
@@ -622,7 +650,11 @@ async function enhanceVideo() {
             <span>Duration: <b id="trimDuration" style="color:#fff">0.0s</b></span><span>Size: <b id="trimSize" style="color:#fff">0MB</b></span>
           </div>
         </div>
-        <div class="control-row"><button class="ctrl-btn primary" onclick="trimVideo()">✂️ Trim & Download</button></div>
+        <div class="control-row">
+          <button class="ctrl-btn primary" onclick="trimVideo('fast')" style="flex:1;">⚡ Fast Trim</button>
+          <button class="ctrl-btn" onclick="trimVideo('quality')" style="flex:1;">✨ Quality Trim</button>
+        </div>
+        <p style="font-size:11px;color:#a99bc4;margin-top:12px;line-height:1.5;">⚡ Fast — 3-5 sec (quick, kuch players mein issue)<br>✨ Quality — 1-2 min (guaranteed play, re-encode)</p>
       </div>`;
   } else if (type === 'video-compress') {
     c.innerHTML = `<div id="videoPendingMsg"><div class="control-label">Video Compress</div><p style="font-size:13px;color:#b0a0c8;text-align:center;padding:40px 20px;">📹 Video upload karo compress karne ke liye</p></div>
