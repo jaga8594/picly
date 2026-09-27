@@ -318,7 +318,6 @@ async function getFFmpeg() {
   
   const R2_URL = 'https://pub-64e5babc43fc4b14b6a7ba94e61796db.r2.dev';
   
-  // Progress — throttled 200ms (PC + Mobile friendly)
   ffmpeg.on('progress', ({ progress }) => {
     const now = Date.now();
     if (now - lastProgressUpdate < 200) return;
@@ -329,11 +328,6 @@ async function getFFmpeg() {
     if (percent > 100) percent = 99;
     const msg = document.getElementById('videoLoaderMsg');
     if (msg) msg.textContent = `Processing... ${percent}%`;
-  });
-  
-  // Debug log
-  ffmpeg.on('log', ({ message }) => {
-    console.log('[FFmpeg]', message);
   });
   
   await ffmpeg.load({
@@ -374,7 +368,6 @@ function hideLoader() {
   if (el) el.style.display = 'none';
 }
 
-// ========== TRIM — Fast & Quality ==========
 async function trimVideo(mode = 'fast') {
   if (!currentVideoFile) { showToast('Upload video first'); return; }
   const s = parseFloat(document.getElementById('trimStartSlider').value);
@@ -391,9 +384,9 @@ async function trimVideo(mode = 'fast') {
   
   const timeoutId = setTimeout(() => {
     hideLoader();
-    showToast('⚠️ Timeout — video format issue. Chhota video try karo.');
+    showToast('⚠️ Timeout — video bahut heavy hai. Fast mode try karo.');
     releaseWakeLock();
-  }, 180000);
+  }, 240000);
   
   try {
     const ffmpeg = await getFFmpeg();
@@ -415,10 +408,12 @@ async function trimVideo(mode = 'fast') {
         '-i','input.mp4',
         '-ss',String(s),
         '-t',String(e-s),
+        '-vf','scale=1080:-2',
         '-c:v','libx264',
+        '-preset','ultrafast',
+        '-crf','26',
         '-c:a','aac',
-        '-preset','fast',
-        '-crf','23',
+        '-b:a','128k',
         '-movflags','+faststart',
         'output.mp4'
       ]);
@@ -433,7 +428,7 @@ async function trimVideo(mode = 'fast') {
     a.download = 'picly-trimmed-' + Date.now() + '.mp4';
     a.click();
     hideLoader();
-    showToast(mode === 'fast' ? '✅ Video ready (fast)!' : '✅ Video ready (quality)!');
+    showToast(mode === 'fast' ? '✅ Fast ready!' : '✅ Quality ready!');
   } catch (err) {
     clearTimeout(timeoutId);
     hideLoader();
@@ -454,13 +449,13 @@ async function compressVideo() {
     hideLoader();
     showToast('⚠️ Timeout — video format issue.');
     releaseWakeLock();
-  }, 180000);
+  }, 240000);
   
   try {
     const ffmpeg = await getFFmpeg();
     const { fetchFile } = FFmpegUtil;
     await ffmpeg.writeFile('input.mp4', await fetchFile(currentVideoFile));
-    await ffmpeg.exec(['-i','input.mp4','-vcodec','libx264','-crf',crf,'-preset','fast','output.mp4']);
+    await ffmpeg.exec(['-i','input.mp4','-vf','scale=720:-2','-vcodec','libx264','-crf',crf,'-preset','ultrafast','output.mp4']);
     clearTimeout(timeoutId);
     const data = await ffmpeg.readFile('output.mp4');
     const blob = new Blob([data.buffer], { type: 'video/mp4' });
@@ -490,7 +485,7 @@ async function extractMp3() {
     hideLoader();
     showToast('⚠️ Timeout — video format issue.');
     releaseWakeLock();
-  }, 180000);
+  }, 240000);
   
   try {
     const ffmpeg = await getFFmpeg();
@@ -527,7 +522,7 @@ async function videoToGif() {
     hideLoader();
     showToast('⚠️ Timeout — video format issue.');
     releaseWakeLock();
-  }, 180000);
+  }, 240000);
   
   try {
     const ffmpeg = await getFFmpeg();
@@ -566,13 +561,13 @@ async function enhanceVideo() {
     hideLoader();
     showToast('⚠️ Timeout — video format issue.');
     releaseWakeLock();
-  }, 180000);
+  }, 240000);
   
   try {
     const ffmpeg = await getFFmpeg();
     const { fetchFile } = FFmpegUtil;
     await ffmpeg.writeFile('input.mp4', await fetchFile(currentVideoFile));
-    await ffmpeg.exec(['-i','input.mp4','-vf',filter,'-c:a','copy','output.mp4']);
+    await ffmpeg.exec(['-i','input.mp4','-vf',filter+',scale=1080:-2','-c:a','copy','output.mp4']);
     clearTimeout(timeoutId);
     const data = await ffmpeg.readFile('output.mp4');
     const blob = new Blob([data.buffer], { type: 'video/mp4' });
@@ -732,11 +727,14 @@ async function enhanceVideo() {
             <span>Duration: <b id="trimDuration" style="color:#fff">0.0s</b></span><span>Size: <b id="trimSize" style="color:#fff">0MB</b></span>
           </div>
         </div>
-        <div class="control-row">
-          <button class="ctrl-btn primary" onclick="trimVideo('fast')" style="flex:1;">⚡ Fast Trim</button>
-          <button class="ctrl-btn" onclick="trimVideo('quality')" style="flex:1;">✨ Quality Trim</button>
+        <div class="control-row" style="flex-direction:column;gap:10px;">
+          <button class="ctrl-btn primary" onclick="trimVideo('fast')" style="width:100%;">⚡ Fast (3-5 sec)</button>
+          <button class="ctrl-btn primary" onclick="trimVideo('quality')" style="width:100%;">✨ Quality 1080p (1-2 min)</button>
         </div>
-        <p style="font-size:11px;color:#a99bc4;margin-top:12px;line-height:1.5;">⚡ Fast — 3-5 sec (quick, kuch players mein issue)<br>✨ Quality — 1-2 min (guaranteed play, re-encode)</p>
+        <p style="font-size:11px;color:#a99bc4;margin-top:12px;line-height:1.6;">
+          ⚡ <b>Fast</b> — direct copy, instant, kuch devices pe playback issue<br>
+          ✨ <b>Quality</b> — 1080p re-encode, guaranteed playable, sab jagah chalta hai
+        </p>
       </div>`;
   } else if (type === 'video-compress') {
     c.innerHTML = `<div id="videoPendingMsg"><div class="control-label">Video Compress</div><p style="font-size:13px;color:#b0a0c8;text-align:center;padding:40px 20px;">📹 Video upload karo compress karne ke liye</p></div>
