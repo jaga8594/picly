@@ -288,16 +288,15 @@ function selectEnhanceType(t, btn) {
   btn.classList.add('active');
 }
 
+// ==================== FFMPEG 0.11.6 (SINGLE THREADED) ====================
 async function getFFmpeg() {
-  if (ffmpegInstance) return ffmpegInstance;
-  const { FFmpeg } = FFmpegWASM;
-  const { toBlobURL } = FFmpegUtil;
-  const ffmpeg = new FFmpeg();
-  const baseURL = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd';
-  await ffmpeg.load({
-    coreURL: await toBlobURL(baseURL + '/ffmpeg-core.js', 'text/javascript'),
-    wasmURL: await toBlobURL(baseURL + '/ffmpeg-core.wasm', 'application/wasm')
+  if (ffmpegInstance && ffmpegInstance.isLoaded()) return ffmpegInstance;
+  const { createFFmpeg } = FFmpeg;
+  const ffmpeg = createFFmpeg({
+    log: false,
+    corePath: 'ffmpeg-core.js'
   });
+  await ffmpeg.load();
   ffmpegInstance = ffmpeg;
   return ffmpeg;
 }
@@ -334,11 +333,11 @@ async function trimVideo() {
   showLoader('FFmpeg load ho raha hai... (pehli baar 20-30 sec)');
   try {
     const ffmpeg = await getFFmpeg();
-    const { fetchFile } = FFmpegUtil;
+    const { fetchFile } = FFmpeg;
     showLoader('Video trim ho rahi hai...');
-    await ffmpeg.writeFile('input.mp4', await fetchFile(currentVideoFile));
-    await ffmpeg.exec(['-i','input.mp4','-ss',String(s),'-t',String(e-s),'-c','copy','output.mp4']);
-    const data = await ffmpeg.readFile('output.mp4');
+    ffmpeg.FS('writeFile', 'input.mp4', await fetchFile(currentVideoFile));
+    await ffmpeg.run('-i','input.mp4','-ss',String(s),'-t',String(e-s),'-c','copy','output.mp4');
+    const data = ffmpeg.FS('readFile', 'output.mp4');
     const blob = new Blob([data.buffer], { type: 'video/mp4' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
@@ -356,11 +355,11 @@ async function compressVideo() {
   showLoader('FFmpeg load ho raha hai...');
   try {
     const ffmpeg = await getFFmpeg();
-    const { fetchFile } = FFmpegUtil;
+    const { fetchFile } = FFmpeg;
     showLoader('Video compress ho rahi hai...');
-    await ffmpeg.writeFile('input.mp4', await fetchFile(currentVideoFile));
-    await ffmpeg.exec(['-i','input.mp4','-vcodec','libx264','-crf',crf,'-preset','fast','output.mp4']);
-    const data = await ffmpeg.readFile('output.mp4');
+    ffmpeg.FS('writeFile', 'input.mp4', await fetchFile(currentVideoFile));
+    await ffmpeg.run('-i','input.mp4','-vcodec','libx264','-crf',crf,'-preset','fast','output.mp4');
+    const data = ffmpeg.FS('readFile', 'output.mp4');
     const blob = new Blob([data.buffer], { type: 'video/mp4' });
     const ns = (blob.size/1024/1024).toFixed(2);
     const os = (currentVideoFile.size/1024/1024).toFixed(2);
@@ -378,11 +377,11 @@ async function extractMp3() {
   showLoader('FFmpeg load ho raha hai...');
   try {
     const ffmpeg = await getFFmpeg();
-    const { fetchFile } = FFmpegUtil;
+    const { fetchFile } = FFmpeg;
     showLoader('Audio extract ho raha hai...');
-    await ffmpeg.writeFile('input.mp4', await fetchFile(currentVideoFile));
-    await ffmpeg.exec(['-i','input.mp4','-vn','-acodec','libmp3lame','-q:a','2','output.mp3']);
-    const data = await ffmpeg.readFile('output.mp3');
+    ffmpeg.FS('writeFile', 'input.mp4', await fetchFile(currentVideoFile));
+    await ffmpeg.run('-i','input.mp4','-vn','-acodec','libmp3lame','-q:a','2','output.mp3');
+    const data = ffmpeg.FS('readFile', 'output.mp3');
     const blob = new Blob([data.buffer], { type: 'audio/mp3' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
@@ -401,11 +400,11 @@ async function videoToGif() {
   showLoader('FFmpeg load ho raha hai...');
   try {
     const ffmpeg = await getFFmpeg();
-    const { fetchFile } = FFmpegUtil;
+    const { fetchFile } = FFmpeg;
     showLoader('GIF ban raha hai...');
-    await ffmpeg.writeFile('input.mp4', await fetchFile(currentVideoFile));
-    await ffmpeg.exec(['-i','input.mp4','-ss',String(s),'-t',String(d),'-vf','fps='+f+',scale=480:-1:flags=lanczos','output.gif']);
-    const data = await ffmpeg.readFile('output.gif');
+    ffmpeg.FS('writeFile', 'input.mp4', await fetchFile(currentVideoFile));
+    await ffmpeg.run('-i','input.mp4','-ss',String(s),'-t',String(d),'-vf','fps='+f+',scale=480:-1:flags=lanczos','output.gif');
+    const data = ffmpeg.FS('readFile', 'output.gif');
     const blob = new Blob([data.buffer], { type: 'image/gif' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
@@ -426,11 +425,11 @@ async function enhanceVideo() {
   showLoader('FFmpeg load ho raha hai...');
   try {
     const ffmpeg = await getFFmpeg();
-    const { fetchFile } = FFmpegUtil;
+    const { fetchFile } = FFmpeg;
     showLoader('Video enhance ho rahi hai...');
-    await ffmpeg.writeFile('input.mp4', await fetchFile(currentVideoFile));
-    await ffmpeg.exec(['-i','input.mp4','-vf',filter,'-c:a','copy','output.mp4']);
-    const data = await ffmpeg.readFile('output.mp4');
+    ffmpeg.FS('writeFile', 'input.mp4', await fetchFile(currentVideoFile));
+    await ffmpeg.run('-i','input.mp4','-vf',filter,'-c:a','copy','output.mp4');
+    const data = ffmpeg.FS('readFile', 'output.mp4');
     const blob = new Blob([data.buffer], { type: 'video/mp4' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
@@ -566,92 +565,61 @@ async function enhanceVideo() {
       <div class="control-label">Photos</div><div class="manual-row"><input type="file" id="collageUpload" accept="image/*" multiple onchange="addCollagePhoto(this)" class="manual-input"></div>
       <div class="control-row"><button class="ctrl-btn primary" onclick="buildCollage()">Build Collage</button></div>
       <div id="collageStatus" style="font-size:12px;color:#a99bc4;margin-top:12px;"></div>`;
-  }
-  // ==================== VIDEO TOOLS ====================
-  else if (type === 'video-trim') {
-    c.innerHTML = `
-      <div id="videoPendingMsg"><div class="control-label">Video Trimmer</div><p style="font-size:13px;color:#b0a0c8;text-align:center;padding:40px 20px;">📹 Video upload karo trim karne ke liye</p></div>
+  } else if (type === 'video-trim') {
+    c.innerHTML = `<div id="videoPendingMsg"><div class="control-label">Video Trimmer</div><p style="font-size:13px;color:#b0a0c8;text-align:center;padding:40px 20px;">📹 Video upload karo trim karne ke liye</p></div>
       <div id="videoActiveUI" style="display:none">
         <div class="control-label">Trim Range</div>
         <div style="padding:16px;background:linear-gradient(135deg, rgba(168,85,247,0.15), rgba(236,72,153,0.1));border:1.5px solid rgba(168,85,247,0.3);border-radius:18px;margin-bottom:16px;">
           <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:800;color:#c0b0d8;margin-bottom:8px;font-family:monospace;">
-            <span>START: <b id="trimStartLabel" style="color:#ff0080">0.0s</b></span>
-            <span>END: <b id="trimEndLabel" style="color:#a855f7">0.0s</b></span>
+            <span>START: <b id="trimStartLabel" style="color:#ff0080">0.0s</b></span><span>END: <b id="trimEndLabel" style="color:#a855f7">0.0s</b></span>
           </div>
           <div style="font-size:11px;color:#a99bc4;margin-bottom:4px;font-weight:700;">START TIME</div>
           <input type="range" id="trimStartSlider" min="0" max="100" step="0.1" value="0" style="width:100%;margin-bottom:12px;accent-color:#ff0080;">
           <div style="font-size:11px;color:#a99bc4;margin-bottom:4px;font-weight:700;">END TIME</div>
           <input type="range" id="trimEndSlider" min="0" max="100" step="0.1" value="100" style="width:100%;accent-color:#a855f7;">
           <div style="display:flex;justify-content:space-between;font-size:12px;color:#a99bc4;margin-top:12px;">
-            <span>Duration: <b id="trimDuration" style="color:#fff">0.0s</b></span>
-            <span>Size: <b id="trimSize" style="color:#fff">0MB</b></span>
+            <span>Duration: <b id="trimDuration" style="color:#fff">0.0s</b></span><span>Size: <b id="trimSize" style="color:#fff">0MB</b></span>
           </div>
         </div>
         <div class="control-row"><button class="ctrl-btn primary" onclick="trimVideo()">✂️ Trim & Download</button></div>
       </div>`;
   } else if (type === 'video-compress') {
-    c.innerHTML = `
-      <div id="videoPendingMsg"><div class="control-label">Video Compress</div><p style="font-size:13px;color:#b0a0c8;text-align:center;padding:40px 20px;">📹 Video upload karo compress karne ke liye</p></div>
+    c.innerHTML = `<div id="videoPendingMsg"><div class="control-label">Video Compress</div><p style="font-size:13px;color:#b0a0c8;text-align:center;padding:40px 20px;">📹 Video upload karo compress karne ke liye</p></div>
       <div id="videoActiveUI" style="display:none">
         <div class="control-label">Compression Level</div>
         <div style="padding:16px;background:linear-gradient(135deg, rgba(168,85,247,0.15), rgba(236,72,153,0.1));border:1.5px solid rgba(168,85,247,0.3);border-radius:18px;margin-bottom:16px;">
-          <div style="display:flex;justify-content:space-between;font-size:12px;color:#a99bc4;margin-bottom:12px;">
-            <span>Original: <b id="compressOrigSize" style="color:#fff">0MB</b></span>
-            <span>Duration: <b id="compressDuration" style="color:#fff">0.0s</b></span>
-          </div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;color:#a99bc4;margin-bottom:12px;"><span>Original: <b id="compressOrigSize" style="color:#fff">0MB</b></span><span>Duration: <b id="compressDuration" style="color:#fff">0.0s</b></span></div>
           <div class="control-label">Quality</div>
-          <div class="control-row">
-            <button class="ctrl-btn" onclick="selectCompressQuality('high',this)">High</button>
-            <button class="ctrl-btn active" onclick="selectCompressQuality('medium',this)">Medium</button>
-            <button class="ctrl-btn" onclick="selectCompressQuality('low',this)">Low</button>
-          </div>
+          <div class="control-row"><button class="ctrl-btn" onclick="selectCompressQuality('high',this)">High</button><button class="ctrl-btn active" onclick="selectCompressQuality('medium',this)">Medium</button><button class="ctrl-btn" onclick="selectCompressQuality('low',this)">Low</button></div>
         </div>
         <div class="control-row"><button class="ctrl-btn primary" onclick="compressVideo()">🗜️ Compress & Download</button></div>
       </div>`;
   } else if (type === 'video-gif') {
-    c.innerHTML = `
-      <div id="videoPendingMsg"><div class="control-label">Video to GIF</div><p style="font-size:13px;color:#b0a0c8;text-align:center;padding:40px 20px;">📹 Video upload karo GIF banane ke liye</p></div>
+    c.innerHTML = `<div id="videoPendingMsg"><div class="control-label">Video to GIF</div><p style="font-size:13px;color:#b0a0c8;text-align:center;padding:40px 20px;">📹 Video upload karo GIF banane ke liye</p></div>
       <div id="videoActiveUI" style="display:none">
         <div class="control-label">GIF Settings</div>
         <div style="padding:16px;background:linear-gradient(135deg, rgba(168,85,247,0.15), rgba(236,72,153,0.1));border:1.5px solid rgba(168,85,247,0.3);border-radius:18px;margin-bottom:16px;">
-          <div class="control-label">Start Time (seconds)</div>
-          <input type="number" id="gifStart" value="0" step="0.1" class="manual-input" style="width:100%;margin-bottom:12px;">
-          <div class="control-label">Duration (seconds)</div>
-          <input type="number" id="gifDuration" value="3" step="0.1" class="manual-input" style="width:100%;margin-bottom:12px;">
-          <div class="control-label">FPS</div>
-          <select id="gifFps" class="manual-select" style="width:100%;">
-            <option value="10">10 FPS</option>
-            <option value="15" selected>15 FPS</option>
-            <option value="24">24 FPS</option>
-          </select>
+          <div class="control-label">Start Time (seconds)</div><input type="number" id="gifStart" value="0" step="0.1" class="manual-input" style="width:100%;margin-bottom:12px;">
+          <div class="control-label">Duration (seconds)</div><input type="number" id="gifDuration" value="3" step="0.1" class="manual-input" style="width:100%;margin-bottom:12px;">
+          <div class="control-label">FPS</div><select id="gifFps" class="manual-select" style="width:100%;"><option value="10">10 FPS</option><option value="15" selected>15 FPS</option><option value="24">24 FPS</option></select>
         </div>
         <div class="control-row"><button class="ctrl-btn primary" onclick="videoToGif()">🎞️ Make GIF</button></div>
       </div>`;
   } else if (type === 'video-mp3') {
-    c.innerHTML = `
-      <div id="videoPendingMsg"><div class="control-label">Video to MP3</div><p style="font-size:13px;color:#b0a0c8;text-align:center;padding:40px 20px;">📹 Video upload karo MP3 nikalne ke liye</p></div>
+    c.innerHTML = `<div id="videoPendingMsg"><div class="control-label">Video to MP3</div><p style="font-size:13px;color:#b0a0c8;text-align:center;padding:40px 20px;">📹 Video upload karo MP3 nikalne ke liye</p></div>
       <div id="videoActiveUI" style="display:none">
         <div class="control-label">Audio Info</div>
         <div style="padding:16px;background:linear-gradient(135deg, rgba(168,85,247,0.15), rgba(236,72,153,0.1));border:1.5px solid rgba(168,85,247,0.3);border-radius:18px;margin-bottom:16px;">
-          <div style="display:flex;justify-content:space-between;font-size:12px;color:#a99bc4;">
-            <span>Duration: <b id="mp3Duration" style="color:#fff">0.0s</b></span>
-            <span>Size: <b id="mp3Size" style="color:#fff">0MB</b></span>
-          </div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;color:#a99bc4;"><span>Duration: <b id="mp3Duration" style="color:#fff">0.0s</b></span><span>Size: <b id="mp3Size" style="color:#fff">0MB</b></span></div>
         </div>
         <div class="control-row"><button class="ctrl-btn primary" onclick="extractMp3()">🎵 Extract MP3</button></div>
       </div>`;
   } else if (type === 'video-enhance') {
-    c.innerHTML = `
-      <div id="videoPendingMsg"><div class="control-label">Video Enhance</div><p style="font-size:13px;color:#b0a0c8;text-align:center;padding:40px 20px;">📹 Video upload karo enhance karne ke liye</p></div>
+    c.innerHTML = `<div id="videoPendingMsg"><div class="control-label">Video Enhance</div><p style="font-size:13px;color:#b0a0c8;text-align:center;padding:40px 20px;">📹 Video upload karo enhance karne ke liye</p></div>
       <div id="videoActiveUI" style="display:none">
         <div class="control-label">Enhance Type</div>
         <div style="padding:16px;background:linear-gradient(135deg, rgba(168,85,247,0.15), rgba(236,72,153,0.1));border:1.5px solid rgba(168,85,247,0.3);border-radius:18px;margin-bottom:16px;">
-          <div class="control-row">
-            <button class="ctrl-btn" onclick="selectEnhanceType('sharpen',this)">🔍 Sharpen</button>
-            <button class="ctrl-btn" onclick="selectEnhanceType('denoise',this)">🧹 Denoise</button>
-            <button class="ctrl-btn active" onclick="selectEnhanceType('bright',this)">☀️ Brighten</button>
-            <button class="ctrl-btn" onclick="selectEnhanceType('contrast',this)">🎨 Contrast</button>
-          </div>
+          <div class="control-row"><button class="ctrl-btn" onclick="selectEnhanceType('sharpen',this)">🔍 Sharpen</button><button class="ctrl-btn" onclick="selectEnhanceType('denoise',this)">🧹 Denoise</button><button class="ctrl-btn active" onclick="selectEnhanceType('bright',this)">☀️ Brighten</button><button class="ctrl-btn" onclick="selectEnhanceType('contrast',this)">🎨 Contrast</button></div>
         </div>
         <div class="control-row"><button class="ctrl-btn primary" onclick="enhanceVideo()">✨ Enhance & Download</button></div>
       </div>`;
