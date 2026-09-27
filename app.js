@@ -65,7 +65,7 @@ let currentVideoFile = null;
 let currentVideoDuration = 0;
 let selectedCompressQuality = 'medium';
 let selectedEnhanceType = 'bright';
-let selectedResolution = '720';
+let selectedResolution = '1080';
 let wakeLock = null;
 let dotsInterval = null;
 let isProcessing = false;
@@ -297,9 +297,8 @@ function selectResolution(res, btn) {
   selectedResolution = res;
   btn.parentElement.querySelectorAll('.ctrl-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
-  if (res === '2k') {
-    showToast('⚠️ 2K me 40-90 sec lagenge');
-  }
+  if (res === '2k') showToast('⚡ 2K HD — 30-60 sec lagenge');
+  if (res === '1080') showToast('🎬 1080p FHD — 15-30 sec lagenge');
 }
 
 async function requestWakeLock() {
@@ -345,7 +344,7 @@ function updateProgress(percent) {
   if (percentEl) percentEl.textContent = Math.floor(p) + '%';
   if (stageEl) {
     if (p < 40) stageEl.textContent = '📤 Uploading to server';
-    else if (p < 90) stageEl.textContent = '⚙️ Processing on server';
+    else if (p < 90) stageEl.textContent = '⚡ Enhancing with AI';
     else if (p < 100) stageEl.textContent = '📥 Downloading result';
     else stageEl.textContent = '✨ Complete';
   }
@@ -559,7 +558,7 @@ async function videoToGif() {
   if (!currentVideoFile) { showToast('Upload video first'); return; }
   const s = parseFloat(document.getElementById('gifStart').value) || 0;
   const d = parseFloat(document.getElementById('gifDuration').value) || 3;
-  const f = document.getElementById('gifFps').value || 12;
+  const f = document.getElementById('gifFps').value || 10;
   isProcessing = true;
   await requestWakeLock();
   showLoader('🎞️ Creating GIF');
@@ -594,13 +593,10 @@ async function enhanceVideo() {
   await requestWakeLock();
   
   if (selectedResolution === '2k') {
-    showToast('⚠️ 2K me 40-90 sec lag sakte hain');
+    showToast('⚡ 2K HD — 30-60 sec lagenge');
   }
   if (selectedEnhanceType === 'stabilize') {
     showToast('🎬 Stabilizing — 30-60 sec lagenge');
-  }
-  if (selectedEnhanceType === 'upscale2k') {
-    showToast('⚡ 2K Upscale — 40-90 sec lagenge');
   }
   
   showLoader('✨ Enhancing your video');
@@ -802,7 +798,7 @@ function buildControls(type) {
         <div style="padding:16px;background:linear-gradient(135deg, rgba(168,85,247,0.15), rgba(236,72,153,0.1));border:1.5px solid rgba(168,85,247,0.3);border-radius:18px;margin-bottom:16px;">
           <div class="control-label">Start Time (seconds)</div><input type="number" id="gifStart" value="0" step="0.1" class="manual-input" style="width:100%;margin-bottom:12px;">
           <div class="control-label">Duration (seconds)</div><input type="number" id="gifDuration" value="3" step="0.1" class="manual-input" style="width:100%;margin-bottom:12px;">
-          <div class="control-label">FPS</div><select id="gifFps" class="manual-select" style="width:100%;"><option value="10">10 FPS</option><option value="12" selected>12 FPS</option><option value="15">15 FPS</option></select>
+          <div class="control-label">FPS</div><select id="gifFps" class="manual-select" style="width:100%;"><option value="8">8 FPS</option><option value="10" selected>10 FPS</option><option value="12">12 FPS</option></select>
         </div>
         <div class="control-row" style="position:relative;">
           <button class="ctrl-btn primary" onclick="videoToGif()" style="width:100%;padding:18px;font-size:15px;letter-spacing:0.5px;position:relative;overflow:hidden;">
@@ -832,11 +828,12 @@ function buildControls(type) {
         <div class="control-label">Resolution</div>
         <div style="padding:16px;background:linear-gradient(135deg, rgba(168,85,247,0.15), rgba(236,72,153,0.1));border:1.5px solid rgba(168,85,247,0.3);border-radius:18px;margin-bottom:16px;">
           <div class="control-row">
-            <button class="ctrl-btn" onclick="selectResolution('480',this)">480p</button>
-            <button class="ctrl-btn active" onclick="selectResolution('720',this)">720p HD</button>
-            <button class="ctrl-btn" onclick="selectResolution('1080',this)">1080p FHD</button>
-            <button class="ctrl-btn" onclick="selectResolution('2k',this)">2K QHD</button>
+            <button class="ctrl-btn" onclick="selectResolution('480',this)">📱 480p</button>
+            <button class="ctrl-btn" onclick="selectResolution('720',this)">🎥 720p HD</button>
+            <button class="ctrl-btn active" onclick="selectResolution('1080',this)">🎬 1080p FHD</button>
+            <button class="ctrl-btn" onclick="selectResolution('2k',this)">⚡ 2K HD</button>
           </div>
+          <p style="font-size:11px;color:#aaff00;margin-top:10px;font-weight:700;letter-spacing:0.3px;">⚡ 2K HD — Premium quality for social media</p>
         </div>
         
         <div class="control-label">Enhance Type</div>
