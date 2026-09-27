@@ -1,3 +1,5 @@
+const SERVER_URL = 'https://picly-server.onrender.com';
+
 const categories = {
   edit: { name:'Edit', desc:'Crop · filters · text · stickers', tools:[
     { id:'crop', name:'Crop', desc:'Cut photo to perfect size', type:'crop', img:'https://images.unsplash.com/photo-1502920917128-1aa500764cbd?w=100&q=80' },
@@ -61,9 +63,10 @@ let signatureData = null;
 let canvas = null, ctx = null, overlayLayer = null;
 let currentVideoFile = null;
 let currentVideoDuration = 0;
-let ffmpegInstance = null;
 let selectedCompressQuality = 'medium';
 let selectedEnhanceType = 'bright';
+let wakeLock = null;
+let dotsInterval = null;
 
 const CALCULATOR_TYPES = ['emi','gst','age','bmi','unit','qr'];
 const VIDEO_TYPES = ['video-trim','video-compress','video-gif','video-mp3','video-enhance'];
@@ -216,7 +219,6 @@ function resetImage() {
   }
 }
 
-// ==================== VIDEO LOADER ====================
 function loadVideo(input) {
   const file = input.files ? input.files[0] : input;
   if (!file) return;
@@ -242,7 +244,8 @@ function loadVideo(input) {
       const ss = document.getElementById('trimStartSlider');
       const es = document.getElementById('trimEndSlider');
       if (ss && es) {
-        ss.max = currentVideoDuration; es.max = currentVideoDuration;
+        ss.max = currentVideoDuration;
+        es.max = currentVideoDuration;
         es.value = currentVideoDuration;
         document.getElementById('trimEndLabel').textContent = currentVideoDuration.toFixed(1) + 's';
         document.getElementById('trimDuration').textContent = currentVideoDuration.toFixed(1) + 's';
@@ -288,9 +291,6 @@ function selectEnhanceType(t, btn) {
   btn.classList.add('active');
 }
 
-// ==================== FFMPEG 0.12.x MULTI-THREADED — R2 ====================
-let wakeLock = null;
-
 async function requestWakeLock() {
   try {
     if ('wakeLock' in navigator) {
@@ -309,27 +309,6 @@ async function releaseWakeLock() {
   }
 }
 
-async function getFFmpeg() {
-  if (ffmpegInstance) return ffmpegInstance;
-  const { FFmpeg } = FFmpegWASM;
-  const { toBlobURL } = FFmpegUtil;
-  const ffmpeg = new FFmpeg();
-  
-  const R2_URL = 'https://pub-64e5babc43fc4b14b6a7ba94e61796db.r2.dev';
-  
-  // NO progress event — avoids fake 99% values
-  
-  await ffmpeg.load({
-    coreURL: await toBlobURL(R2_URL + '/ffmpeg-core.js', 'text/javascript'),
-    wasmURL: await toBlobURL(R2_URL + '/ffmpeg-core.wasm', 'application/wasm'),
-    workerURL: await toBlobURL(R2_URL + '/ffmpeg-core.worker.js', 'text/javascript')
-  });
-  ffmpegInstance = ffmpeg;
-  return ffmpeg;
-}
-
-// Animated dots helper
-let dotsInterval = null;
 function startDotsAnimation(baseMsg) {
   let count = 0;
   const el = document.getElementById('videoLoaderMsg');
@@ -340,6 +319,7 @@ function startDotsAnimation(baseMsg) {
     el.textContent = baseMsg + '.'.repeat(count);
   }, 500);
 }
+
 function stopDotsAnimation() {
   clearInterval(dotsInterval);
   dotsInterval = null;
@@ -354,8 +334,8 @@ function showLoader(msg) {
     el.innerHTML = `
       <div style="width:60px;height:60px;border:4px solid rgba(168,85,247,0.2);border-top-color:#a855f7;border-radius:50%;animation:spin 1s linear infinite;"></div>
       <p id="videoLoaderMsg" style="color:#fff;font-weight:800;font-size:16px;text-align:center;max-width:400px;line-height:1.5;">Processing...</p>
-      <p style="color:#ff6b6b;font-size:13px;text-align:center;max-width:400px;line-height:1.6;font-weight:700;">⚠️ Tab MAT minimize karo<br>Warna processing ruk jayegi</p>
-      <p style="color:#a99bc4;font-size:12px;text-align:center;max-width:400px;line-height:1.6;">⏱️ 30-90 sec lag sakte hain<br>📹 720p HD output</p>
+      <p style="color:#ff6b6b;font-size:13px;text-align:center;max-width:400px;line-height:1.6;font-weight:700;">⚠️ Pehli baar 30-50 sec lag sakte hain<br>Server cold start</p>
+      <p style="color:#a99bc4;font-size:12px;text-align:center;max-width:400px;line-height:1.6;">⏱️ 720p HD output<br>✅ Multi-thread server</p>
     `;
     document.body.appendChild(el);
     if (!document.getElementById('spinKeyframe')) {
@@ -376,52 +356,22 @@ function hideLoader() {
   if (el) el.style.display = 'none';
 }
 
+// ==================== VIDEO FUNCTIONS — SERVER BASED ====================
 async function trimVideo() {
   if (!currentVideoFile) { showToast('Upload video first'); return; }
   const s = parseFloat(document.getElementById('trimStartSlider').value);
   const e = parseFloat(document.getElementById('trimEndSlider').value);
   if (e <= s) { showToast('Invalid range'); return; }
-  
-  showLoader('✂️ Trimming video');
-  
   await requestWakeLock();
-  
-  const timeoutId = setTimeout(() => {
-    hideLoader();
-    showToast('⚠️ Timeout — chhota video try karo');
-    releaseWakeLock();
-  }, 300000);
-  
+  showLoader('✂️ Uploading & trimming');
   try {
-    const ffmpeg = await getFFmpeg();
-    const { fetchFile } = FFmpegUtil;
-    await ffmpeg.writeFile('input.mp4', await fetchFile(currentVideoFile));
-    
-    await ffmpeg.exec([
-      '-i','input.mp4',
-      '-ss',String(s),
-      '-t',String(e-s),
-      '-vf','scale=720:-2',
-      '-c:v','libx264',
-      '-preset','ultrafast',
-      '-crf','28',
-      '-maxrate','2M',
-      '-bufsize','4M',
-      '-c:a','aac',
-      '-b:a','96k',
-      '-movflags','+faststart',
-      'output.mp4'
-    ]);
-    
-    clearTimeout(timeoutId);
-    
-    const data = await ffmpeg.readFile('output.mp4');
-    const blob = new Blob([data.buffer], { type: 'video/mp4' });
-    
-    if (blob.size < 50000) {
-      throw new Error('Output too small — encoding failed');
-    }
-    
+    const formData = new FormData();
+    formData.append('video', currentVideoFile);
+    formData.append('start', s);
+    formData.append('end', e);
+    const res = await fetch(SERVER_URL + '/api/trim', { method: 'POST', body: formData });
+    if (!res.ok) throw new Error('Server error: ' + res.status);
+    const blob = await res.blob();
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = 'picly-trimmed-' + Date.now() + '.mp4';
@@ -429,9 +379,8 @@ async function trimVideo() {
     hideLoader();
     showToast('✅ Ready! ' + (blob.size/1024/1024).toFixed(1) + 'MB');
   } catch (err) {
-    clearTimeout(timeoutId);
     hideLoader();
-    console.error(err);
+    console.error('❌', err);
     showToast('Error: ' + err.message);
   }
   await releaseWakeLock();
@@ -439,48 +388,24 @@ async function trimVideo() {
 
 async function compressVideo() {
   if (!currentVideoFile) { showToast('Upload video first'); return; }
-  const q = { high:'23', medium:'28', low:'32' };
-  const crf = q[selectedCompressQuality] || '28';
-  showLoader('🗜️ Compressing video');
   await requestWakeLock();
-  
-  const timeoutId = setTimeout(() => {
-    hideLoader();
-    showToast('⚠️ Timeout');
-    releaseWakeLock();
-  }, 300000);
-  
+  showLoader('🗜️ Uploading & compressing');
   try {
-    const ffmpeg = await getFFmpeg();
-    const { fetchFile } = FFmpegUtil;
-    await ffmpeg.writeFile('input.mp4', await fetchFile(currentVideoFile));
-    await ffmpeg.exec([
-      '-i','input.mp4',
-      '-vf','scale=720:-2',
-      '-c:v','libx264',
-      '-preset','ultrafast',
-      '-crf',crf,
-      '-maxrate','2M',
-      '-bufsize','4M',
-      '-c:a','aac',
-      '-b:a','96k',
-      'output.mp4'
-    ]);
-    clearTimeout(timeoutId);
-    const data = await ffmpeg.readFile('output.mp4');
-    const blob = new Blob([data.buffer], { type: 'video/mp4' });
-    const ns = (blob.size/1024/1024).toFixed(2);
-    const os = (currentVideoFile.size/1024/1024).toFixed(2);
+    const formData = new FormData();
+    formData.append('video', currentVideoFile);
+    formData.append('quality', selectedCompressQuality);
+    const res = await fetch(SERVER_URL + '/api/compress', { method: 'POST', body: formData });
+    if (!res.ok) throw new Error('Server error: ' + res.status);
+    const blob = await res.blob();
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = 'picly-compressed-' + Date.now() + '.mp4';
     a.click();
     hideLoader();
-    showToast('✅ ' + os + 'MB → ' + ns + 'MB');
+    showToast('✅ ' + (blob.size/1024/1024).toFixed(1) + 'MB');
   } catch (err) {
-    clearTimeout(timeoutId);
     hideLoader();
-    console.error(err);
+    console.error('❌', err);
     showToast('Error: ' + err.message);
   }
   await releaseWakeLock();
@@ -488,23 +413,14 @@ async function compressVideo() {
 
 async function extractMp3() {
   if (!currentVideoFile) { showToast('Upload video first'); return; }
-  showLoader('🎵 Extracting audio');
   await requestWakeLock();
-  
-  const timeoutId = setTimeout(() => {
-    hideLoader();
-    showToast('⚠️ Timeout');
-    releaseWakeLock();
-  }, 300000);
-  
+  showLoader('🎵 Extracting audio');
   try {
-    const ffmpeg = await getFFmpeg();
-    const { fetchFile } = FFmpegUtil;
-    await ffmpeg.writeFile('input.mp4', await fetchFile(currentVideoFile));
-    await ffmpeg.exec(['-i','input.mp4','-vn','-acodec','libmp3lame','-q:a','2','output.mp3']);
-    clearTimeout(timeoutId);
-    const data = await ffmpeg.readFile('output.mp3');
-    const blob = new Blob([data.buffer], { type: 'audio/mp3' });
+    const formData = new FormData();
+    formData.append('video', currentVideoFile);
+    const res = await fetch(SERVER_URL + '/api/mp3', { method: 'POST', body: formData });
+    if (!res.ok) throw new Error('Server error: ' + res.status);
+    const blob = await res.blob();
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = 'picly-audio-' + Date.now() + '.mp3';
@@ -512,9 +428,8 @@ async function extractMp3() {
     hideLoader();
     showToast('✅ Audio ready!');
   } catch (err) {
-    clearTimeout(timeoutId);
     hideLoader();
-    console.error(err);
+    console.error('❌', err);
     showToast('Error: ' + err.message);
   }
   await releaseWakeLock();
@@ -525,23 +440,17 @@ async function videoToGif() {
   const s = parseFloat(document.getElementById('gifStart').value) || 0;
   const d = parseFloat(document.getElementById('gifDuration').value) || 3;
   const f = document.getElementById('gifFps').value || 15;
-  showLoader('🎞️ Creating GIF');
   await requestWakeLock();
-  
-  const timeoutId = setTimeout(() => {
-    hideLoader();
-    showToast('⚠️ Timeout');
-    releaseWakeLock();
-  }, 300000);
-  
+  showLoader('🎞️ Creating GIF');
   try {
-    const ffmpeg = await getFFmpeg();
-    const { fetchFile } = FFmpegUtil;
-    await ffmpeg.writeFile('input.mp4', await fetchFile(currentVideoFile));
-    await ffmpeg.exec(['-i','input.mp4','-ss',String(s),'-t',String(d),'-vf','fps='+f+',scale=480:-1:flags=lanczos','output.gif']);
-    clearTimeout(timeoutId);
-    const data = await ffmpeg.readFile('output.gif');
-    const blob = new Blob([data.buffer], { type: 'image/gif' });
+    const formData = new FormData();
+    formData.append('video', currentVideoFile);
+    formData.append('start', s);
+    formData.append('duration', d);
+    formData.append('fps', f);
+    const res = await fetch(SERVER_URL + '/api/gif', { method: 'POST', body: formData });
+    if (!res.ok) throw new Error('Server error: ' + res.status);
+    const blob = await res.blob();
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = 'picly-' + Date.now() + '.gif';
@@ -549,60 +458,18 @@ async function videoToGif() {
     hideLoader();
     showToast('✅ GIF ready!');
   } catch (err) {
-    clearTimeout(timeoutId);
     hideLoader();
-    console.error(err);
+    console.error('❌', err);
     showToast('Error: ' + err.message);
   }
   await releaseWakeLock();
 }
 
-async function enhanceVideo() {
-  if (!currentVideoFile) { showToast('Upload video first'); return; }
-  let filter = '';
-  if (selectedEnhanceType === 'bright') filter = 'eq=brightness=0.1:contrast=1.1';
-  else if (selectedEnhanceType === 'contrast') filter = 'eq=contrast=1.3:saturation=1.2';
-  else if (selectedEnhanceType === 'sharpen') filter = 'unsharp=5:5:1.0:5:5:0.0';
-  else if (selectedEnhanceType === 'denoise') filter = 'hqdn3d=4:3:6:4.5';
-  showLoader('🎨 Enhancing video');
-  await requestWakeLock();
-  
-  const timeoutId = setTimeout(() => {
-    hideLoader();
-    showToast('⚠️ Timeout');
-    releaseWakeLock();
-  }, 300000);
-  
-  try {
-    const ffmpeg = await getFFmpeg();
-    const { fetchFile } = FFmpegUtil;
-    await ffmpeg.writeFile('input.mp4', await fetchFile(currentVideoFile));
-    await ffmpeg.exec([
-      '-i','input.mp4',
-      '-vf',filter+',scale=720:-2',
-      '-c:v','libx264',
-      '-preset','ultrafast',
-      '-crf','28',
-      '-c:a','copy',
-      'output.mp4'
-    ]);
-    clearTimeout(timeoutId);
-    const data = await ffmpeg.readFile('output.mp4');
-    const blob = new Blob([data.buffer], { type: 'video/mp4' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'picly-enhanced-' + Date.now() + '.mp4';
-    a.click();
-    hideLoader();
-    showToast('✅ Enhanced video ready!');
-  } catch (err) {
-    clearTimeout(timeoutId);
-    hideLoader();
-    console.error(err);
-    showToast('Error: ' + err.message);
-  }
-  await releaseWakeLock();
-}function buildControls(type) {
+async function getFFmpeg() { return null; }
+async function enhanceVideo() { showToast('Enhance — coming soon'); }
+
+// ==================== BUILD CONTROLS ====================
+function buildControls(type) {
   const c = document.getElementById('dynamicControls');
   if (!c) return;
   c.innerHTML = '';
@@ -749,8 +616,8 @@ async function enhanceVideo() {
           <button class="ctrl-btn primary" onclick="trimVideo()" style="width:100%;">✂️ Trim & Download</button>
         </div>
         <p style="font-size:11px;color:#a99bc4;margin-top:12px;line-height:1.6;">
-          ⏱️ 30-90 sec lag sakte hain<br>
-          ✅ 720p HD · Guaranteed playable
+          ⏱️ Pehli baar 30-50 sec (cold start)<br>
+          ✅ 720p HD · Multi-thread server
         </p>
       </div>`;
   } else if (type === 'video-compress') {
@@ -796,7 +663,9 @@ async function enhanceVideo() {
   } else {
     c.innerHTML = `<div class="control-label">Coming Soon</div><p style="font-size:13px;color:#888;padding:12px 0;">Under development.</p>`;
   }
-}function calculateEMI() {
+}
+
+function calculateEMI() {
   const p = parseFloat(document.getElementById('emiPrincipal').value);
   const r = parseFloat(document.getElementById('emiRate').value);
   const y = parseFloat(document.getElementById('emiYears').value);
