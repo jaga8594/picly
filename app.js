@@ -67,6 +67,7 @@ let selectedCompressQuality = 'medium';
 let selectedEnhanceType = 'bright';
 let wakeLock = null;
 let dotsInterval = null;
+let isProcessing = false;
 
 const CALCULATOR_TYPES = ['emi','gst','age','bmi','unit','qr'];
 const VIDEO_TYPES = ['video-trim','video-compress','video-gif','video-mp3','video-enhance'];
@@ -325,65 +326,161 @@ function stopDotsAnimation() {
   dotsInterval = null;
 }
 
+// ==================== PREMIUM LOADER — REAL PROGRESS ====================
+function updateProgress(percent) {
+  const circle = document.getElementById('progressCircle');
+  const percentEl = document.getElementById('progressPercent');
+  const stageEl = document.getElementById('progressStage');
+  const p = Math.max(0, Math.min(100, percent));
+  if (circle) circle.style.strokeDashoffset = 377 - (377 * p / 100);
+  if (percentEl) percentEl.textContent = Math.floor(p) + '%';
+  if (stageEl) {
+    if (p < 50) stageEl.textContent = '📤 Uploading to server';
+    else if (p < 90) stageEl.textContent = '⚙️ Processing on server';
+    else if (p < 100) stageEl.textContent = '📥 Downloading result';
+    else stageEl.textContent = '✨ Complete';
+  }
+}
+
 function showLoader(msg) {
   let el = document.getElementById('videoLoader');
   if (!el) {
     el = document.createElement('div');
     el.id = 'videoLoader';
-    el.style.cssText = 'position:fixed;inset:0;background:rgba(6,3,13,0.95);backdrop-filter:blur(12px);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;padding:20px;';
+    el.style.cssText = 'position:fixed;inset:0;background:rgba(6,3,13,0.96);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:28px;padding:24px;';
     el.innerHTML = `
-      <div style="width:60px;height:60px;border:4px solid rgba(168,85,247,0.2);border-top-color:#a855f7;border-radius:50%;animation:spin 1s linear infinite;"></div>
-      <p id="videoLoaderMsg" style="color:#fff;font-weight:800;font-size:16px;text-align:center;max-width:400px;line-height:1.5;">Processing...</p>
-      <p id="videoProgress" style="color:#a855f7;font-size:18px;font-weight:900;text-align:center;font-family:monospace;">0 sec</p>
-      <p style="color:#ff6b6b;font-size:13px;text-align:center;max-width:400px;line-height:1.6;font-weight:700;">⚠️ 10-30 sec lag sakte hain</p>
-      <p style="color:#a99bc4;font-size:12px;text-align:center;max-width:400px;line-height:1.6;">✅ 720p HD · Multi-thread server</p>
+      <div style="position:relative;width:160px;height:160px;">
+        <svg width="160" height="160" viewBox="0 0 160 160" style="transform:rotate(-90deg);">
+          <defs>
+            <linearGradient id="progressGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#ff0080"/>
+              <stop offset="50%" stop-color="#a855f7"/>
+              <stop offset="100%" stop-color="#00d4ff"/>
+            </linearGradient>
+            <filter id="glow">
+              <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+              <feMerge>
+                <feMergeNode in="coloredBlur"/>
+                <feMergeNode in="SourceGraphic"/>
+              </feMerge>
+            </filter>
+          </defs>
+          <circle cx="80" cy="80" r="70" stroke="rgba(168,85,247,0.12)" stroke-width="10" fill="none"/>
+          <circle id="progressCircle" cx="80" cy="80" r="70" stroke="url(#progressGrad)" stroke-width="10" fill="none" stroke-linecap="round" stroke-dasharray="440" stroke-dashoffset="440" filter="url(#glow)" style="transition:stroke-dashoffset 0.3s ease-out;"/>
+        </svg>
+        <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+          <div id="progressPercent" style="font-size:38px;font-weight:900;background:linear-gradient(135deg,#ff0080,#a855f7,#00d4ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:-1.5px;font-family:'Arial Black',sans-serif;line-height:1;">0%</div>
+        </div>
+      </div>
+      <div style="text-align:center;max-width:400px;">
+        <p id="videoLoaderMsg" style="color:#fff;font-weight:800;font-size:17px;letter-spacing:-0.3px;line-height:1.4;margin-bottom:8px;">Processing</p>
+        <p id="progressStage" style="color:#a855f7;font-size:13px;font-weight:700;letter-spacing:0.3px;">📤 Uploading to server</p>
+      </div>
+      <div style="display:flex;gap:20px;margin-top:4px;padding:14px 20px;background:rgba(168,85,247,0.08);border:1px solid rgba(168,85,247,0.2);border-radius:14px;backdrop-filter:blur(10px);">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div style="width:8px;height:8px;border-radius:50%;background:#aaff00;box-shadow:0 0 10px #aaff00;"></div>
+          <span style="color:#c0b0d8;font-size:11px;font-weight:700;letter-spacing:0.5px;">720p HD</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div style="width:8px;height:8px;border-radius:50%;background:#00d4ff;box-shadow:0 0 10px #00d4ff;"></div>
+          <span style="color:#c0b0d8;font-size:11px;font-weight:700;letter-spacing:0.5px;">Fast Server</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div style="width:8px;height:8px;border-radius:50%;background:#ff0080;box-shadow:0 0 10px #ff0080;"></div>
+          <span style="color:#c0b0d8;font-size:11px;font-weight:700;letter-spacing:0.5px;">Premium</span>
+        </div>
+      </div>
     `;
     document.body.appendChild(el);
-    if (!document.getElementById('spinKeyframe')) {
-      const s = document.createElement('style');
-      s.id = 'spinKeyframe';
-      s.textContent = '@keyframes spin { to { transform: rotate(360deg); } }';
-      document.head.appendChild(s);
-    }
   }
   document.getElementById('videoLoaderMsg').textContent = msg;
   el.style.display = 'flex';
-  startDotsAnimation(msg);
-  
-  let sec = 0;
-  if (window.progressTimer) clearInterval(window.progressTimer);
-  window.progressTimer = setInterval(() => {
-    sec++;
-    const p = document.getElementById('videoProgress');
-    if (p) p.textContent = sec + ' sec';
-  }, 1000);
+  updateProgress(0);
 }
 
 function hideLoader() {
   stopDotsAnimation();
-  if (window.progressTimer) {
-    clearInterval(window.progressTimer);
-    window.progressTimer = null;
-  }
-  const el = document.getElementById('videoLoader');
-  if (el) el.style.display = 'none';
+  updateProgress(100);
+  setTimeout(() => {
+    const el = document.getElementById('videoLoader');
+    if (el) el.style.display = 'none';
+  }, 500);
 }
 
+// ==================== XHR UPLOAD WITH REAL PROGRESS ====================
+function uploadWithProgress(url, formData, onProgress) {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', url, true);
+    xhr.responseType = 'blob';
+    
+    // Upload progress
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable) {
+        const uploadPercent = (e.loaded / e.total) * 100;
+        // Upload 0-40% of total progress
+        const overall = uploadPercent * 0.4;
+        onProgress(overall);
+      }
+    };
+    
+    // Upload complete — server processing starts
+    xhr.upload.onload = () => {
+      onProgress(45);
+      // While server processes, slowly move from 45 to 90
+      let fake = 45;
+      window.serverProgressInterval = setInterval(() => {
+        if (fake < 90) {
+          fake += 1.5;
+          onProgress(fake);
+        }
+      }, 400);
+    };
+    
+    xhr.onload = () => {
+      if (window.serverProgressInterval) {
+        clearInterval(window.serverProgressInterval);
+        window.serverProgressInterval = null;
+      }
+      if (xhr.status >= 200 && xhr.status < 300) {
+        onProgress(95);
+        resolve(xhr.response);
+      } else {
+        reject(new Error('Server error: ' + xhr.status));
+      }
+    };
+    
+    xhr.onerror = () => {
+      if (window.serverProgressInterval) {
+        clearInterval(window.serverProgressInterval);
+        window.serverProgressInterval = null;
+      }
+      reject(new Error('Network error'));
+    };
+    
+    xhr.send(formData);
+  });
+}
+
+// ==================== VIDEO FUNCTIONS ====================
 async function trimVideo() {
+  if (isProcessing) return;
   if (!currentVideoFile) { showToast('Upload video first'); return; }
   const s = parseFloat(document.getElementById('trimStartSlider').value);
   const e = parseFloat(document.getElementById('trimEndSlider').value);
   if (e <= s) { showToast('Invalid range'); return; }
+  
+  isProcessing = true;
   await requestWakeLock();
-  showLoader('✂️ Uploading & trimming');
+  showLoader('✂️ Trimming your video');
   try {
     const formData = new FormData();
     formData.append('video', currentVideoFile);
     formData.append('start', s);
     formData.append('end', e);
-    const res = await fetch(SERVER_URL + '/api/trim', { method: 'POST', body: formData });
-    if (!res.ok) throw new Error('Server error: ' + res.status);
-    const blob = await res.blob();
+    
+    const blob = await uploadWithProgress(SERVER_URL + '/api/trim', formData, updateProgress);
+    
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = 'picly-trimmed-' + Date.now() + '.mp4';
@@ -396,19 +493,22 @@ async function trimVideo() {
     showToast('Error: ' + err.message);
   }
   await releaseWakeLock();
+  isProcessing = false;
 }
 
 async function compressVideo() {
+  if (isProcessing) return;
   if (!currentVideoFile) { showToast('Upload video first'); return; }
+  isProcessing = true;
   await requestWakeLock();
-  showLoader('🗜️ Uploading & compressing');
+  showLoader('🗜️ Compressing your video');
   try {
     const formData = new FormData();
     formData.append('video', currentVideoFile);
     formData.append('quality', selectedCompressQuality);
-    const res = await fetch(SERVER_URL + '/api/compress', { method: 'POST', body: formData });
-    if (!res.ok) throw new Error('Server error: ' + res.status);
-    const blob = await res.blob();
+    
+    const blob = await uploadWithProgress(SERVER_URL + '/api/compress', formData, updateProgress);
+    
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = 'picly-compressed-' + Date.now() + '.mp4';
@@ -421,18 +521,21 @@ async function compressVideo() {
     showToast('Error: ' + err.message);
   }
   await releaseWakeLock();
+  isProcessing = false;
 }
 
 async function extractMp3() {
+  if (isProcessing) return;
   if (!currentVideoFile) { showToast('Upload video first'); return; }
+  isProcessing = true;
   await requestWakeLock();
   showLoader('🎵 Extracting audio');
   try {
     const formData = new FormData();
     formData.append('video', currentVideoFile);
-    const res = await fetch(SERVER_URL + '/api/mp3', { method: 'POST', body: formData });
-    if (!res.ok) throw new Error('Server error: ' + res.status);
-    const blob = await res.blob();
+    
+    const blob = await uploadWithProgress(SERVER_URL + '/api/mp3', formData, updateProgress);
+    
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = 'picly-audio-' + Date.now() + '.mp3';
@@ -445,13 +548,16 @@ async function extractMp3() {
     showToast('Error: ' + err.message);
   }
   await releaseWakeLock();
+  isProcessing = false;
 }
 
 async function videoToGif() {
+  if (isProcessing) return;
   if (!currentVideoFile) { showToast('Upload video first'); return; }
   const s = parseFloat(document.getElementById('gifStart').value) || 0;
   const d = parseFloat(document.getElementById('gifDuration').value) || 3;
-  const f = document.getElementById('gifFps').value || 15;
+  const f = document.getElementById('gifFps').value || 12;
+  isProcessing = true;
   await requestWakeLock();
   showLoader('🎞️ Creating GIF');
   try {
@@ -460,9 +566,9 @@ async function videoToGif() {
     formData.append('start', s);
     formData.append('duration', d);
     formData.append('fps', f);
-    const res = await fetch(SERVER_URL + '/api/gif', { method: 'POST', body: formData });
-    if (!res.ok) throw new Error('Server error: ' + res.status);
-    const blob = await res.blob();
+    
+    const blob = await uploadWithProgress(SERVER_URL + '/api/gif', formData, updateProgress);
+    
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = 'picly-' + Date.now() + '.gif';
@@ -475,6 +581,7 @@ async function videoToGif() {
     showToast('Error: ' + err.message);
   }
   await releaseWakeLock();
+  isProcessing = false;
 }
 
 async function getFFmpeg() { return null; }
@@ -623,13 +730,12 @@ function buildControls(type) {
             <span>Duration: <b id="trimDuration" style="color:#fff">0.0s</b></span><span>Size: <b id="trimSize" style="color:#fff">0MB</b></span>
           </div>
         </div>
-        <div class="control-row">
-          <button class="ctrl-btn primary" onclick="trimVideo()" style="width:100%;">✂️ Trim & Download</button>
+        <div class="control-row" style="position:relative;">
+          <button class="ctrl-btn primary" onclick="trimVideo()" style="width:100%;padding:18px;font-size:15px;letter-spacing:0.5px;position:relative;overflow:hidden;">
+            <span style="position:relative;z-index:2;">✂️ Trim & Download</span>
+            <span style="position:absolute;top:6px;right:8px;font-size:8px;font-weight:900;letter-spacing:1px;background:linear-gradient(135deg,#aaff00,#00d4ff);color:#000;padding:2px 6px;border-radius:6px;z-index:2;">FAST & PREMIUM</span>
+          </button>
         </div>
-        <p style="font-size:11px;color:#a99bc4;margin-top:12px;line-height:1.6;">
-          ⏱️ 10-30 sec (fast server)<br>
-          ✅ 720p HD · Multi-thread
-        </p>
       </div>`;
   } else if (type === 'video-compress') {
     c.innerHTML = `<div id="videoPendingMsg"><div class="control-label">Video Compress</div><p style="font-size:13px;color:#b0a0c8;text-align:center;padding:40px 20px;">📹 Video upload karo compress karne ke liye</p></div>
@@ -640,7 +746,12 @@ function buildControls(type) {
           <div class="control-label">Quality</div>
           <div class="control-row"><button class="ctrl-btn" onclick="selectCompressQuality('high',this)">High</button><button class="ctrl-btn active" onclick="selectCompressQuality('medium',this)">Medium</button><button class="ctrl-btn" onclick="selectCompressQuality('low',this)">Low</button></div>
         </div>
-        <div class="control-row"><button class="ctrl-btn primary" onclick="compressVideo()">🗜️ Compress & Download</button></div>
+        <div class="control-row" style="position:relative;">
+          <button class="ctrl-btn primary" onclick="compressVideo()" style="width:100%;padding:18px;font-size:15px;letter-spacing:0.5px;position:relative;overflow:hidden;">
+            <span style="position:relative;z-index:2;">🗜️ Compress & Download</span>
+            <span style="position:absolute;top:6px;right:8px;font-size:8px;font-weight:900;letter-spacing:1px;background:linear-gradient(135deg,#aaff00,#00d4ff);color:#000;padding:2px 6px;border-radius:6px;z-index:2;">FAST & PREMIUM</span>
+          </button>
+        </div>
       </div>`;
   } else if (type === 'video-gif') {
     c.innerHTML = `<div id="videoPendingMsg"><div class="control-label">Video to GIF</div><p style="font-size:13px;color:#b0a0c8;text-align:center;padding:40px 20px;">📹 Video upload karo GIF banane ke liye</p></div>
@@ -651,7 +762,12 @@ function buildControls(type) {
           <div class="control-label">Duration (seconds)</div><input type="number" id="gifDuration" value="3" step="0.1" class="manual-input" style="width:100%;margin-bottom:12px;">
           <div class="control-label">FPS</div><select id="gifFps" class="manual-select" style="width:100%;"><option value="10">10 FPS</option><option value="12" selected>12 FPS</option><option value="15">15 FPS</option></select>
         </div>
-        <div class="control-row"><button class="ctrl-btn primary" onclick="videoToGif()">🎞️ Make GIF</button></div>
+        <div class="control-row" style="position:relative;">
+          <button class="ctrl-btn primary" onclick="videoToGif()" style="width:100%;padding:18px;font-size:15px;letter-spacing:0.5px;position:relative;overflow:hidden;">
+            <span style="position:relative;z-index:2;">🎞️ Make GIF</span>
+            <span style="position:absolute;top:6px;right:8px;font-size:8px;font-weight:900;letter-spacing:1px;background:linear-gradient(135deg,#aaff00,#00d4ff);color:#000;padding:2px 6px;border-radius:6px;z-index:2;">FAST & PREMIUM</span>
+          </button>
+        </div>
       </div>`;
   } else if (type === 'video-mp3') {
     c.innerHTML = `<div id="videoPendingMsg"><div class="control-label">Video to MP3</div><p style="font-size:13px;color:#b0a0c8;text-align:center;padding:40px 20px;">📹 Video upload karo MP3 nikalne ke liye</p></div>
@@ -660,7 +776,12 @@ function buildControls(type) {
         <div style="padding:16px;background:linear-gradient(135deg, rgba(168,85,247,0.15), rgba(236,72,153,0.1));border:1.5px solid rgba(168,85,247,0.3);border-radius:18px;margin-bottom:16px;">
           <div style="display:flex;justify-content:space-between;font-size:12px;color:#a99bc4;"><span>Duration: <b id="mp3Duration" style="color:#fff">0.0s</b></span><span>Size: <b id="mp3Size" style="color:#fff">0MB</b></span></div>
         </div>
-        <div class="control-row"><button class="ctrl-btn primary" onclick="extractMp3()">🎵 Extract MP3</button></div>
+        <div class="control-row" style="position:relative;">
+          <button class="ctrl-btn primary" onclick="extractMp3()" style="width:100%;padding:18px;font-size:15px;letter-spacing:0.5px;position:relative;overflow:hidden;">
+            <span style="position:relative;z-index:2;">🎵 Extract MP3</span>
+            <span style="position:absolute;top:6px;right:8px;font-size:8px;font-weight:900;letter-spacing:1px;background:linear-gradient(135deg,#aaff00,#00d4ff);color:#000;padding:2px 6px;border-radius:6px;z-index:2;">FAST & PREMIUM</span>
+          </button>
+        </div>
       </div>`;
   } else if (type === 'video-enhance') {
     c.innerHTML = `<div id="videoPendingMsg"><div class="control-label">Video Enhance</div><p style="font-size:13px;color:#b0a0c8;text-align:center;padding:40px 20px;">📹 Video upload karo enhance karne ke liye</p></div>
