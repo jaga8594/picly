@@ -287,11 +287,14 @@
   </div>
   <div class="editor-body">
     <div class="upload-area" id="uploadArea" onclick="document.getElementById('modalUpload').click()">
-      <input type="file" id="modalUpload" accept="image/*" onchange="loadImage(this)">
+      <input type="file" id="modalUpload" accept="image/*,video/*" onchange="loadImage(this)">
       <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
       <p id="uploadTitle">Tap to upload photo</p>
       <span id="uploadHint">JPG, PNG, WEBP — max 10MB</span>
     </div>
+
+    <video id="videoPreview" style="display:none;width:100%;max-height:400px;border-radius:16px;margin-bottom:20px;background:#000;" controls></video>
+
     <div id="canvasWrap" style="display:none">
       <div class="canvas-container">
         <canvas id="canvas"></canvas>
@@ -306,10 +309,12 @@
   </div>
 </div>
 
-<input type="file" id="globalUpload" accept="image/*" style="display:none" onchange="handleGlobalUpload(this)">
+<input type="file" id="globalUpload" accept="image/*,video/*" style="display:none" onchange="handleGlobalUpload(this)">
 <div class="toast" id="toast"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js"></script>
+<script src="https://unpkg.com/@ffmpeg/util@0.12.1/dist/umd/index.js"></script>
 <script src="app.js"></script>
 
 </body>
