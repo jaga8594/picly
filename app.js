@@ -372,7 +372,7 @@ async function trimVideo() {
     const ffmpeg = await getFFmpeg();
     const { fetchFile } = FFmpegUtil;
     await ffmpeg.writeFile('input.mp4', await fetchFile(currentVideoFile));
-    await ffmpeg.exec(['-i','input.mp4','-ss',String(s),'-t',String(e-s),'-c','copy','output.mp4']);
+    await ffmpeg.exec(['-i','input.mp4','-ss',String(s),'-t',String(e-s),'-c:v','libx264','-c:a','aac','-preset','fast','-crf','23','output.mp4']);
     const data = await ffmpeg.readFile('output.mp4');
     const blob = new Blob([data.buffer], { type: 'video/mp4' });
     const a = document.createElement('a');
