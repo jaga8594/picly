@@ -616,11 +616,15 @@ async function runAnimate() {
         executionProviders: ['wasm'],
         graphOptimizationLevel: 'all'
       });
-      console.log('✅ Model loaded');
+      console.log('=== MODEL INFO ===');
+      console.log('Inputs:', animeSession.inputNames);
+      console.log('Input metadata:', JSON.stringify(animeSession.inputMetadata));
+      console.log('Outputs:', animeSession.outputNames);
+      console.log('Output metadata:', JSON.stringify(animeSession.outputMetadata));
     }
 
     const img = await loadImageFromFileAnimate(currentAnimateImage);
-    const inputSize = 256;
+    const inputSize = 512;
     const inputTensor = imageToTensorAnimate(img, inputSize, inputSize);
 
     showLoader('🎭 Converting to anime');
@@ -631,6 +635,9 @@ async function runAnimate() {
     const outputTensor = results[animeSession.outputNames[0]];
     const outputData = outputTensor.data;
     const dims = outputTensor.dims;
+    console.log('Output dims:', dims);
+
+    // Handle [1,3,H,W] format
     const h = dims[2], w = dims[3];
 
     const c = document.createElement('canvas');
