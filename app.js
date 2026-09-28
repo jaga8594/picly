@@ -28,16 +28,17 @@ const categories = {
     { id:'video-mp3', name:'Video to MP3', desc:'Extract audio', type:'video-mp3', img:'https://images.unsplash.com/photo-1614064641938-3bbee52942c7?w=100&q=80' },
     { id:'video-enhance', name:'Video Enhance', desc:'Sharpen', type:'video-enhance', img:'https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?w=100&q=80' }
   ]},
-  aistudio: { name:'AI Studio', desc:'Text · BG remove · replace', tools:[
+  aistudio: { name:'AI Studio', desc:'AI-powered tools', tools:[
     { id:'ai-text-image', name:'Text to Image', desc:'Prompt → HD image', type:'ai-text-image', img:'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=100&q=80' },
-    { id:'ai-bg-remove', name:'BG Remove', desc:'Photo → Transparent PNG', type:'ai-bg-remove', img:'https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?w=100&q=80' },
-    { id:'ai-bg-replace', name:'BG Replace', desc:'Photo + AI background', type:'ai-bg-replace', img:'https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?w=100&q=80' }
+    { id:'ai-bg-remove', name:'BG Remove', desc:'Photo → Transparent', type:'ai-bg-remove', img:'https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?w=100&q=80' },
+    { id:'ai-bg-replace', name:'BG Replace', desc:'Photo + AI background', type:'ai-bg-replace', img:'https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?w=100&q=80' },
+    { id:'ai-editor', name:'AI Editor', desc:'Edit photo with prompt', type:'ai-editor', img:'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&q=80' }
   ]},
   aimagic: { name:'AI Magic', desc:'Free photo effects', tools:[
-    { id:'ai-enhance', name:'Photo Enhance', desc:'Sharper · Brighter · HD', type:'ai-enhance', img:'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=100&q=80' },
-    { id:'ai-anime', name:'Anime Cartoon', desc:'Anime-style vivid effect', type:'ai-anime', img:'https://images.unsplash.com/photo-1578632767115-351597cf2477?w=100&q=80' },
-    { id:'ai-restore', name:'Old Photo Restore', desc:'Vintage · Color boost', type:'ai-restore', img:'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=100&q=80' },
-    { id:'ai-glow', name:'Glow Effect', desc:'Dreamy soft glow', type:'ai-glow', img:'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&q=80' }
+    { id:'ai-enhance', name:'Photo Enhance', desc:'Sharper · Brighter', type:'ai-enhance', img:'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=100&q=80' },
+    { id:'ai-anime', name:'Anime Cartoon', desc:'Anime-style effect', type:'ai-anime', img:'https://images.unsplash.com/photo-1578632767115-351597cf2477?w=100&q=80' },
+    { id:'ai-restore', name:'Old Photo Restore', desc:'Vintage boost', type:'ai-restore', img:'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=100&q=80' },
+    { id:'ai-glow', name:'Glow Effect', desc:'Soft dreamy glow', type:'ai-glow', img:'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&q=80' }
   ]},
   utility: { name:'Utility', desc:'Calculators · QR', tools:[
     { id:'emi', name:'EMI Calculator', desc:'Loan EMI monthly', type:'emi', img:'https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=100&q=80' },
@@ -76,6 +77,8 @@ let currentAiImage = null;
 let currentAiImageResult = null;
 let currentBgImage = null;
 let currentRemoveBgImage = null;
+let currentEditorImage = null;
+let currentEditorResult = null;
 let wakeLock = null;
 let dotsInterval = null;
 let isProcessing = false;
@@ -83,7 +86,7 @@ let isProcessing = false;
 const CALCULATOR_TYPES = ['emi','gst','age','bmi','unit','qr'];
 const VIDEO_TYPES = ['video-trim','video-compress','video-gif','video-mp3','video-enhance'];
 const AI_MAGIC_TYPES = ['ai-enhance','ai-anime','ai-restore','ai-glow'];
-const AI_STUDIO_TYPES = ['ai-text-image','ai-bg-remove','ai-bg-replace'];
+const AI_STUDIO_TYPES = ['ai-text-image','ai-bg-remove','ai-bg-replace','ai-editor'];
 
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
@@ -140,6 +143,8 @@ function openTool(toolId) {
   currentAiImageResult = null;
   currentBgImage = null;
   currentRemoveBgImage = null;
+  currentEditorImage = null;
+  currentEditorResult = null;
   selectedAiRatio = '1:1';
 
   document.getElementById('editorTitle').textContent = tool.name;
@@ -510,6 +515,65 @@ async function replaceBackground() {
   isProcessing = false;
 }
 
+// ==================== AI EDITOR ====================
+function loadEditorImage(input) {
+  const file = input.files ? input.files[0] : input;
+  if (!file) return;
+  if (!file.type.startsWith('image/')) { showToast('Upload an image'); return; }
+  currentEditorImage = file;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const preview = document.getElementById('editorPreview');
+    if (preview) { preview.src = e.target.result; preview.style.display = 'block'; }
+    const pending = document.getElementById('editorPendingMsg');
+    if (pending) pending.style.display = 'none';
+    const activeUI = document.getElementById('editorActiveUI');
+    if (activeUI) activeUI.style.display = 'block';
+    showToast('Photo loaded ✨');
+  };
+  reader.readAsDataURL(file);
+}
+
+function setEditorPrompt(text) {
+  const input = document.getElementById('editorPromptInput');
+  if (input) input.value = text;
+}
+
+async function runAiEditor() {
+  if (isProcessing) return;
+  if (!currentEditorImage) { showToast('Upload photo first'); return; }
+  const promptInput = document.getElementById('editorPromptInput');
+  const prompt = promptInput ? promptInput.value.trim() : '';
+  if (!prompt) { showToast('Enter prompt'); return; }
+  isProcessing = true;
+  await requestWakeLock();
+  showLoader('🎨 Editing with AI');
+  try {
+    const formData = new FormData();
+    formData.append('image', currentEditorImage);
+    formData.append('prompt', prompt);
+    const blob = await uploadWithProgress(SERVER_URL + '/api/ai-editor', formData, updateProgress);
+    currentEditorResult = URL.createObjectURL(blob);
+    const resultImg = document.getElementById('editorResultImg');
+    if (resultImg) resultImg.src = currentEditorResult;
+    const resultBox = document.getElementById('editorResultBox');
+    if (resultBox) resultBox.style.display = 'block';
+    hideLoader();
+    showToast('✅ Done!');
+  } catch (err) { hideLoader(); console.error('❌', err); showToast('Error: ' + err.message); }
+  await releaseWakeLock();
+  isProcessing = false;
+}
+
+function downloadEditorResult() {
+  if (!currentEditorResult) { showToast('No result yet'); return; }
+  const a = document.createElement('a');
+  a.href = currentEditorResult;
+  a.download = 'picly-edited-' + Date.now() + '.png';
+  a.click();
+  showToast('✅ Downloaded!');
+}
+
 async function requestWakeLock() {
   try { if ('wakeLock' in navigator) { wakeLock = await navigator.wakeLock.request('screen'); } } catch (err) {}
 }
@@ -782,12 +846,6 @@ function buildControls(type) {
           <button class="ctrl-btn" onclick="selectAiRatio('9:16',this)" style="flex:1;font-size:11px;">▮ 9:16</button>
           <button class="ctrl-btn" onclick="selectAiRatio('4:3',this)" style="flex:1;font-size:11px;">▭ 4:3</button>
         </div>
-        <div class="control-row" style="margin-bottom:16px;">
-          <button class="ctrl-btn" onclick="selectAiRatio('3:2',this)" style="flex:1;font-size:11px;">3:2</button>
-          <button class="ctrl-btn" onclick="selectAiRatio('4:5',this)" style="flex:1;font-size:11px;">4:5</button>
-          <button class="ctrl-btn" onclick="selectAiRatio('3:4',this)" style="flex:1;font-size:11px;">3:4</button>
-          <button class="ctrl-btn" onclick="selectAiRatio('2:3',this)" style="flex:1;font-size:11px;">2:3</button>
-        </div>
         <p style="font-size:11px;color:#aaff00;margin-bottom:12px;font-weight:700;">💡 Cloudflare FLUX + Smart Crop · 10-20 sec</p>
         <button class="ctrl-btn primary" onclick="generateAiImage()" style="width:100%;padding:18px;font-size:15px;">✨ Generate Image</button>
       </div>
@@ -831,6 +889,40 @@ function buildControls(type) {
         <input type="text" id="bgPromptInput" placeholder="lion walking in jungle, sunset" class="manual-input" style="width:100%;padding:14px;font-size:14px;margin-bottom:16px;">
         <p style="font-size:11px;color:#aaff00;margin-bottom:12px;font-weight:700;">💡 Local BG Remove + Cloudflare FLUX · 15-30 sec</p>
         <button class="ctrl-btn primary" onclick="replaceBackground()" style="width:100%;padding:18px;font-size:15px;">🎨 Replace Background</button>
+      </div>
+    `;
+  } else if (type === 'ai-editor') {
+    c.innerHTML = `
+      <div id="editorPendingMsg">
+        <div class="control-label">🎨 AI Editor</div>
+        <div class="upload-area" id="editorUploadArea" onclick="document.getElementById('editorInput').click()" style="padding:60px 24px;margin-top:16px;">
+          <input type="file" id="editorInput" accept="image/*" onchange="loadEditorImage(this)" style="display:none;">
+          <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          <p>Tap to upload photo</p>
+          <span>Kuch bhi edit karo prompt se</span>
+        </div>
+      </div>
+      <div id="editorActiveUI" style="display:none">
+        <img id="editorPreview" style="width:100%;max-height:300px;object-fit:contain;border-radius:18px;margin-bottom:16px;box-shadow:0 20px 40px rgba(168,85,247,0.3);">
+        <label style="font-size:12px;color:#c0b0d8;font-weight:700;display:block;margin-bottom:8px;">PROMPT</label>
+        <textarea id="editorPromptInput" placeholder="lion beside me, cinematic, sunset" class="manual-input" style="width:100%;padding:14px;font-size:14px;margin-bottom:12px;min-height:80px;font-family:inherit;"></textarea>
+        <p style="font-size:11px;color:#aaff00;margin-bottom:8px;font-weight:700;">💡 Kuch bhi likho</p>
+        <div class="control-row" style="margin-bottom:12px;flex-wrap:wrap;">
+          <button class="ctrl-btn" onclick="setEditorPrompt('anime style portrait, studio ghibli, cel shaded')" style="flex:1;font-size:11px;padding:10px 6px;">🎭 Anime</button>
+          <button class="ctrl-btn" onclick="setEditorPrompt('cartoon style, pixar 3d, colorful')" style="flex:1;font-size:11px;padding:10px 6px;">🖼️ Cartoon</button>
+          <button class="ctrl-btn" onclick="setEditorPrompt('lion beside me, cinematic, sunset')" style="flex:1;font-size:11px;padding:10px 6px;">🦁 Lion</button>
+        </div>
+        <div class="control-row" style="margin-bottom:12px;flex-wrap:wrap;">
+          <button class="ctrl-btn" onclick="setEditorPrompt('cyberpunk neon city, futuristic')" style="flex:1;font-size:11px;padding:10px 6px;">🌆 Cyberpunk</button>
+          <button class="ctrl-btn" onclick="setEditorPrompt('oil painting, van gogh style')" style="flex:1;font-size:11px;padding:10px 6px;">🎨 Oil</button>
+          <button class="ctrl-btn" onclick="setEditorPrompt('3d render, pixar style, disney')" style="flex:1;font-size:11px;padding:10px 6px;">🎮 3D</button>
+        </div>
+        <button class="ctrl-btn primary" onclick="runAiEditor()" style="width:100%;padding:18px;font-size:15px;">✨ Edit with AI</button>
+      </div>
+      <div id="editorResultBox" style="display:none;margin-top:20px;">
+        <div class="control-label">Result</div>
+        <img id="editorResultImg" style="width:100%;border-radius:18px;box-shadow:0 20px 40px rgba(168,85,247,0.4);margin-bottom:16px;">
+        <button class="ctrl-btn primary" onclick="downloadEditorResult()" style="width:100%;padding:18px;font-size:15px;">⬇️ Download</button>
       </div>
     `;
   } else if (type === 'ai-enhance' || type === 'ai-anime' || type === 'ai-restore' || type === 'ai-glow') {
