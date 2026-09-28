@@ -28,11 +28,12 @@ const categories = {
     { id:'video-mp3', name:'Video to MP3', desc:'Extract audio', type:'video-mp3', img:'https://images.unsplash.com/photo-1614064641938-3bbee52942c7?w=100&q=80' },
     { id:'video-enhance', name:'Video Enhance', desc:'Sharpen', type:'video-enhance', img:'https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?w=100&q=80' }
   ]},
-  aistudio: { name:'AI Studio', desc:'AI-powered tools', tools:[
+  aistudio: { name:'AI Studio', desc:'AI tools', tools:[
     { id:'ai-text-image', name:'Text to Image', desc:'Prompt → HD image', type:'ai-text-image', img:'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=100&q=80' },
     { id:'ai-bg-remove', name:'BG Remove', desc:'Photo → Transparent', type:'ai-bg-remove', img:'https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?w=100&q=80' },
     { id:'ai-bg-replace', name:'BG Replace', desc:'Photo + AI background', type:'ai-bg-replace', img:'https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?w=100&q=80' },
-    { id:'ai-editor', name:'AI Editor', desc:'Edit photo with prompt', type:'ai-editor', img:'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&q=80' }
+    { id:'ai-editor', name:'AI Editor', desc:'Edit photo with prompt', type:'ai-editor', img:'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&q=80' },
+    { id:'ai-animate', name:'Animate', desc:'Photo → Anime', type:'ai-animate', img:'https://images.unsplash.com/photo-1578632767115-351597cf2477?w=100&q=80' }
   ]},
   aimagic: { name:'AI Magic', desc:'Free photo effects', tools:[
     { id:'ai-enhance', name:'Photo Enhance', desc:'Sharper · Brighter', type:'ai-enhance', img:'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=100&q=80' },
@@ -79,6 +80,9 @@ let currentBgImage = null;
 let currentRemoveBgImage = null;
 let currentEditorImage = null;
 let currentEditorResult = null;
+let currentAnimateImage = null;
+let currentAnimateResult = null;
+let animeSession = null;
 let wakeLock = null;
 let dotsInterval = null;
 let isProcessing = false;
@@ -86,7 +90,7 @@ let isProcessing = false;
 const CALCULATOR_TYPES = ['emi','gst','age','bmi','unit','qr'];
 const VIDEO_TYPES = ['video-trim','video-compress','video-gif','video-mp3','video-enhance'];
 const AI_MAGIC_TYPES = ['ai-enhance','ai-anime','ai-restore','ai-glow'];
-const AI_STUDIO_TYPES = ['ai-text-image','ai-bg-remove','ai-bg-replace','ai-editor'];
+const AI_STUDIO_TYPES = ['ai-text-image','ai-bg-remove','ai-bg-replace','ai-editor','ai-animate'];
 
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
@@ -145,6 +149,8 @@ function openTool(toolId) {
   currentRemoveBgImage = null;
   currentEditorImage = null;
   currentEditorResult = null;
+  currentAnimateImage = null;
+  currentAnimateResult = null;
   selectedAiRatio = '1:1';
 
   document.getElementById('editorTitle').textContent = tool.name;
@@ -574,6 +580,139 @@ function downloadEditorResult() {
   showToast('✅ Downloaded!');
 }
 
+// ==================== ANIMATE (AnimeGAN ONNX Browser) ====================
+function loadAnimateImage(input) {
+  const file = input.files ? input.files[0] : input;
+  if (!file) return;
+  if (!file.type.startsWith('image/')) { showToast('Upload an image'); return; }
+  currentAnimateImage = file;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const preview = document.getElementById('animatePreview');
+    if (preview) { preview.src = e.target.result; preview.style.display = 'block'; }
+    const uploadArea = document.getElementById('animateUploadArea');
+    if (uploadArea) uploadArea.style.display = 'none';
+    const pending = document.getElementById('animatePendingMsg');
+    if (pending) pending.style.display = 'none';
+    const activeUI = document.getElementById('animateActiveUI');
+    if (activeUI) activeUI.style.display = 'block';
+    showToast('Photo loaded ✨');
+  };
+  reader.readAsDataURL(file);
+}
+
+async function runAnimate() {
+  if (isProcessing) return;
+  if (!currentAnimateImage) { showToast('Upload photo first'); return; }
+  if (typeof ort === 'undefined') { showToast('ONNX library not loaded'); return; }
+  isProcessing = true;
+  await requestWakeLock();
+  showLoader('🎭 Loading AI model');
+
+  try {
+    if (!animeSession) {
+      console.log('Loading AnimeGAN ONNX model...');
+      animeSession = await ort.InferenceSession.create('./models/animegan.onnx', {
+        executionProviders: ['wasm'],
+        graphOptimizationLevel: 'all'
+      });
+      console.log('✅ Model loaded');
+    }
+
+    const img = await loadImageFromFileAnimate(currentAnimateImage);
+    const inputSize = 256;
+    const inputTensor = imageToTensorAnimate(img, inputSize, inputSize);
+
+    showLoader('🎭 Converting to anime');
+    const feeds = {};
+    feeds[animeSession.inputNames[0]] = inputTensor;
+    const results = await animeSession.run(feeds);
+
+    const outputTensor = results[animeSession.outputNames[0]];
+    const outputData = outputTensor.data;
+    const dims = outputTensor.dims;
+    const h = dims[2], w = dims[3];
+
+    const c = document.createElement('canvas');
+    c.width = w;
+    c.height = h;
+    const cctx = c.getContext('2d');
+    const imageData = cctx.createImageData(w, h);
+    const totalPixels = h * w;
+
+    for (let i = 0; i < totalPixels; i++) {
+      let r = outputData[i];
+      let g = outputData[totalPixels + i];
+      let b = outputData[totalPixels * 2 + i];
+
+      if (r <= 1.5) { r = r * 255; g = g * 255; b = b * 255; }
+
+      imageData.data[i * 4] = Math.max(0, Math.min(255, r));
+      imageData.data[i * 4 + 1] = Math.max(0, Math.min(255, g));
+      imageData.data[i * 4 + 2] = Math.max(0, Math.min(255, b));
+      imageData.data[i * 4 + 3] = 255;
+    }
+    cctx.putImageData(imageData, 0, 0);
+
+    currentAnimateResult = c.toDataURL('image/png');
+    const resultImg = document.getElementById('animateResultImg');
+    if (resultImg) resultImg.src = currentAnimateResult;
+    const resultBox = document.getElementById('animateResultBox');
+    if (resultBox) resultBox.style.display = 'block';
+
+    hideLoader();
+    showToast('✅ Anime ready!');
+  } catch (err) {
+    hideLoader();
+    console.error('❌ Animate error:', err);
+    showToast('Error: ' + err.message);
+  }
+  await releaseWakeLock();
+  isProcessing = false;
+}
+
+function loadImageFromFileAnimate(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = reject;
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+function imageToTensorAnimate(img, w, h) {
+  const c = document.createElement('canvas');
+  c.width = w;
+  c.height = h;
+  const cctx = c.getContext('2d');
+  cctx.drawImage(img, 0, 0, w, h);
+  const imageData = cctx.getImageData(0, 0, w, h);
+  const data = imageData.data;
+
+  const float32 = new Float32Array(1 * 3 * h * w);
+  for (let i = 0; i < h * w; i++) {
+    float32[i] = data[i * 4] / 255.0;
+    float32[h * w + i] = data[i * 4 + 1] / 255.0;
+    float32[2 * h * w + i] = data[i * 4 + 2] / 255.0;
+  }
+
+  return new ort.Tensor('float32', float32, [1, 3, h, w]);
+}
+
+function downloadAnimateResult() {
+  if (!currentAnimateResult) { showToast('No result yet'); return; }
+  const a = document.createElement('a');
+  a.href = currentAnimateResult;
+  a.download = 'picly-anime-' + Date.now() + '.png';
+  a.click();
+  showToast('✅ Downloaded!');
+}
+
 async function requestWakeLock() {
   try { if ('wakeLock' in navigator) { wakeLock = await navigator.wakeLock.request('screen'); } } catch (err) {}
 }
@@ -905,7 +1044,7 @@ function buildControls(type) {
       <div id="editorActiveUI" style="display:none">
         <img id="editorPreview" style="width:100%;max-height:300px;object-fit:contain;border-radius:18px;margin-bottom:16px;box-shadow:0 20px 40px rgba(168,85,247,0.3);">
         <label style="font-size:12px;color:#c0b0d8;font-weight:700;display:block;margin-bottom:8px;">PROMPT</label>
-        <textarea id="editorPromptInput" placeholder="lion beside me, cinematic, sunset" class="manual-input" style="width:100%;padding:14px;font-size:14px;margin-bottom:12px;min-height:80px;font-family:inherit;"></textarea>
+        <textarea id="editorPromptInput" placeholder="anime style portrait, studio ghibli" class="manual-input" style="width:100%;padding:14px;font-size:14px;margin-bottom:12px;min-height:80px;font-family:inherit;"></textarea>
         <p style="font-size:11px;color:#aaff00;margin-bottom:8px;font-weight:700;">💡 Kuch bhi likho</p>
         <div class="control-row" style="margin-bottom:12px;flex-wrap:wrap;">
           <button class="ctrl-btn" onclick="setEditorPrompt('anime style portrait, studio ghibli, cel shaded')" style="flex:1;font-size:11px;padding:10px 6px;">🎭 Anime</button>
@@ -923,6 +1062,28 @@ function buildControls(type) {
         <div class="control-label">Result</div>
         <img id="editorResultImg" style="width:100%;border-radius:18px;box-shadow:0 20px 40px rgba(168,85,247,0.4);margin-bottom:16px;">
         <button class="ctrl-btn primary" onclick="downloadEditorResult()" style="width:100%;padding:18px;font-size:15px;">⬇️ Download</button>
+      </div>
+    `;
+  } else if (type === 'ai-animate') {
+    c.innerHTML = `
+      <div id="animatePendingMsg">
+        <div class="control-label">🎭 Animate</div>
+        <div class="upload-area" id="animateUploadArea" onclick="document.getElementById('animateInput').click()" style="padding:60px 24px;margin-top:16px;">
+          <input type="file" id="animateInput" accept="image/*" onchange="loadAnimateImage(this)" style="display:none;">
+          <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          <p>Tap to upload photo</p>
+          <span>Person photo — anime character banega</span>
+        </div>
+      </div>
+      <div id="animateActiveUI" style="display:none">
+        <img id="animatePreview" style="width:100%;max-height:300px;object-fit:contain;border-radius:18px;margin-bottom:16px;box-shadow:0 20px 40px rgba(168,85,247,0.3);">
+        <p style="font-size:11px;color:#aaff00;margin-bottom:12px;font-weight:700;">💡 AnimeGAN · 100% free · pehli baar 8 MB download</p>
+        <button class="ctrl-btn primary" onclick="runAnimate()" style="width:100%;padding:18px;font-size:15px;">🎭 Convert to Anime</button>
+      </div>
+      <div id="animateResultBox" style="display:none;margin-top:20px;">
+        <div class="control-label">Result</div>
+        <img id="animateResultImg" style="width:100%;border-radius:18px;box-shadow:0 20px 40px rgba(168,85,247,0.4);margin-bottom:16px;">
+        <button class="ctrl-btn primary" onclick="downloadAnimateResult()" style="width:100%;padding:18px;font-size:15px;">⬇️ Download</button>
       </div>
     `;
   } else if (type === 'ai-enhance' || type === 'ai-anime' || type === 'ai-restore' || type === 'ai-glow') {
