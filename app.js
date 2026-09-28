@@ -28,8 +28,9 @@ const categories = {
     { id:'video-mp3', name:'Video to MP3', desc:'Extract audio', type:'video-mp3', img:'https://images.unsplash.com/photo-1614064641938-3bbee52942c7?w=100&q=80' },
     { id:'video-enhance', name:'Video Enhance', desc:'Sharpen', type:'video-enhance', img:'https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?w=100&q=80' }
   ]},
-  aistudio: { name:'AI Studio', desc:'Text → HD image', tools:[
-    { id:'ai-text-image', name:'Text to Image', desc:'Prompt → HD image', type:'ai-text-image', img:'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=100&q=80' }
+  aistudio: { name:'AI Studio', desc:'Text → image · BG replace', tools:[
+    { id:'ai-text-image', name:'Text to Image', desc:'Prompt → HD image', type:'ai-text-image', img:'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=100&q=80' },
+    { id:'ai-bg-replace', name:'BG Replace', desc:'Photo + AI background', type:'ai-bg-replace', img:'https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?w=100&q=80' }
   ]},
   aimagic: { name:'AI Magic', desc:'Free photo effects', tools:[
     { id:'ai-enhance', name:'Photo Enhance', desc:'Sharper · Brighter · HD', type:'ai-enhance', img:'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=100&q=80' },
@@ -75,11 +76,12 @@ let currentAiImageResult = null;
 let wakeLock = null;
 let dotsInterval = null;
 let isProcessing = false;
+let currentBgImage = null;
 
 const CALCULATOR_TYPES = ['emi','gst','age','bmi','unit','qr'];
 const VIDEO_TYPES = ['video-trim','video-compress','video-gif','video-mp3','video-enhance'];
 const AI_MAGIC_TYPES = ['ai-enhance','ai-anime','ai-restore','ai-glow'];
-const AI_STUDIO_TYPES = ['ai-text-image'];
+const AI_STUDIO_TYPES = ['ai-text-image','ai-bg-replace'];
 
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
@@ -134,8 +136,9 @@ function openTool(toolId) {
   currentVideoDuration = 0;
   currentAiImage = null;
   currentAiImageResult = null;
+  currentBgImage = null;
   selectedAiRatio = '1:1';
-  
+
   document.getElementById('editorTitle').textContent = tool.name;
   const ol = document.getElementById('overlayLayer');
   if (ol) ol.innerHTML = '';
@@ -248,23 +251,23 @@ function loadVideo(input) {
   const file = input.files ? input.files[0] : input;
   if (!file) return;
   currentVideoFile = file;
-  
+
   const video = document.getElementById('videoPreview');
   video.src = URL.createObjectURL(file);
   video.style.display = 'block';
   document.getElementById('uploadArea').style.display = 'none';
-  
+
   video.onloadedmetadata = () => {
     currentVideoDuration = video.duration;
     const sizeMB = (file.size / 1024 / 1024).toFixed(2);
-    
+
     const pending = document.getElementById('videoPendingMsg');
     if (pending) pending.style.display = 'none';
     const activeUI = document.getElementById('videoActiveUI');
     if (activeUI) activeUI.style.display = 'block';
-    
+
     const type = currentTool.type;
-    
+
     if (type === 'video-trim') {
       const ss = document.getElementById('trimStartSlider');
       const es = document.getElementById('trimEndSlider');
@@ -299,7 +302,7 @@ function loadVideo(input) {
       if (d) d.textContent = currentVideoDuration.toFixed(1) + 's';
       if (s) s.textContent = sizeMB + 'MB';
     }
-    
+
     showToast('Video loaded — ' + sizeMB + 'MB ✨');
   };
 }
@@ -352,7 +355,7 @@ function loadAiImage(input) {
     return;
   }
   currentAiImage = file;
-  
+
   const reader = new FileReader();
   reader.onload = (e) => {
     const preview = document.getElementById('aiImagePreview');
@@ -381,9 +384,9 @@ async function applyAiMagic() {
     const formData = new FormData();
     formData.append('image', currentAiImage);
     formData.append('type', selectedAiMagic);
-    
+
     const blob = await uploadWithProgress(SERVER_URL + '/api/ai-magic', formData, updateProgress);
-    
+
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = `picly-${selectedAiMagic}-${Date.now()}.jpg`;
@@ -399,51 +402,40 @@ async function applyAiMagic() {
   isProcessing = false;
 }
 
-// ==================== AI STUDIO — TEXT TO IMAGE ====================
+// ==================== AI STUDIO — TEXT TO IMAGE (with Aspect Ratio) ====================
 async function generateAiImage() {
   if (isProcessing) return;
   const promptInput = document.getElementById('aiPromptInput');
   if (!promptInput) { showToast('Input not found'); return; }
   const prompt = promptInput.value.trim();
   if (!prompt) { showToast('Enter prompt first'); return; }
-  
-  const ratioMap = {
-    '1:1':  { w: 1024, h: 1024 },
-    '16:9': { w: 1344, h: 768 },
-    '9:16': { w: 768,  h: 1344 },
-    '4:3':  { w: 1152, h: 864 },
-    '3:2':  { w: 1216, h: 832 },
-    '4:5':  { w: 896,  h: 1120 },
-    '3:4':  { w: 864,  h: 1152 },
-    '2:3':  { w: 832,  h: 1216 }
-  };
-  const dims = ratioMap[selectedAiRatio] || ratioMap['1:1'];
-  
+
   isProcessing = true;
   await requestWakeLock();
   showLoader('🎨 Generating AI image');
-  
+
   try {
     const res = await fetch(SERVER_URL + '/api/cf-image', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ 
         prompt: prompt,
-        width: dims.w,
-        height: dims.h
+        aspect_ratio: selectedAiRatio
       })
     });
-    
-    if (!res.ok) throw new Error('Server error: ' + res.status);
-    
+
+    if (!res.ok) {
+      throw new Error('Server error: ' + res.status);
+    }
+
     const data = await res.json();
-    
+
     if (!data.success || !data.result || !data.result.image) {
       throw new Error('No image in response');
     }
-    
+
     currentAiImageResult = data.result.image;
-    
+
     const preview = document.getElementById('aiResultImg');
     if (preview) {
       preview.src = 'data:image/png;base64,' + currentAiImageResult;
@@ -451,7 +443,7 @@ async function generateAiImage() {
     }
     const resultBox = document.getElementById('aiResultBox');
     if (resultBox) resultBox.style.display = 'block';
-    
+
     hideLoader();
     showToast('✅ Image generated!');
   } catch (err) {
@@ -470,6 +462,66 @@ function downloadAiImage() {
   a.download = 'picly-ai-' + Date.now() + '.png';
   a.click();
   showToast('✅ Downloaded!');
+}
+
+// ==================== AI BG REPLACE ====================
+function loadBgImage(input) {
+  const file = input.files ? input.files[0] : input;
+  if (!file) return;
+  if (!file.type.startsWith('image/')) {
+    showToast('Please upload an image');
+    return;
+  }
+  currentBgImage = file;
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const preview = document.getElementById('bgImagePreview');
+    if (preview) {
+      preview.src = e.target.result;
+      preview.style.display = 'block';
+    }
+    const uploadArea = document.getElementById('bgUploadArea');
+    if (uploadArea) uploadArea.style.display = 'none';
+    const pending = document.getElementById('bgPendingMsg');
+    if (pending) pending.style.display = 'none';
+    const activeUI = document.getElementById('bgActiveUI');
+    if (activeUI) activeUI.style.display = 'block';
+    showToast('Image loaded ✨');
+  };
+  reader.readAsDataURL(file);
+}
+
+async function replaceBackground() {
+  if (isProcessing) return;
+  if (!currentBgImage) { showToast('Upload image first'); return; }
+  const promptInput = document.getElementById('bgPromptInput');
+  const bgPrompt = promptInput ? promptInput.value.trim() : '';
+  if (!bgPrompt) { showToast('Enter background prompt'); return; }
+
+  isProcessing = true;
+  await requestWakeLock();
+  showLoader('🎨 Replacing background');
+  try {
+    const formData = new FormData();
+    formData.append('image', currentBgImage);
+    formData.append('bgPrompt', bgPrompt);
+
+    const blob = await uploadWithProgress(SERVER_URL + '/api/merge-bg', formData, updateProgress);
+
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'picly-bg-replace-' + Date.now() + '.png';
+    a.click();
+    hideLoader();
+    showToast('✅ Background replaced!');
+  } catch (err) {
+    hideLoader();
+    console.error('❌', err);
+    showToast('Error: ' + err.message);
+  }
+  await releaseWakeLock();
+  isProcessing = false;
 }
 
 async function requestWakeLock() {
@@ -591,7 +643,7 @@ function uploadWithProgress(url, formData, onProgress) {
     const xhr = new XMLHttpRequest();
     xhr.open('POST', url, true);
     xhr.responseType = 'blob';
-    
+
     xhr.upload.onprogress = (e) => {
       if (e.lengthComputable) {
         const uploadPercent = (e.loaded / e.total) * 100;
@@ -599,7 +651,7 @@ function uploadWithProgress(url, formData, onProgress) {
         onProgress(overall);
       }
     };
-    
+
     xhr.upload.onload = () => {
       onProgress(45);
       let fake = 45;
@@ -610,7 +662,7 @@ function uploadWithProgress(url, formData, onProgress) {
         }
       }, 400);
     };
-    
+
     xhr.onload = () => {
       if (window.serverProgressInterval) {
         clearInterval(window.serverProgressInterval);
@@ -623,7 +675,7 @@ function uploadWithProgress(url, formData, onProgress) {
         reject(new Error('Server error: ' + xhr.status));
       }
     };
-    
+
     xhr.onerror = () => {
       if (window.serverProgressInterval) {
         clearInterval(window.serverProgressInterval);
@@ -631,7 +683,7 @@ function uploadWithProgress(url, formData, onProgress) {
       }
       reject(new Error('Network error'));
     };
-    
+
     xhr.send(formData);
   });
 }
@@ -642,7 +694,7 @@ async function trimVideo() {
   const s = parseFloat(document.getElementById('trimStartSlider').value);
   const e = parseFloat(document.getElementById('trimEndSlider').value);
   if (e <= s) { showToast('Invalid range'); return; }
-  
+
   isProcessing = true;
   await requestWakeLock();
   showLoader('✂️ Trimming your video');
@@ -651,9 +703,9 @@ async function trimVideo() {
     formData.append('video', currentVideoFile);
     formData.append('start', s);
     formData.append('end', e);
-    
+
     const blob = await uploadWithProgress(SERVER_URL + '/api/trim', formData, updateProgress);
-    
+
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = 'picly-trimmed-' + Date.now() + '.mp4';
@@ -679,9 +731,9 @@ async function compressVideo() {
     const formData = new FormData();
     formData.append('video', currentVideoFile);
     formData.append('quality', selectedCompressQuality);
-    
+
     const blob = await uploadWithProgress(SERVER_URL + '/api/compress', formData, updateProgress);
-    
+
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = 'picly-compressed-' + Date.now() + '.mp4';
@@ -706,9 +758,9 @@ async function extractMp3() {
   try {
     const formData = new FormData();
     formData.append('video', currentVideoFile);
-    
+
     const blob = await uploadWithProgress(SERVER_URL + '/api/mp3', formData, updateProgress);
-    
+
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = 'picly-audio-' + Date.now() + '.mp3';
@@ -739,9 +791,9 @@ async function videoToGif() {
     formData.append('start', s);
     formData.append('duration', d);
     formData.append('fps', f);
-    
+
     const blob = await uploadWithProgress(SERVER_URL + '/api/gif', formData, updateProgress);
-    
+
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = 'picly-' + Date.now() + '.gif';
@@ -762,19 +814,19 @@ async function enhanceVideo() {
   if (!currentVideoFile) { showToast('Upload video first'); return; }
   isProcessing = true;
   await requestWakeLock();
-  
+
   if (selectedResolution === '2k') showToast('⚡ 2K HD — 30-60 sec lagenge');
   if (selectedEnhanceType === 'stabilize') showToast('🎬 Stabilizing — 30-60 sec lagenge');
-  
+
   showLoader('✨ Enhancing your video');
   try {
     const formData = new FormData();
     formData.append('video', currentVideoFile);
     formData.append('type', selectedEnhanceType);
     formData.append('resolution', selectedResolution);
-    
+
     const blob = await uploadWithProgress(SERVER_URL + '/api/enhance', formData, updateProgress);
-    
+
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = 'picly-enhanced-' + Date.now() + '.mp4';
@@ -1063,7 +1115,7 @@ function buildControls(type) {
           <button class="ctrl-btn" onclick="selectAiRatio('2:3',this)" style="flex:1;font-size:11px;padding:10px 6px;">▯ 2:3</button>
         </div>
         
-        <p style="font-size:11px;color:#aaff00;margin-bottom:12px;font-weight:700;">💡 Cloudflare FLUX · 5-15 sec · HD quality</p>
+        <p style="font-size:11px;color:#aaff00;margin-bottom:12px;font-weight:700;">💡 Cloudflare FLUX + Smart Crop · 10-20 sec</p>
         
         <button class="ctrl-btn primary" onclick="generateAiImage()" style="width:100%;padding:18px;font-size:15px;position:relative;">
           <span style="position:relative;z-index:2;">✨ Generate Image</span>
@@ -1077,6 +1129,34 @@ function buildControls(type) {
         <button class="ctrl-btn primary" onclick="downloadAiImage()" style="width:100%;padding:18px;font-size:15px;">
           ⬇️ Download Image
         </button>
+      </div>
+    `;
+  } else if (type === 'ai-bg-replace') {
+    c.innerHTML = `
+      <div id="bgPendingMsg">
+        <div class="control-label">🎨 Background Replace</div>
+        <div class="upload-area" id="bgUploadArea" onclick="document.getElementById('bgUploadInput').click()" style="padding:60px 24px;margin-top:16px;">
+          <input type="file" id="bgUploadInput" accept="image/*" onchange="loadBgImage(this)" style="display:none;">
+          <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          <p>Tap to upload photo</p>
+          <span>Person photo — background replace hoga</span>
+        </div>
+      </div>
+
+      <div id="bgActiveUI" style="display:none">
+        <img id="bgImagePreview" style="width:100%;max-height:300px;object-fit:contain;border-radius:18px;margin-bottom:16px;box-shadow:0 20px 40px rgba(168,85,247,0.3);">
+
+        <label style="font-size:12px;color:#c0b0d8;font-weight:700;display:block;margin-bottom:8px;">NEW BACKGROUND PROMPT</label>
+        <input type="text" id="bgPromptInput" placeholder="lion walking in jungle, sunset" class="manual-input" style="width:100%;padding:14px;font-size:14px;margin-bottom:16px;">
+
+        <p style="font-size:11px;color:#aaff00;margin-bottom:12px;font-weight:700;">💡 HF RMBG + Cloudflare FLUX · 15-30 sec</p>
+
+        <div class="control-row" style="position:relative;">
+          <button class="ctrl-btn primary" onclick="replaceBackground()" style="width:100%;padding:18px;font-size:15px;position:relative;overflow:hidden;">
+            <span style="position:relative;z-index:2;">🎨 Replace Background</span>
+            <span style="position:absolute;top:6px;right:8px;font-size:8px;font-weight:900;letter-spacing:1px;background:linear-gradient(135deg,#aaff00,#00d4ff);color:#000;padding:2px 6px;border-radius:6px;z-index:2;">AI POWERED</span>
+          </button>
+        </div>
       </div>
     `;
   } else if (type === 'ai-enhance' || type === 'ai-anime' || type === 'ai-restore' || type === 'ai-glow') {
