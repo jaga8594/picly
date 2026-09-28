@@ -33,11 +33,10 @@ const categories = {
     { id:'ai-bg-remove', name:'BG Remove', desc:'Photo → Transparent', type:'ai-bg-remove', img:'https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?w=100&q=80' },
     { id:'ai-bg-replace', name:'BG Replace', desc:'Photo + AI background', type:'ai-bg-replace', img:'https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?w=100&q=80' },
     { id:'ai-editor', name:'AI Editor', desc:'Edit photo with prompt', type:'ai-editor', img:'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&q=80' },
-    { id:'ai-animate', name:'Animate', desc:'Photo → Anime (V3)', type:'ai-animate', img:'https://images.unsplash.com/photo-1578632767115-351597cf2477?w=100&q=80' }
+    { id:'ai-cartoon', name:'Cartoon Effect', desc:'Photo → Cartoon look', type:'ai-cartoon', img:'https://images.unsplash.com/photo-1578632767115-351597cf2477?w=100&q=80' }
   ]},
   aimagic: { name:'AI Magic', desc:'Free photo effects', tools:[
     { id:'ai-enhance', name:'Photo Enhance', desc:'Sharper · Brighter', type:'ai-enhance', img:'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=100&q=80' },
-    { id:'ai-anime', name:'Anime Cartoon', desc:'Anime-style effect', type:'ai-anime', img:'https://images.unsplash.com/photo-1578632767115-351597cf2477?w=100&q=80' },
     { id:'ai-restore', name:'Old Photo Restore', desc:'Vintage boost', type:'ai-restore', img:'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=100&q=80' },
     { id:'ai-glow', name:'Glow Effect', desc:'Soft dreamy glow', type:'ai-glow', img:'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&q=80' }
   ]},
@@ -80,17 +79,16 @@ let currentBgImage = null;
 let currentRemoveBgImage = null;
 let currentEditorImage = null;
 let currentEditorResult = null;
-let currentAnimateImage = null;
-let currentAnimateResult = null;
-let animeSession = null;
+let currentCartoonImage = null;
+let currentCartoonResult = null;
 let wakeLock = null;
 let dotsInterval = null;
 let isProcessing = false;
 
 const CALCULATOR_TYPES = ['emi','gst','age','bmi','unit','qr'];
 const VIDEO_TYPES = ['video-trim','video-compress','video-gif','video-mp3','video-enhance'];
-const AI_MAGIC_TYPES = ['ai-enhance','ai-anime','ai-restore','ai-glow'];
-const AI_STUDIO_TYPES = ['ai-text-image','ai-bg-remove','ai-bg-replace','ai-editor','ai-animate'];
+const AI_MAGIC_TYPES = ['ai-enhance','ai-restore','ai-glow'];
+const AI_STUDIO_TYPES = ['ai-text-image','ai-bg-remove','ai-bg-replace','ai-editor','ai-cartoon'];
 
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
@@ -149,8 +147,8 @@ function openTool(toolId) {
   currentRemoveBgImage = null;
   currentEditorImage = null;
   currentEditorResult = null;
-  currentAnimateImage = null;
-  currentAnimateResult = null;
+  currentCartoonImage = null;
+  currentCartoonResult = null;
   selectedAiRatio = '1:1';
 
   document.getElementById('editorTitle').textContent = tool.name;
@@ -340,7 +338,7 @@ function selectAiMagic(type, btn) {
   selectedAiMagic = type;
   btn.parentElement.querySelectorAll('.ctrl-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
-  const hints = { enhance: '✨ Sharper, brighter', anime: '🎭 Anime effect', restore: '🎨 Old photo look', glow: '🌟 Soft glow' };
+  const hints = { enhance: '✨ Sharper, brighter', restore: '🎨 Old photo look', glow: '🌟 Soft glow' };
   const hint = document.getElementById('aiMagicHint');
   if (hint) hint.textContent = hints[type] || '';
 }
@@ -576,157 +574,55 @@ function downloadEditorResult() {
   showToast('✅ Downloaded!');
 }
 
-// ==================== ANIMATE (AnimeGANv3 ONNX Browser — NHWC FIX) ====================
-function loadAnimateImage(input) {
+// ==================== CARTOON EFFECT ====================
+function loadCartoonImage(input) {
   const file = input.files ? input.files[0] : input;
   if (!file) return;
   if (!file.type.startsWith('image/')) { showToast('Upload an image'); return; }
-  currentAnimateImage = file;
+  currentCartoonImage = file;
   const reader = new FileReader();
   reader.onload = (e) => {
-    const preview = document.getElementById('animatePreview');
+    const preview = document.getElementById('cartoonPreview');
     if (preview) { preview.src = e.target.result; preview.style.display = 'block'; }
-    const uploadArea = document.getElementById('animateUploadArea');
+    const uploadArea = document.getElementById('cartoonUploadArea');
     if (uploadArea) uploadArea.style.display = 'none';
-    const pending = document.getElementById('animatePendingMsg');
+    const pending = document.getElementById('cartoonPendingMsg');
     if (pending) pending.style.display = 'none';
-    const activeUI = document.getElementById('animateActiveUI');
+    const activeUI = document.getElementById('cartoonActiveUI');
     if (activeUI) activeUI.style.display = 'block';
     showToast('Photo loaded ✨');
   };
   reader.readAsDataURL(file);
 }
 
-async function runAnimate() {
+async function applyCartoon() {
   if (isProcessing) return;
-  if (!currentAnimateImage) { showToast('Upload photo first'); return; }
-  if (typeof ort === 'undefined') { showToast('ONNX library not loaded'); return; }
+  if (!currentCartoonImage) { showToast('Upload photo first'); return; }
   isProcessing = true;
   await requestWakeLock();
-  showLoader('🎭 Loading AI model');
-
+  showLoader('🖼️ Applying Cartoon Effect');
   try {
-    if (!animeSession) {
-      console.log('Loading AnimeGAN v3 ONNX model...');
-      animeSession = await ort.InferenceSession.create('./models/animegan.onnx', {
-        executionProviders: ['wasm'],
-        graphOptimizationLevel: 'all'
-      });
-      console.log('=== MODEL INFO ===');
-      console.log('Inputs:', animeSession.inputNames);
-      console.log('Input metadata:', JSON.stringify(animeSession.inputMetadata));
-      console.log('Outputs:', animeSession.outputNames);
-      console.log('Output metadata:', JSON.stringify(animeSession.outputMetadata));
-    }
-
-    const img = await loadImageFromFileAnimate(currentAnimateImage);
-    const inputSize = 512;
-    const inputTensor = imageToTensorAnimate(img, inputSize, inputSize);
-
-    showLoader('🎭 Converting to anime');
-    const feeds = {};
-    feeds[animeSession.inputNames[0]] = inputTensor;
-    const results = await animeSession.run(feeds);
-
-    const outputTensor = results[animeSession.outputNames[0]];
-    const outputData = outputTensor.data;
-    const dims = outputTensor.dims;
-    console.log('Output dims:', dims);
-
-    // Detect NHWC vs NCHW
-    let h, w, isNHWC;
-    if (dims[3] === 3 || dims[3] === 4) {
-      // NHWC: [1, H, W, C]
-      h = dims[1]; w = dims[2]; isNHWC = true;
-      console.log('Detected NHWC, h=' + h + ' w=' + w);
-    } else {
-      // NCHW: [1, C, H, W]
-      h = dims[2]; w = dims[3]; isNHWC = false;
-      console.log('Detected NCHW, h=' + h + ' w=' + w);
-    }
-
-    const c = document.createElement('canvas');
-    c.width = w;
-    c.height = h;
-    const cctx = c.getContext('2d');
-    const imageData = cctx.createImageData(w, h);
-    const totalPixels = h * w;
-
-    for (let i = 0; i < totalPixels; i++) {
-      let r, g, b;
-      if (isNHWC) {
-        r = outputData[i * 3];
-        g = outputData[i * 3 + 1];
-        b = outputData[i * 3 + 2];
-      } else {
-        r = outputData[i];
-        g = outputData[totalPixels + i];
-        b = outputData[totalPixels * 2 + i];
-      }
-      if (r <= 1.5) { r = r * 255; g = g * 255; b = b * 255; }
-      imageData.data[i * 4] = Math.max(0, Math.min(255, r));
-      imageData.data[i * 4 + 1] = Math.max(0, Math.min(255, g));
-      imageData.data[i * 4 + 2] = Math.max(0, Math.min(255, b));
-      imageData.data[i * 4 + 3] = 255;
-    }
-    cctx.putImageData(imageData, 0, 0);
-
-    currentAnimateResult = c.toDataURL('image/png');
-    const resultImg = document.getElementById('animateResultImg');
-    if (resultImg) resultImg.src = currentAnimateResult;
-    const resultBox = document.getElementById('animateResultBox');
+    const formData = new FormData();
+    formData.append('image', currentCartoonImage);
+    formData.append('type', 'cartoon');
+    const blob = await uploadWithProgress(SERVER_URL + '/api/ai-magic', formData, updateProgress);
+    currentCartoonResult = URL.createObjectURL(blob);
+    const resultImg = document.getElementById('cartoonResultImg');
+    if (resultImg) resultImg.src = currentCartoonResult;
+    const resultBox = document.getElementById('cartoonResultBox');
     if (resultBox) resultBox.style.display = 'block';
-
     hideLoader();
-    showToast('✅ Anime ready!');
-  } catch (err) {
-    hideLoader();
-    console.error('❌ Animate error:', err);
-    showToast('Error: ' + err.message);
-  }
+    showToast('✅ Cartoon ready!');
+  } catch (err) { hideLoader(); console.error('❌', err); showToast('Error: ' + err.message); }
   await releaseWakeLock();
   isProcessing = false;
 }
 
-function loadImageFromFileAnimate(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const img = new Image();
-      img.onload = () => resolve(img);
-      img.onerror = reject;
-      img.src = e.target.result;
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
-
-function imageToTensorAnimate(img, w, h) {
-  const c = document.createElement('canvas');
-  c.width = w;
-  c.height = h;
-  const cctx = c.getContext('2d');
-  cctx.drawImage(img, 0, 0, w, h);
-  const imageData = cctx.getImageData(0, 0, w, h);
-  const data = imageData.data;
-
-  // NHWC format: [1, H, W, 3]
-  const float32 = new Float32Array(1 * h * w * 3);
-  for (let i = 0; i < h * w; i++) {
-    float32[i * 3] = data[i * 4] / 255.0;
-    float32[i * 3 + 1] = data[i * 4 + 1] / 255.0;
-    float32[i * 3 + 2] = data[i * 4 + 2] / 255.0;
-  }
-
-  return new ort.Tensor('float32', float32, [1, h, w, 3]);
-}
-
-function downloadAnimateResult() {
-  if (!currentAnimateResult) { showToast('No result yet'); return; }
+function downloadCartoonResult() {
+  if (!currentCartoonResult) { showToast('No result yet'); return; }
   const a = document.createElement('a');
-  a.href = currentAnimateResult;
-  a.download = 'picly-anime-' + Date.now() + '.png';
+  a.href = currentCartoonResult;
+  a.download = 'picly-cartoon-' + Date.now() + '.jpg';
   a.click();
   showToast('✅ Downloaded!');
 }
@@ -1082,29 +978,29 @@ function buildControls(type) {
         <button class="ctrl-btn primary" onclick="downloadEditorResult()" style="width:100%;padding:18px;font-size:15px;">⬇️ Download</button>
       </div>
     `;
-  } else if (type === 'ai-animate') {
+  } else if (type === 'ai-cartoon') {
     c.innerHTML = `
-      <div id="animatePendingMsg">
-        <div class="control-label">🎭 Animate (v3)</div>
-        <div class="upload-area" id="animateUploadArea" onclick="document.getElementById('animateInput').click()" style="padding:60px 24px;margin-top:16px;">
-          <input type="file" id="animateInput" accept="image/*" onchange="loadAnimateImage(this)" style="display:none;">
+      <div id="cartoonPendingMsg">
+        <div class="control-label">🖼️ Cartoon Effect</div>
+        <div class="upload-area" id="cartoonUploadArea" onclick="document.getElementById('cartoonInput').click()" style="padding:60px 24px;margin-top:16px;">
+          <input type="file" id="cartoonInput" accept="image/*" onchange="loadCartoonImage(this)" style="display:none;">
           <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
           <p>Tap to upload photo</p>
-          <span>Person photo — anime character banega</span>
+          <span>Photo → Cartoon look (vivid colors, flat shades)</span>
         </div>
       </div>
-      <div id="animateActiveUI" style="display:none">
-        <img id="animatePreview" style="width:100%;max-height:300px;object-fit:contain;border-radius:18px;margin-bottom:16px;box-shadow:0 20px 40px rgba(168,85,247,0.3);">
-        <p style="font-size:11px;color:#aaff00;margin-bottom:12px;font-weight:700;">💡 AnimeGAN v3 · 100% free · pehli baar 5.8 MB download</p>
-        <button class="ctrl-btn primary" onclick="runAnimate()" style="width:100%;padding:18px;font-size:15px;">🎭 Convert to Anime</button>
+      <div id="cartoonActiveUI" style="display:none">
+        <img id="cartoonPreview" style="width:100%;max-height:300px;object-fit:contain;border-radius:18px;margin-bottom:16px;box-shadow:0 20px 40px rgba(168,85,247,0.3);">
+        <p style="font-size:11px;color:#aaff00;margin-bottom:12px;font-weight:700;">💡 FFmpeg · fast · 2-5 sec</p>
+        <button class="ctrl-btn primary" onclick="applyCartoon()" style="width:100%;padding:18px;font-size:15px;">🖼️ Apply Cartoon Effect</button>
       </div>
-      <div id="animateResultBox" style="display:none;margin-top:20px;">
+      <div id="cartoonResultBox" style="display:none;margin-top:20px;">
         <div class="control-label">Result</div>
-        <img id="animateResultImg" style="width:100%;border-radius:18px;box-shadow:0 20px 40px rgba(168,85,247,0.4);margin-bottom:16px;">
-        <button class="ctrl-btn primary" onclick="downloadAnimateResult()" style="width:100%;padding:18px;font-size:15px;">⬇️ Download</button>
+        <img id="cartoonResultImg" style="width:100%;border-radius:18px;box-shadow:0 20px 40px rgba(168,85,247,0.4);margin-bottom:16px;">
+        <button class="ctrl-btn primary" onclick="downloadCartoonResult()" style="width:100%;padding:18px;font-size:15px;">⬇️ Download</button>
       </div>
     `;
-  } else if (type === 'ai-enhance' || type === 'ai-anime' || type === 'ai-restore' || type === 'ai-glow') {
+  } else if (type === 'ai-enhance' || type === 'ai-restore' || type === 'ai-glow') {
     const magicType = type.replace('ai-', '');
     selectedAiMagic = magicType;
     c.innerHTML = `
@@ -1119,7 +1015,6 @@ function buildControls(type) {
         <img id="aiImagePreview" style="width:100%;max-height:300px;object-fit:contain;border-radius:18px;margin-bottom:16px;">
         <div class="control-row">
           <button class="ctrl-btn ${magicType === 'enhance' ? 'active' : ''}" onclick="selectAiMagic('enhance',this)">✨ Enhance</button>
-          <button class="ctrl-btn ${magicType === 'anime' ? 'active' : ''}" onclick="selectAiMagic('anime',this)">🎭 Anime</button>
           <button class="ctrl-btn ${magicType === 'restore' ? 'active' : ''}" onclick="selectAiMagic('restore',this)">🎨 Restore</button>
           <button class="ctrl-btn ${magicType === 'glow' ? 'active' : ''}" onclick="selectAiMagic('glow',this)">🌟 Glow</button>
         </div>
