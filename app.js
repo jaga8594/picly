@@ -33,7 +33,7 @@ const categories = {
     { id:'ai-bg-remove', name:'BG Remove', desc:'Photo → Transparent', type:'ai-bg-remove', img:'https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?w=100&q=80' },
     { id:'ai-bg-replace', name:'BG Replace', desc:'Photo + AI background', type:'ai-bg-replace', img:'https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?w=100&q=80' },
     { id:'ai-editor', name:'AI Editor', desc:'Edit photo with prompt', type:'ai-editor', img:'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&q=80' },
-    { id:'ai-animate', name:'Animate', desc:'Photo → Anime', type:'ai-animate', img:'https://images.unsplash.com/photo-1578632767115-351597cf2477?w=100&q=80' }
+    { id:'ai-animate', name:'Animate', desc:'Photo → Anime (V3)', type:'ai-animate', img:'https://images.unsplash.com/photo-1578632767115-351597cf2477?w=100&q=80' }
   ]},
   aimagic: { name:'AI Magic', desc:'Free photo effects', tools:[
     { id:'ai-enhance', name:'Photo Enhance', desc:'Sharper · Brighter', type:'ai-enhance', img:'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=100&q=80' },
@@ -393,7 +393,6 @@ async function applyAiMagic() {
   isProcessing = false;
 }
 
-// ==================== TEXT TO IMAGE ====================
 async function generateAiImage() {
   if (isProcessing) return;
   const promptInput = document.getElementById('aiPromptInput');
@@ -433,7 +432,6 @@ function downloadAiImage() {
   showToast('✅ Downloaded!');
 }
 
-// ==================== BG REMOVE ====================
 function loadRemoveBgImage(input) {
   const file = input.files ? input.files[0] : input;
   if (!file) return;
@@ -475,7 +473,6 @@ async function removeBgOnly() {
   isProcessing = false;
 }
 
-// ==================== BG REPLACE ====================
 function loadBgImage(input) {
   const file = input.files ? input.files[0] : input;
   if (!file) return;
@@ -521,7 +518,6 @@ async function replaceBackground() {
   isProcessing = false;
 }
 
-// ==================== AI EDITOR ====================
 function loadEditorImage(input) {
   const file = input.files ? input.files[0] : input;
   if (!file) return;
@@ -580,7 +576,7 @@ function downloadEditorResult() {
   showToast('✅ Downloaded!');
 }
 
-// ==================== ANIMATE (AnimeGAN ONNX Browser) ====================
+// ==================== ANIMATE (AnimeGANv3 ONNX Browser) ====================
 function loadAnimateImage(input) {
   const file = input.files ? input.files[0] : input;
   if (!file) return;
@@ -611,7 +607,7 @@ async function runAnimate() {
 
   try {
     if (!animeSession) {
-      console.log('Loading AnimeGAN ONNX model...');
+      console.log('Loading AnimeGAN v3 ONNX model...');
       animeSession = await ort.InferenceSession.create('./models/animegan.onnx', {
         executionProviders: ['wasm'],
         graphOptimizationLevel: 'all'
@@ -624,7 +620,7 @@ async function runAnimate() {
     }
 
     const img = await loadImageFromFileAnimate(currentAnimateImage);
-    const inputSize = 512;
+    const inputSize = 256; // AnimeGAN v3 usually 256
     const inputTensor = imageToTensorAnimate(img, inputSize, inputSize);
 
     showLoader('🎭 Converting to anime');
@@ -637,8 +633,9 @@ async function runAnimate() {
     const dims = outputTensor.dims;
     console.log('Output dims:', dims);
 
-    // Handle [1,3,H,W] format
-    const h = dims[2], w = dims[3];
+    let h, w;
+    if (dims.length === 4) { h = dims[2]; w = dims[3]; }
+    else { h = dims[0]; w = dims[1]; }
 
     const c = document.createElement('canvas');
     c.width = w;
@@ -651,9 +648,7 @@ async function runAnimate() {
       let r = outputData[i];
       let g = outputData[totalPixels + i];
       let b = outputData[totalPixels * 2 + i];
-
       if (r <= 1.5) { r = r * 255; g = g * 255; b = b * 255; }
-
       imageData.data[i * 4] = Math.max(0, Math.min(255, r));
       imageData.data[i * 4 + 1] = Math.max(0, Math.min(255, g));
       imageData.data[i * 4 + 2] = Math.max(0, Math.min(255, b));
@@ -1074,7 +1069,7 @@ function buildControls(type) {
   } else if (type === 'ai-animate') {
     c.innerHTML = `
       <div id="animatePendingMsg">
-        <div class="control-label">🎭 Animate</div>
+        <div class="control-label">🎭 Animate (v3)</div>
         <div class="upload-area" id="animateUploadArea" onclick="document.getElementById('animateInput').click()" style="padding:60px 24px;margin-top:16px;">
           <input type="file" id="animateInput" accept="image/*" onchange="loadAnimateImage(this)" style="display:none;">
           <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
@@ -1084,7 +1079,7 @@ function buildControls(type) {
       </div>
       <div id="animateActiveUI" style="display:none">
         <img id="animatePreview" style="width:100%;max-height:300px;object-fit:contain;border-radius:18px;margin-bottom:16px;box-shadow:0 20px 40px rgba(168,85,247,0.3);">
-        <p style="font-size:11px;color:#aaff00;margin-bottom:12px;font-weight:700;">💡 AnimeGAN · 100% free · pehli baar 8 MB download</p>
+        <p style="font-size:11px;color:#aaff00;margin-bottom:12px;font-weight:700;">💡 AnimeGAN v3 · 100% free · pehli baar 5.8 MB download</p>
         <button class="ctrl-btn primary" onclick="runAnimate()" style="width:100%;padding:18px;font-size:15px;">🎭 Convert to Anime</button>
       </div>
       <div id="animateResultBox" style="display:none;margin-top:20px;">
