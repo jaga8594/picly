@@ -576,7 +576,7 @@ function downloadEditorResult() {
   showToast('✅ Downloaded!');
 }
 
-// ==================== ANIMATE (AnimeGANv3 ONNX Browser) ====================
+// ==================== ANIMATE (AnimeGANv3 ONNX Browser — NHWC FIX) ====================
 function loadAnimateImage(input) {
   const file = input.files ? input.files[0] : input;
   if (!file) return;
@@ -620,7 +620,7 @@ async function runAnimate() {
     }
 
     const img = await loadImageFromFileAnimate(currentAnimateImage);
-    const inputSize = 256; // AnimeGAN v3 usually 256
+    const inputSize = 512;
     const inputTensor = imageToTensorAnimate(img, inputSize, inputSize);
 
     showLoader('🎭 Converting to anime');
@@ -633,9 +633,17 @@ async function runAnimate() {
     const dims = outputTensor.dims;
     console.log('Output dims:', dims);
 
-    let h, w;
-    if (dims.length === 4) { h = dims[2]; w = dims[3]; }
-    else { h = dims[0]; w = dims[1]; }
+    // Detect NHWC vs NCHW
+    let h, w, isNHWC;
+    if (dims[3] === 3 || dims[3] === 4) {
+      // NHWC: [1, H, W, C]
+      h = dims[1]; w = dims[2]; isNHWC = true;
+      console.log('Detected NHWC, h=' + h + ' w=' + w);
+    } else {
+      // NCHW: [1, C, H, W]
+      h = dims[2]; w = dims[3]; isNHWC = false;
+      console.log('Detected NCHW, h=' + h + ' w=' + w);
+    }
 
     const c = document.createElement('canvas');
     c.width = w;
@@ -645,9 +653,16 @@ async function runAnimate() {
     const totalPixels = h * w;
 
     for (let i = 0; i < totalPixels; i++) {
-      let r = outputData[i];
-      let g = outputData[totalPixels + i];
-      let b = outputData[totalPixels * 2 + i];
+      let r, g, b;
+      if (isNHWC) {
+        r = outputData[i * 3];
+        g = outputData[i * 3 + 1];
+        b = outputData[i * 3 + 2];
+      } else {
+        r = outputData[i];
+        g = outputData[totalPixels + i];
+        b = outputData[totalPixels * 2 + i];
+      }
       if (r <= 1.5) { r = r * 255; g = g * 255; b = b * 255; }
       imageData.data[i * 4] = Math.max(0, Math.min(255, r));
       imageData.data[i * 4 + 1] = Math.max(0, Math.min(255, g));
@@ -696,14 +711,15 @@ function imageToTensorAnimate(img, w, h) {
   const imageData = cctx.getImageData(0, 0, w, h);
   const data = imageData.data;
 
-  const float32 = new Float32Array(1 * 3 * h * w);
+  // NHWC format: [1, H, W, 3]
+  const float32 = new Float32Array(1 * h * w * 3);
   for (let i = 0; i < h * w; i++) {
-    float32[i] = data[i * 4] / 255.0;
-    float32[h * w + i] = data[i * 4 + 1] / 255.0;
-    float32[2 * h * w + i] = data[i * 4 + 2] / 255.0;
+    float32[i * 3] = data[i * 4] / 255.0;
+    float32[i * 3 + 1] = data[i * 4 + 1] / 255.0;
+    float32[i * 3 + 2] = data[i * 4 + 2] / 255.0;
   }
 
-  return new ort.Tensor('float32', float32, [1, 3, h, w]);
+  return new ort.Tensor('float32', float32, [1, h, w, 3]);
 }
 
 function downloadAnimateResult() {
