@@ -33,11 +33,12 @@ const categories = {
     { id:'ai-bg-remove', name:'BG Remove', desc:'Photo → Transparent', type:'ai-bg-remove', img:'https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?w=100&q=80' },
     { id:'ai-bg-replace', name:'BG Replace', desc:'Photo + AI background', type:'ai-bg-replace', img:'https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?w=100&q=80' },
     { id:'ai-editor', name:'AI Editor', desc:'Edit photo with prompt', type:'ai-editor', img:'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&q=80' },
-    { id:'ai-cartoon', name:'Cartoon Effect', desc:'Photo → Cartoon look', type:'ai-cartoon', img:'https://images.unsplash.com/photo-1578632767115-351597cf2477?w=100&q=80' }
+    { id:'ai-upscale', name:'Image Upscaler', desc:'HD 2x upscale', type:'ai-upscale', img:'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?w=100&q=80' },
+    { id:'ai-cleanup', name:'Cleanup', desc:'Remove objects', type:'ai-cleanup', img:'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=100&q=80' },
+    { id:'ai-restore', name:'Photo Restore', desc:'Restore old photos', type:'ai-restore', img:'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=100&q=80' }
   ]},
   aimagic: { name:'AI Magic', desc:'Free photo effects', tools:[
     { id:'ai-enhance', name:'Photo Enhance', desc:'Sharper · Brighter', type:'ai-enhance', img:'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=100&q=80' },
-    { id:'ai-restore', name:'Old Photo Restore', desc:'Vintage boost', type:'ai-restore', img:'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=100&q=80' },
     { id:'ai-glow', name:'Glow Effect', desc:'Soft dreamy glow', type:'ai-glow', img:'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&q=80' }
   ]},
   utility: { name:'Utility', desc:'Calculators · QR', tools:[
@@ -79,16 +80,20 @@ let currentBgImage = null;
 let currentRemoveBgImage = null;
 let currentEditorImage = null;
 let currentEditorResult = null;
-let currentCartoonImage = null;
-let currentCartoonResult = null;
+let currentUpscaleImage = null;
+let currentUpscaleResult = null;
+let currentCleanupImage = null;
+let currentCleanupResult = null;
+let currentRestoreImage = null;
+let currentRestoreResult = null;
 let wakeLock = null;
 let dotsInterval = null;
 let isProcessing = false;
 
 const CALCULATOR_TYPES = ['emi','gst','age','bmi','unit','qr'];
 const VIDEO_TYPES = ['video-trim','video-compress','video-gif','video-mp3','video-enhance'];
-const AI_MAGIC_TYPES = ['ai-enhance','ai-restore','ai-glow'];
-const AI_STUDIO_TYPES = ['ai-text-image','ai-bg-remove','ai-bg-replace','ai-editor','ai-cartoon'];
+const AI_MAGIC_TYPES = ['ai-enhance','ai-glow'];
+const AI_STUDIO_TYPES = ['ai-text-image','ai-bg-remove','ai-bg-replace','ai-editor','ai-upscale','ai-cleanup','ai-restore'];
 
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
@@ -147,8 +152,12 @@ function openTool(toolId) {
   currentRemoveBgImage = null;
   currentEditorImage = null;
   currentEditorResult = null;
-  currentCartoonImage = null;
-  currentCartoonResult = null;
+  currentUpscaleImage = null;
+  currentUpscaleResult = null;
+  currentCleanupImage = null;
+  currentCleanupResult = null;
+  currentRestoreImage = null;
+  currentRestoreResult = null;
   selectedAiRatio = '1:1';
 
   document.getElementById('editorTitle').textContent = tool.name;
@@ -185,12 +194,7 @@ function openTool(toolId) {
       uploadInput.setAttribute('accept', 'video/*');
       uploadTitle.textContent = 'Tap to upload video';
     }
-  } else if (isAiMagic) {
-    if (uploadArea) uploadArea.style.display = 'none';
-    if (canvasWrap) canvasWrap.style.display = 'block';
-    if (canvasContainer) canvasContainer.style.display = 'none';
-    if (actionBtns) actionBtns.style.display = 'none';
-  } else if (isAiStudio) {
+  } else if (isAiMagic || isAiStudio) {
     if (uploadArea) uploadArea.style.display = 'none';
     if (canvasWrap) canvasWrap.style.display = 'block';
     if (canvasContainer) canvasContainer.style.display = 'none';
@@ -338,7 +342,7 @@ function selectAiMagic(type, btn) {
   selectedAiMagic = type;
   btn.parentElement.querySelectorAll('.ctrl-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
-  const hints = { enhance: '✨ Sharper, brighter', restore: '🎨 Old photo look', glow: '🌟 Soft glow' };
+  const hints = { enhance: '✨ Sharper, brighter', glow: '🌟 Soft glow' };
   const hint = document.getElementById('aiMagicHint');
   if (hint) hint.textContent = hints[type] || '';
 }
@@ -391,6 +395,7 @@ async function applyAiMagic() {
   isProcessing = false;
 }
 
+// ==================== TEXT TO IMAGE ====================
 async function generateAiImage() {
   if (isProcessing) return;
   const promptInput = document.getElementById('aiPromptInput');
@@ -430,6 +435,7 @@ function downloadAiImage() {
   showToast('✅ Downloaded!');
 }
 
+// ==================== BG REMOVE ====================
 function loadRemoveBgImage(input) {
   const file = input.files ? input.files[0] : input;
   if (!file) return;
@@ -471,6 +477,7 @@ async function removeBgOnly() {
   isProcessing = false;
 }
 
+// ==================== BG REPLACE ====================
 function loadBgImage(input) {
   const file = input.files ? input.files[0] : input;
   if (!file) return;
@@ -516,6 +523,7 @@ async function replaceBackground() {
   isProcessing = false;
 }
 
+// ==================== AI EDITOR ====================
 function loadEditorImage(input) {
   const file = input.files ? input.files[0] : input;
   if (!file) return;
@@ -574,57 +582,130 @@ function downloadEditorResult() {
   showToast('✅ Downloaded!');
 }
 
-// ==================== CARTOON EFFECT ====================
-function loadCartoonImage(input) {
+// ==================== UPSCALER ====================
+function loadUpscaleImage(input) {
   const file = input.files ? input.files[0] : input;
   if (!file) return;
-  if (!file.type.startsWith('image/')) { showToast('Upload an image'); return; }
-  currentCartoonImage = file;
+  currentUpscaleImage = file;
   const reader = new FileReader();
   reader.onload = (e) => {
-    const preview = document.getElementById('cartoonPreview');
-    if (preview) { preview.src = e.target.result; preview.style.display = 'block'; }
-    const uploadArea = document.getElementById('cartoonUploadArea');
-    if (uploadArea) uploadArea.style.display = 'none';
-    const pending = document.getElementById('cartoonPendingMsg');
-    if (pending) pending.style.display = 'none';
-    const activeUI = document.getElementById('cartoonActiveUI');
-    if (activeUI) activeUI.style.display = 'block';
-    showToast('Photo loaded ✨');
+    document.getElementById('upscalePreview').src = e.target.result;
+    document.getElementById('upscalePending').style.display = 'none';
+    document.getElementById('upscaleActive').style.display = 'block';
   };
   reader.readAsDataURL(file);
 }
 
-async function applyCartoon() {
+async function runUpscale() {
   if (isProcessing) return;
-  if (!currentCartoonImage) { showToast('Upload photo first'); return; }
+  if (!currentUpscaleImage) { showToast('Upload photo'); return; }
   isProcessing = true;
   await requestWakeLock();
-  showLoader('🖼️ Applying Cartoon Effect');
+  showLoader('🖼️ Upscaling to HD');
   try {
     const formData = new FormData();
-    formData.append('image', currentCartoonImage);
-    formData.append('type', 'cartoon');
-    const blob = await uploadWithProgress(SERVER_URL + '/api/ai-magic', formData, updateProgress);
-    currentCartoonResult = URL.createObjectURL(blob);
-    const resultImg = document.getElementById('cartoonResultImg');
-    if (resultImg) resultImg.src = currentCartoonResult;
-    const resultBox = document.getElementById('cartoonResultBox');
-    if (resultBox) resultBox.style.display = 'block';
+    formData.append('image', currentUpscaleImage);
+    const blob = await uploadWithProgress(SERVER_URL + '/api/upscale', formData, updateProgress);
+    currentUpscaleResult = URL.createObjectURL(blob);
+    document.getElementById('upscaleResultImg').src = currentUpscaleResult;
+    document.getElementById('upscaleResult').style.display = 'block';
     hideLoader();
-    showToast('✅ Cartoon ready!');
-  } catch (err) { hideLoader(); console.error('❌', err); showToast('Error: ' + err.message); }
+    showToast('✅ Upscaled!');
+  } catch (err) { hideLoader(); showToast('Error: ' + err.message); }
   await releaseWakeLock();
   isProcessing = false;
 }
 
-function downloadCartoonResult() {
-  if (!currentCartoonResult) { showToast('No result yet'); return; }
+function downloadUpscale() {
+  if (!currentUpscaleResult) return;
   const a = document.createElement('a');
-  a.href = currentCartoonResult;
-  a.download = 'picly-cartoon-' + Date.now() + '.jpg';
+  a.href = currentUpscaleResult;
+  a.download = 'picly-upscaled-' + Date.now() + '.jpg';
   a.click();
-  showToast('✅ Downloaded!');
+}
+
+// ==================== CLEANUP ====================
+function loadCleanupImage(input) {
+  const file = input.files ? input.files[0] : input;
+  if (!file) return;
+  currentCleanupImage = file;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    document.getElementById('cleanupPreview').src = e.target.result;
+    document.getElementById('cleanupPending').style.display = 'none';
+    document.getElementById('cleanupActive').style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+}
+
+async function runCleanup() {
+  if (isProcessing) return;
+  if (!currentCleanupImage) { showToast('Upload photo'); return; }
+  isProcessing = true;
+  await requestWakeLock();
+  showLoader('🧹 Cleaning up');
+  try {
+    const formData = new FormData();
+    formData.append('image', currentCleanupImage);
+    const blob = await uploadWithProgress(SERVER_URL + '/api/cleanup', formData, updateProgress);
+    currentCleanupResult = URL.createObjectURL(blob);
+    document.getElementById('cleanupResultImg').src = currentCleanupResult;
+    document.getElementById('cleanupResult').style.display = 'block';
+    hideLoader();
+    showToast('✅ Cleaned!');
+  } catch (err) { hideLoader(); showToast('Error: ' + err.message); }
+  await releaseWakeLock();
+  isProcessing = false;
+}
+
+function downloadCleanup() {
+  if (!currentCleanupResult) return;
+  const a = document.createElement('a');
+  a.href = currentCleanupResult;
+  a.download = 'picly-cleanup-' + Date.now() + '.jpg';
+  a.click();
+}
+
+// ==================== PHOTO RESTORE ====================
+function loadRestoreImage(input) {
+  const file = input.files ? input.files[0] : input;
+  if (!file) return;
+  currentRestoreImage = file;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    document.getElementById('restorePreview').src = e.target.result;
+    document.getElementById('restorePending').style.display = 'none';
+    document.getElementById('restoreActive').style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+}
+
+async function runRestore() {
+  if (isProcessing) return;
+  if (!currentRestoreImage) { showToast('Upload photo'); return; }
+  isProcessing = true;
+  await requestWakeLock();
+  showLoader('🎨 Restoring photo (30-60 sec)');
+  try {
+    const formData = new FormData();
+    formData.append('image', currentRestoreImage);
+    const blob = await uploadWithProgress(SERVER_URL + '/api/restore', formData, updateProgress);
+    currentRestoreResult = URL.createObjectURL(blob);
+    document.getElementById('restoreResultImg').src = currentRestoreResult;
+    document.getElementById('restoreResult').style.display = 'block';
+    hideLoader();
+    showToast('✅ Restored!');
+  } catch (err) { hideLoader(); showToast('Error: ' + err.message); }
+  await releaseWakeLock();
+  isProcessing = false;
+}
+
+function downloadRestore() {
+  if (!currentRestoreResult) return;
+  const a = document.createElement('a');
+  a.href = currentRestoreResult;
+  a.download = 'picly-restored-' + Date.now() + '.png';
+  a.click();
 }
 
 async function requestWakeLock() {
@@ -633,15 +714,6 @@ async function requestWakeLock() {
 async function releaseWakeLock() {
   if (wakeLock) { try { await wakeLock.release(); } catch(e) {} wakeLock = null; }
 }
-
-function startDotsAnimation(baseMsg) {
-  let count = 0;
-  const el = document.getElementById('videoLoaderMsg');
-  if (!el) return;
-  clearInterval(dotsInterval);
-  dotsInterval = setInterval(() => { count = (count + 1) % 4; el.textContent = baseMsg + '.'.repeat(count); }, 500);
-}
-function stopDotsAnimation() { clearInterval(dotsInterval); dotsInterval = null; }
 
 function updateProgress(percent) {
   const circle = document.getElementById('progressCircle');
@@ -689,7 +761,6 @@ function showLoader(msg) {
 }
 
 function hideLoader() {
-  stopDotsAnimation();
   updateProgress(100);
   setTimeout(() => { const el = document.getElementById('videoLoader'); if (el) el.style.display = 'none'; }, 500);
 }
@@ -716,9 +787,7 @@ function uploadWithProgress(url, formData, onProgress) {
     };
     xhr.send(formData);
   });
-}
-
-async function trimVideo() {
+}async function trimVideo() {
   if (isProcessing) return;
   if (!currentVideoFile) { showToast('Upload video first'); return; }
   const s = parseFloat(document.getElementById('trimStartSlider').value);
@@ -837,8 +906,6 @@ async function enhanceVideo() {
   isProcessing = false;
 }
 
-async function getFFmpeg() { return null; }
-
 function buildControls(type) {
   const c = document.getElementById('dynamicControls');
   if (!c) return;
@@ -899,7 +966,7 @@ function buildControls(type) {
           <button class="ctrl-btn" onclick="selectAiRatio('9:16',this)" style="flex:1;font-size:11px;">▮ 9:16</button>
           <button class="ctrl-btn" onclick="selectAiRatio('4:3',this)" style="flex:1;font-size:11px;">▭ 4:3</button>
         </div>
-        <p style="font-size:11px;color:#aaff00;margin-bottom:12px;font-weight:700;">💡 Cloudflare FLUX + Smart Crop · 10-20 sec</p>
+        <p style="font-size:11px;color:#aaff00;margin-bottom:12px;font-weight:700;">💡 Cloudflare FLUX · 10-20 sec</p>
         <button class="ctrl-btn primary" onclick="generateAiImage()" style="width:100%;padding:18px;font-size:15px;">✨ Generate Image</button>
       </div>
       <div id="aiResultBox" style="display:none;">
@@ -921,7 +988,7 @@ function buildControls(type) {
       </div>
       <div id="removeBgActive" style="display:none">
         <img id="removeBgPreview" style="width:100%;max-height:300px;object-fit:contain;border-radius:18px;margin-bottom:16px;box-shadow:0 20px 40px rgba(168,85,247,0.3);">
-        <p style="font-size:11px;color:#aaff00;margin-bottom:12px;font-weight:700;">💡 Local AI · No API · 100% Free</p>
+        <p style="font-size:11px;color:#aaff00;margin-bottom:12px;font-weight:700;">💡 Local AI · 100% Free</p>
         <button class="ctrl-btn primary" onclick="removeBgOnly()" style="width:100%;padding:18px;font-size:15px;">🖼️ Remove Background</button>
       </div>
     `;
@@ -958,17 +1025,11 @@ function buildControls(type) {
       <div id="editorActiveUI" style="display:none">
         <img id="editorPreview" style="width:100%;max-height:300px;object-fit:contain;border-radius:18px;margin-bottom:16px;box-shadow:0 20px 40px rgba(168,85,247,0.3);">
         <label style="font-size:12px;color:#c0b0d8;font-weight:700;display:block;margin-bottom:8px;">PROMPT</label>
-        <textarea id="editorPromptInput" placeholder="anime style portrait, studio ghibli" class="manual-input" style="width:100%;padding:14px;font-size:14px;margin-bottom:12px;min-height:80px;font-family:inherit;"></textarea>
-        <p style="font-size:11px;color:#aaff00;margin-bottom:8px;font-weight:700;">💡 Kuch bhi likho</p>
+        <textarea id="editorPromptInput" placeholder="anime style portrait" class="manual-input" style="width:100%;padding:14px;font-size:14px;margin-bottom:12px;min-height:80px;font-family:inherit;"></textarea>
         <div class="control-row" style="margin-bottom:12px;flex-wrap:wrap;">
           <button class="ctrl-btn" onclick="setEditorPrompt('anime style portrait, studio ghibli, cel shaded')" style="flex:1;font-size:11px;padding:10px 6px;">🎭 Anime</button>
-          <button class="ctrl-btn" onclick="setEditorPrompt('cartoon style, pixar 3d, colorful')" style="flex:1;font-size:11px;padding:10px 6px;">🖼️ Cartoon</button>
           <button class="ctrl-btn" onclick="setEditorPrompt('lion beside me, cinematic, sunset')" style="flex:1;font-size:11px;padding:10px 6px;">🦁 Lion</button>
-        </div>
-        <div class="control-row" style="margin-bottom:12px;flex-wrap:wrap;">
           <button class="ctrl-btn" onclick="setEditorPrompt('cyberpunk neon city, futuristic')" style="flex:1;font-size:11px;padding:10px 6px;">🌆 Cyberpunk</button>
-          <button class="ctrl-btn" onclick="setEditorPrompt('oil painting, van gogh style')" style="flex:1;font-size:11px;padding:10px 6px;">🎨 Oil</button>
-          <button class="ctrl-btn" onclick="setEditorPrompt('3d render, pixar style, disney')" style="flex:1;font-size:11px;padding:10px 6px;">🎮 3D</button>
         </div>
         <button class="ctrl-btn primary" onclick="runAiEditor()" style="width:100%;padding:18px;font-size:15px;">✨ Edit with AI</button>
       </div>
@@ -978,29 +1039,73 @@ function buildControls(type) {
         <button class="ctrl-btn primary" onclick="downloadEditorResult()" style="width:100%;padding:18px;font-size:15px;">⬇️ Download</button>
       </div>
     `;
-  } else if (type === 'ai-cartoon') {
+  } else if (type === 'ai-upscale') {
     c.innerHTML = `
-      <div id="cartoonPendingMsg">
-        <div class="control-label">🖼️ Cartoon Effect</div>
-        <div class="upload-area" id="cartoonUploadArea" onclick="document.getElementById('cartoonInput').click()" style="padding:60px 24px;margin-top:16px;">
-          <input type="file" id="cartoonInput" accept="image/*" onchange="loadCartoonImage(this)" style="display:none;">
+      <div id="upscalePending">
+        <div class="control-label">🖼️ Image Upscaler</div>
+        <div class="upload-area" id="upscaleUploadArea" onclick="document.getElementById('upscaleInput').click()" style="padding:60px 24px;margin-top:16px;">
+          <input type="file" id="upscaleInput" accept="image/*" onchange="loadUpscaleImage(this)" style="display:none;">
           <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
           <p>Tap to upload photo</p>
-          <span>Photo → Cartoon look (vivid colors, flat shades)</span>
+          <span>HD 2x upscale · 2048px</span>
         </div>
       </div>
-      <div id="cartoonActiveUI" style="display:none">
-        <img id="cartoonPreview" style="width:100%;max-height:300px;object-fit:contain;border-radius:18px;margin-bottom:16px;box-shadow:0 20px 40px rgba(168,85,247,0.3);">
-        <p style="font-size:11px;color:#aaff00;margin-bottom:12px;font-weight:700;">💡 FFmpeg · fast · 2-5 sec</p>
-        <button class="ctrl-btn primary" onclick="applyCartoon()" style="width:100%;padding:18px;font-size:15px;">🖼️ Apply Cartoon Effect</button>
+      <div id="upscaleActive" style="display:none">
+        <img id="upscalePreview" style="width:100%;max-height:300px;object-fit:contain;border-radius:18px;margin-bottom:16px;">
+        <p style="font-size:11px;color:#aaff00;margin-bottom:12px;font-weight:700;">💡 Clipdrop · 3-5 sec</p>
+        <button class="ctrl-btn primary" onclick="runUpscale()" style="width:100%;padding:18px;font-size:15px;">🖼️ Upscale to HD</button>
       </div>
-      <div id="cartoonResultBox" style="display:none;margin-top:20px;">
+      <div id="upscaleResult" style="display:none;margin-top:20px;">
         <div class="control-label">Result</div>
-        <img id="cartoonResultImg" style="width:100%;border-radius:18px;box-shadow:0 20px 40px rgba(168,85,247,0.4);margin-bottom:16px;">
-        <button class="ctrl-btn primary" onclick="downloadCartoonResult()" style="width:100%;padding:18px;font-size:15px;">⬇️ Download</button>
+        <img id="upscaleResultImg" style="width:100%;border-radius:18px;margin-bottom:16px;">
+        <button class="ctrl-btn primary" onclick="downloadUpscale()" style="width:100%;padding:18px;">⬇️ Download</button>
       </div>
     `;
-  } else if (type === 'ai-enhance' || type === 'ai-restore' || type === 'ai-glow') {
+  } else if (type === 'ai-cleanup') {
+    c.innerHTML = `
+      <div id="cleanupPending">
+        <div class="control-label">🧹 Cleanup</div>
+        <div class="upload-area" id="cleanupUploadArea" onclick="document.getElementById('cleanupInput').click()" style="padding:60px 24px;margin-top:16px;">
+          <input type="file" id="cleanupInput" accept="image/*" onchange="loadCleanupImage(this)" style="display:none;">
+          <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          <p>Tap to upload photo</p>
+          <span>Remove unwanted objects</span>
+        </div>
+      </div>
+      <div id="cleanupActive" style="display:none">
+        <img id="cleanupPreview" style="width:100%;max-height:300px;object-fit:contain;border-radius:18px;margin-bottom:16px;">
+        <p style="font-size:11px;color:#aaff00;margin-bottom:12px;font-weight:700;">💡 Clipdrop · 3-5 sec</p>
+        <button class="ctrl-btn primary" onclick="runCleanup()" style="width:100%;padding:18px;font-size:15px;">🧹 Cleanup Image</button>
+      </div>
+      <div id="cleanupResult" style="display:none;margin-top:20px;">
+        <div class="control-label">Result</div>
+        <img id="cleanupResultImg" style="width:100%;border-radius:18px;margin-bottom:16px;">
+        <button class="ctrl-btn primary" onclick="downloadCleanup()" style="width:100%;padding:18px;">⬇️ Download</button>
+      </div>
+    `;
+  } else if (type === 'ai-restore') {
+    c.innerHTML = `
+      <div id="restorePending">
+        <div class="control-label">🎨 Photo Restore</div>
+        <div class="upload-area" id="restoreUploadArea" onclick="document.getElementById('restoreInput').click()" style="padding:60px 24px;margin-top:16px;">
+          <input type="file" id="restoreInput" accept="image/*" onchange="loadRestoreImage(this)" style="display:none;">
+          <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          <p>Tap to upload old photo</p>
+          <span>Restore + enhance faces</span>
+        </div>
+      </div>
+      <div id="restoreActive" style="display:none">
+        <img id="restorePreview" style="width:100%;max-height:300px;object-fit:contain;border-radius:18px;margin-bottom:16px;">
+        <p style="font-size:11px;color:#aaff00;margin-bottom:12px;font-weight:700;">💡 CodeFormer AI · 30-60 sec</p>
+        <button class="ctrl-btn primary" onclick="runRestore()" style="width:100%;padding:18px;font-size:15px;">🎨 Restore Photo</button>
+      </div>
+      <div id="restoreResult" style="display:none;margin-top:20px;">
+        <div class="control-label">Result</div>
+        <img id="restoreResultImg" style="width:100%;border-radius:18px;margin-bottom:16px;">
+        <button class="ctrl-btn primary" onclick="downloadRestore()" style="width:100%;padding:18px;">⬇️ Download</button>
+      </div>
+    `;
+  } else if (type === 'ai-enhance' || type === 'ai-glow') {
     const magicType = type.replace('ai-', '');
     selectedAiMagic = magicType;
     c.innerHTML = `
@@ -1015,7 +1120,6 @@ function buildControls(type) {
         <img id="aiImagePreview" style="width:100%;max-height:300px;object-fit:contain;border-radius:18px;margin-bottom:16px;">
         <div class="control-row">
           <button class="ctrl-btn ${magicType === 'enhance' ? 'active' : ''}" onclick="selectAiMagic('enhance',this)">✨ Enhance</button>
-          <button class="ctrl-btn ${magicType === 'restore' ? 'active' : ''}" onclick="selectAiMagic('restore',this)">🎨 Restore</button>
           <button class="ctrl-btn ${magicType === 'glow' ? 'active' : ''}" onclick="selectAiMagic('glow',this)">🌟 Glow</button>
         </div>
         <button class="ctrl-btn primary" onclick="applyAiMagic()" style="width:100%;padding:18px;margin-top:16px;">🎨 Apply</button>
