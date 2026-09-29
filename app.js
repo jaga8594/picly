@@ -96,28 +96,7 @@ const VIDEO_TYPES = ['video-trim','video-compress','video-gif','video-mp3','vide
 const AI_MAGIC_TYPES = ['ai-enhance','ai-glow'];
 const AI_STUDIO_TYPES = ['ai-text-image','ai-bg-remove','ai-bg-replace','ai-editor','ai-upscale','ai-cleanup','ai-restore'];function showScreen(id) { document.querySelectorAll('.screen').forEach(s => s.classList.remove('active')); const el = document.getElementById(id); if (el) el.classList.add('active'); window.scrollTo(0, 0); }
 function goHome() { showScreen('homeScreen'); currentCategory = null; }
-
-function openCategory(catId) {
-  currentCategory = catId;
-  const cat = categories[catId];
-  if (!cat) return;
-  document.getElementById('catPageTitle').textContent = cat.name;
-  document.getElementById('catHeroName').textContent = cat.name;
-  document.getElementById('catHeroDesc').textContent = cat.desc;
-  document.getElementById('toolsList').innerHTML = cat.tools.map(tool => {
-    const img = tool.img || 'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=100&q=80';
-    return `
-      <div class="tool-item" onclick="openTool('${tool.id}')">
-        <img class="tool-bg" src="${img}" alt="" loading="lazy">
-        <div class="tool-icon"><svg viewBox="0 0 24 24"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg></div>
-        <img class="tool-thumb" src="${img}" alt="${tool.name}" loading="lazy">
-        <div class="tool-info"><div class="tool-name">${tool.name}</div><div class="tool-desc">${tool.desc}</div></div>
-        <div class="tool-arrow">›</div>
-      </div>`;
-  }).join('');
-  showScreen('categoryScreen');
-}
-
+function openCategory(catId) { currentCategory = catId; const cat = categories[catId]; if (!cat) return; document.getElementById('catPageTitle').textContent = cat.name; document.getElementById('catHeroName').textContent = cat.name; document.getElementById('catHeroDesc').textContent = cat.desc; document.getElementById('toolsList').innerHTML = cat.tools.map(tool => { const img = tool.img || 'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=100&q=80'; return `<div class="tool-item" onclick="openTool('${tool.id}')"><img class="tool-bg" src="${img}" alt="" loading="lazy"><div class="tool-icon"><svg viewBox="0 0 24 24"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg></div><img class="tool-thumb" src="${img}" alt="${tool.name}" loading="lazy"><div class="tool-info"><div class="tool-name">${tool.name}</div><div class="tool-desc">${tool.desc}</div></div><div class="tool-arrow">›</div></div>`; }).join(''); showScreen('categoryScreen'); }
 function backToCategory() { if (currentCategory) openCategory(currentCategory); else goHome(); }
 
 function openTool(toolId) {
@@ -151,53 +130,12 @@ function openTool(toolId) {
 }
 
 function openToolFromHome(toolId) { currentCategory = null; openTool(toolId); }
-
 function handleGlobalUpload(input) { if (input.files && input.files[0]) { openCategory('edit'); setTimeout(() => openTool('crop'), 100); setTimeout(() => loadImage(input), 200); } }
-
-function loadImage(input) {
-  const file = input.files ? input.files[0] : input;
-  if (!file) return;
-  if (file.type.startsWith('video/')) { loadVideo(input); return; }
-  const reader = new FileReader();
-  reader.onload = (e) => { const img = new Image(); img.onload = () => { originalImage = img; currentImage = img; if (canvas) { canvas.width = img.width; canvas.height = img.height; ctx.drawImage(img, 0, 0); } document.getElementById('uploadArea').style.display = 'none'; document.getElementById('canvasWrap').style.display = 'block'; showToast('Photo loaded ✨'); }; img.src = e.target.result; };
-  reader.readAsDataURL(file);
-}
-
+function loadImage(input) { const file = input.files ? input.files[0] : input; if (!file) return; if (file.type.startsWith('video/')) { loadVideo(input); return; } const reader = new FileReader(); reader.onload = (e) => { const img = new Image(); img.onload = () => { originalImage = img; currentImage = img; if (canvas) { canvas.width = img.width; canvas.height = img.height; ctx.drawImage(img, 0, 0); } document.getElementById('uploadArea').style.display = 'none'; document.getElementById('canvasWrap').style.display = 'block'; showToast('Photo loaded ✨'); }; img.src = e.target.result; }; reader.readAsDataURL(file); }
 function redraw() { if (!currentImage || !canvas) return; canvas.width = currentImage.width; canvas.height = currentImage.height; ctx.drawImage(currentImage, 0, 0); }
 function resetImage() { if (originalImage && canvas) { currentImage = originalImage; redraw(); canvas.style.filter = 'none'; overlayItems = []; if (overlayLayer) overlayLayer.innerHTML = ''; showToast('Reset done'); } }
 
-function loadVideo(input) {
-  const file = input.files ? input.files[0] : input;
-  if (!file) return;
-  currentVideoFile = file;
-  const video = document.getElementById('videoPreview');
-  video.src = URL.createObjectURL(file);
-  video.style.display = 'block';
-  document.getElementById('uploadArea').style.display = 'none';
-  video.onloadedmetadata = () => {
-    currentVideoDuration = video.duration;
-    const sizeMB = (file.size / 1024 / 1024).toFixed(2);
-    const pending = document.getElementById('videoPendingMsg'); if (pending) pending.style.display = 'none';
-    const activeUI = document.getElementById('videoActiveUI'); if (activeUI) activeUI.style.display = 'block';
-    const type = currentTool.type;
-    if (type === 'video-trim') {
-      const ss = document.getElementById('trimStartSlider'); const es = document.getElementById('trimEndSlider');
-      if (ss && es) {
-        ss.max = currentVideoDuration; es.max = currentVideoDuration; es.value = currentVideoDuration;
-        document.getElementById('trimEndLabel').textContent = currentVideoDuration.toFixed(1) + 's';
-        document.getElementById('trimDuration').textContent = currentVideoDuration.toFixed(1) + 's';
-        document.getElementById('trimSize').textContent = sizeMB + 'MB';
-        ss.oninput = () => { if (parseFloat(ss.value) >= parseFloat(es.value)) ss.value = parseFloat(es.value) - 0.1; document.getElementById('trimStartLabel').textContent = parseFloat(ss.value).toFixed(1) + 's'; document.getElementById('trimDuration').textContent = (parseFloat(es.value) - parseFloat(ss.value)).toFixed(1) + 's'; video.currentTime = parseFloat(ss.value); };
-        es.oninput = () => { if (parseFloat(es.value) <= parseFloat(ss.value)) es.value = parseFloat(ss.value) + 0.1; document.getElementById('trimEndLabel').textContent = parseFloat(es.value).toFixed(1) + 's'; document.getElementById('trimDuration').textContent = (parseFloat(es.value) - parseFloat(ss.value)).toFixed(1) + 's'; video.currentTime = parseFloat(es.value); };
-      }
-    } else if (type === 'video-compress') {
-      const o = document.getElementById('compressOrigSize'); const d = document.getElementById('compressDuration'); if (o) o.textContent = sizeMB + 'MB'; if (d) d.textContent = currentVideoDuration.toFixed(1) + 's';
-    } else if (type === 'video-mp3') {
-      const d = document.getElementById('mp3Duration'); const s = document.getElementById('mp3Size'); if (d) d.textContent = currentVideoDuration.toFixed(1) + 's'; if (s) s.textContent = sizeMB + 'MB';
-    }
-    showToast('Video loaded — ' + sizeMB + 'MB ✨');
-  };
-}
+function loadVideo(input) { const file = input.files ? input.files[0] : input; if (!file) return; currentVideoFile = file; const video = document.getElementById('videoPreview'); video.src = URL.createObjectURL(file); video.style.display = 'block'; document.getElementById('uploadArea').style.display = 'none'; video.onloadedmetadata = () => { currentVideoDuration = video.duration; const sizeMB = (file.size / 1024 / 1024).toFixed(2); const pending = document.getElementById('videoPendingMsg'); if (pending) pending.style.display = 'none'; const activeUI = document.getElementById('videoActiveUI'); if (activeUI) activeUI.style.display = 'block'; const type = currentTool.type; if (type === 'video-trim') { const ss = document.getElementById('trimStartSlider'); const es = document.getElementById('trimEndSlider'); if (ss && es) { ss.max = currentVideoDuration; es.max = currentVideoDuration; es.value = currentVideoDuration; document.getElementById('trimEndLabel').textContent = currentVideoDuration.toFixed(1) + 's'; document.getElementById('trimDuration').textContent = currentVideoDuration.toFixed(1) + 's'; document.getElementById('trimSize').textContent = sizeMB + 'MB'; ss.oninput = () => { if (parseFloat(ss.value) >= parseFloat(es.value)) ss.value = parseFloat(es.value) - 0.1; document.getElementById('trimStartLabel').textContent = parseFloat(ss.value).toFixed(1) + 's'; document.getElementById('trimDuration').textContent = (parseFloat(es.value) - parseFloat(ss.value)).toFixed(1) + 's'; video.currentTime = parseFloat(ss.value); }; es.oninput = () => { if (parseFloat(es.value) <= parseFloat(ss.value)) es.value = parseFloat(ss.value) + 0.1; document.getElementById('trimEndLabel').textContent = parseFloat(es.value).toFixed(1) + 's'; document.getElementById('trimDuration').textContent = (parseFloat(es.value) - parseFloat(ss.value)).toFixed(1) + 's'; video.currentTime = parseFloat(es.value); }; } } else if (type === 'video-compress') { const o = document.getElementById('compressOrigSize'); const d = document.getElementById('compressDuration'); if (o) o.textContent = sizeMB + 'MB'; if (d) d.textContent = currentVideoDuration.toFixed(1) + 's'; } else if (type === 'video-mp3') { const d = document.getElementById('mp3Duration'); const s = document.getElementById('mp3Size'); if (d) d.textContent = currentVideoDuration.toFixed(1) + 's'; if (s) s.textContent = sizeMB + 'MB'; } showToast('Video loaded — ' + sizeMB + 'MB ✨'); }; }
 
 function selectCompressQuality(q, btn) { selectedCompressQuality = q; btn.parentElement.querySelectorAll('.ctrl-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); }
 function selectEnhanceType(t, btn) { selectedEnhanceType = t; btn.parentElement.querySelectorAll('.ctrl-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); }
@@ -257,7 +195,7 @@ function showLoader(msg) { let el = document.getElementById('videoLoader'); if (
 
 function hideLoader() { updateProgress(100); setTimeout(() => { const el = document.getElementById('videoLoader'); if (el) el.style.display = 'none'; }, 500); }
 
-function uploadWithProgress(url, formData, onProgress) { return new Promise((resolve, reject) => { const xhr = new XMLHttpRequest(); xhr.open('POST', url, true); xhr.responseType = 'blob'; xhr.upload.onprogress = (e) => { if (e.lengthComputable) onProgress((e.loaded / e.total) * 40); }; xhr.upload.onload = () => { onProgress(45); let fake = 45; window.serverProgressInterval = setInterval(() => { if (fake < 90) { fake += 1.5; onProgress(fake); } }, 400); }; xhr.onload = () => { if (window.serverProgressInterval) { clearInterval(window.serverProgressInterval); window.serverProgressInterval = null; } if (xhr.status >= 200 && xhr.status < 300) { onProgress(95); resolve(xhr.response); } else reject(new Error('Server error: ' + xhr.status)); }; xhr.onerror = () => { if (window.serverProgressInterval) { clearInterval(window.serverProgressInterval); window.serverProgressInterval = null; } reject(new Error('Network error')); }; xhr.send(formData); }); }
+function uploadWithProgress(url, formData, onProgress) { return new Promise((resolve, reject) => { const xhr = new XMLHttpRequest(); xhr.open('POST', url, true); xhr.responseType = 'blob'; xhr.timeout = 180000; xhr.upload.onprogress = (e) => { if (e.lengthComputable) onProgress((e.loaded / e.total) * 40); }; xhr.upload.onload = () => { onProgress(45); let fake = 45; window.serverProgressInterval = setInterval(() => { if (fake < 90) { fake += 1.5; onProgress(fake); } }, 400); }; xhr.onload = () => { if (window.serverProgressInterval) { clearInterval(window.serverProgressInterval); window.serverProgressInterval = null; } if (xhr.status >= 200 && xhr.status < 300) { onProgress(95); resolve(xhr.response); } else reject(new Error('Server error: ' + xhr.status)); }; xhr.onerror = () => { if (window.serverProgressInterval) { clearInterval(window.serverProgressInterval); window.serverProgressInterval = null; } reject(new Error('Network error')); }; xhr.ontimeout = () => { if (window.serverProgressInterval) { clearInterval(window.serverProgressInterval); window.serverProgressInterval = null; } reject(new Error('Request timed out')); }; xhr.send(formData); }); }
 
 async function trimVideo() { if (isProcessing) return; if (!currentVideoFile) { showToast('Upload video first'); return; } const s = parseFloat(document.getElementById('trimStartSlider').value); const e = parseFloat(document.getElementById('trimEndSlider').value); if (e <= s) { showToast('Invalid range'); return; } isProcessing = true; await requestWakeLock(); showLoader('✂️ Trimming video'); try { const formData = new FormData(); formData.append('video', currentVideoFile); formData.append('start', s); formData.append('end', e); const blob = await uploadWithProgress(SERVER_URL + '/api/trim', formData, updateProgress); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'picly-trimmed-' + Date.now() + '.mp4'; a.click(); hideLoader(); showToast('✅ Ready!'); } catch (err) { hideLoader(); showToast('Error: ' + err.message); } await releaseWakeLock(); isProcessing = false; }
 
@@ -273,7 +211,6 @@ function buildControls(type) {
   const c = document.getElementById('dynamicControls');
   if (!c) return;
   c.innerHTML = '';
-
   if (type === 'emi') { c.innerHTML = `<div class="calc-header"><div class="calc-icon">💰</div><div class="calc-title">EMI Calculator</div></div><div class="calc-form"><div class="calc-field"><label>Loan Amount (₹)</label><input type="number" id="emiPrincipal" class="calc-input"></div><div class="calc-field"><label>Interest Rate (%)</label><input type="number" id="emiRate" step="0.1" class="calc-input"></div><div class="calc-field"><label>Tenure (Years)</label><input type="number" id="emiYears" class="calc-input"></div><button class="calc-btn" onclick="calculateEMI()">Calculate</button></div><div id="emiResult" class="calc-result"></div>`; }
   else if (type === 'gst') { c.innerHTML = `<div class="calc-header"><div class="calc-icon">🧾</div><div class="calc-title">GST Calculator</div></div><div class="calc-form"><div class="calc-field"><label>Amount (₹)</label><input type="number" id="gstAmount" class="calc-input"></div><div class="calc-field"><label>GST Rate (%)</label><select id="gstRate" class="calc-select"><option value="5">5%</option><option value="12">12%</option><option value="18" selected>18%</option><option value="28">28%</option></select></div><div class="calc-btn-row"><button class="calc-btn" onclick="calcGST('add')">Add</button><button class="calc-btn" onclick="calcGST('remove')">Remove</button></div></div><div id="gstResult" class="calc-result"></div>`; }
   else if (type === 'age') { c.innerHTML = `<div class="calc-header"><div class="calc-icon">🎂</div><div class="calc-title">Age Calculator</div></div><div class="calc-form"><div class="calc-field"><label>Date of Birth</label><input type="date" id="dobInput" class="calc-input"></div><button class="calc-btn" onclick="calculateAge()">Calculate</button></div><div id="ageResult" class="calc-result"></div>`; }
