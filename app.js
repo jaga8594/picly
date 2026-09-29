@@ -12,6 +12,7 @@ const categories = {
   ]},
   documents: { name:'Documents', desc:'Passport · signature · PDF', tools:[
     { id:'passport', name:'Passport Photo', desc:'35×45mm, 2×2 inch', type:'passport', img:'https://i.ibb.co/Q7BVycWY/us-passport-size-diagram.webp' },
+    { id:'photo-signature', name:'Photo + Signature', desc:'Draw signature + merge', type:'photo-signature', img:'https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=100&q=80' },
     { id:'compress', name:'Image Compress', desc:'Exact KB/MB', type:'compress', img:'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=100&q=80' },
     { id:'pdf', name:'Photo to PDF', desc:'Convert to PDF', type:'pdf', img:'https://images.unsplash.com/photo-1568667256549-094345857637?w=100&q=80' },
     { id:'convert', name:'Format Converter', desc:'JPG ↔ PNG ↔ WEBP', type:'convert', img:'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?w=100&q=80' }
@@ -175,6 +176,215 @@ function showLoader(msg) { let el = document.getElementById('videoLoader'); if (
 function hideLoader() { updateProgress(100); setTimeout(() => { const el = document.getElementById('videoLoader'); if (el) el.style.display = 'none'; }, 500); }
 function uploadWithProgress(url, formData, onProgress) { return new Promise((resolve, reject) => { const xhr = new XMLHttpRequest(); xhr.open('POST', url, true); xhr.responseType = 'blob'; xhr.timeout = 180000; xhr.upload.onprogress = (e) => { if (e.lengthComputable) onProgress((e.loaded / e.total) * 40); }; xhr.upload.onload = () => { onProgress(45); let fake = 45; window.serverProgressInterval = setInterval(() => { if (fake < 90) { fake += 1.5; onProgress(fake); } }, 400); }; xhr.onload = () => { if (window.serverProgressInterval) { clearInterval(window.serverProgressInterval); window.serverProgressInterval = null; } if (xhr.status >= 200 && xhr.status < 300) { onProgress(95); resolve(xhr.response); } else reject(new Error('Server error: ' + xhr.status)); }; xhr.onerror = () => { if (window.serverProgressInterval) { clearInterval(window.serverProgressInterval); window.serverProgressInterval = null; } reject(new Error('Network error')); }; xhr.ontimeout = () => { if (window.serverProgressInterval) { clearInterval(window.serverProgressInterval); window.serverProgressInterval = null; } reject(new Error('Request timed out')); }; xhr.send(formData); }); }
 function showToast(msg) { const t = document.getElementById('toast'); if (!t) return; t.textContent = msg; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2000); }
+
+// ==================== PHOTO + SIGNATURE ====================
+let psPhoto = null;
+let psCanvas = null;
+let psCtx = null;
+let psColor = '#000000';
+let psBrush = 3;
+let psDrawing = false;
+let psLastX = 0;
+let psLastY = 0;
+let psStrokes = [];
+let psResult = null;
+
+function loadPhotoSigImage(input) {
+  const file = input.files ? input.files[0] : input;
+  if (!file) return;
+  psPhoto = null;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const img = new Image();
+    img.onload = () => {
+      psPhoto = img;
+      document.getElementById('psPhotoPreview').src = e.target.result;
+      document.getElementById('psUploadTitle').textContent = 'Change photo';
+      document.getElementById('psPhotoActive').style.display = 'block';
+      setTimeout(setupPsCanvas, 200);
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function setupPsCanvas() {
+  psCanvas = document.getElementById('psSignCanvas');
+  if (!psCanvas) return;
+  const rect = psCanvas.getBoundingClientRect();
+  psCanvas.width = rect.width * 2;
+  psCanvas.height = rect.height * 2;
+  psCtx = psCanvas.getContext('2d');
+  psCtx.lineCap = 'round';
+  psCtx.lineJoin = 'round';
+  psCtx.strokeStyle = psColor;
+  psCtx.lineWidth = psBrush * 2;
+  psStrokes = [];
+  psCtx.clearRect(0, 0, psCanvas.width, psCanvas.height);
+
+  const getPos = (e) => {
+    const r = psCanvas.getBoundingClientRect();
+    const t = e.touches ? e.touches[0] : e;
+    return {
+      x: (t.clientX - r.left) * (psCanvas.width / r.width),
+      y: (t.clientY - r.top) * (psCanvas.height / r.height)
+    };
+  };
+
+  const start = (e) => {
+    e.preventDefault();
+    psDrawing = true;
+    const p = getPos(e);
+    psLastX = p.x;
+    psLastY = p.y;
+    psStrokes.push({ type: 'start', x: p.x, y: p.y, color: psColor, width: psBrush * 2 });
+    psCtx.beginPath();
+    psCtx.arc(p.x, p.y, (psBrush * 2) / 2, 0, Math.PI * 2);
+    psCtx.fillStyle = psColor;
+    psCtx.fill();
+  };
+
+  const move = (e) => {
+    if (!psDrawing) return;
+    e.preventDefault();
+    const p = getPos(e);
+    psStrokes.push({ type: 'line', x1: psLastX, y1: psLastY, x2: p.x, y2: p.y, color: psColor, width: psBrush * 2 });
+    psCtx.strokeStyle = psColor;
+    psCtx.lineWidth = psBrush * 2;
+    psCtx.beginPath();
+    psCtx.moveTo(psLastX, psLastY);
+    psCtx.lineTo(p.x, p.y);
+    psCtx.stroke();
+    psLastX = p.x;
+    psLastY = p.y;
+  };
+
+  const end = () => { psDrawing = false; };
+
+  psCanvas.onmousedown = start;
+  psCanvas.onmousemove = move;
+  psCanvas.onmouseup = end;
+  psCanvas.onmouseleave = end;
+  psCanvas.ontouchstart = start;
+  psCanvas.ontouchmove = move;
+  psCanvas.ontouchend = end;
+}
+
+function setPsColor(color, btn) {
+  psColor = color;
+  if (psCtx) psCtx.strokeStyle = color;
+  if (btn) {
+    btn.parentElement.querySelectorAll('.ctrl-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  }
+}
+
+function setPsBrush(size, btn) {
+  psBrush = size;
+  if (psCtx) psCtx.lineWidth = size * 2;
+  if (btn) {
+    btn.parentElement.querySelectorAll('.ctrl-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  }
+}
+
+function clearPsSignature() {
+  if (!psCtx || !psCanvas) return;
+  psCtx.clearRect(0, 0, psCanvas.width, psCanvas.height);
+  psStrokes = [];
+  showToast('Cleared');
+}
+
+function undoPsSignature() {
+  if (!psCtx || !psCanvas || psStrokes.length === 0) {
+    showToast('Nothing to undo');
+    return;
+  }
+  let lastStart = -1;
+  for (let i = psStrokes.length - 1; i >= 0; i--) {
+    if (psStrokes[i].type === 'start') { lastStart = i; break; }
+  }
+  if (lastStart === -1) { clearPsSignature(); return; }
+  psStrokes = psStrokes.slice(0, lastStart);
+  redrawPsStrokes();
+  showToast('Undo');
+}
+
+function redrawPsStrokes() {
+  if (!psCtx || !psCanvas) return;
+  psCtx.clearRect(0, 0, psCanvas.width, psCanvas.height);
+  psStrokes.forEach(s => {
+    psCtx.strokeStyle = s.color;
+    psCtx.fillStyle = s.color;
+    psCtx.lineWidth = s.width;
+    if (s.type === 'start') {
+      psCtx.beginPath();
+      psCtx.arc(s.x, s.y, s.width / 2, 0, Math.PI * 2);
+      psCtx.fill();
+    } else if (s.type === 'line') {
+      psCtx.beginPath();
+      psCtx.moveTo(s.x1, s.y1);
+      psCtx.lineTo(s.x2, s.y2);
+      psCtx.stroke();
+    }
+  });
+}
+
+function mergePhotoSignature() {
+  if (!psPhoto) { showToast('Upload photo first'); return; }
+  const hasSignature = psStrokes.length > 0;
+  const nameText = document.getElementById('psNameInput')?.value.trim() || '';
+
+  const photoW = psPhoto.width;
+  const photoH = psPhoto.height;
+  const photoAreaH = photoH;
+  const sigAreaH = Math.round(photoH * 0.3);
+  const nameAreaH = nameText ? Math.round(photoH * 0.1) : 0;
+
+  const finalW = photoW;
+  const finalH = photoAreaH + nameAreaH + sigAreaH;
+
+  const temp = document.createElement('canvas');
+  temp.width = finalW;
+  temp.height = finalH;
+  const tctx = temp.getContext('2d');
+
+  tctx.fillStyle = '#ffffff';
+  tctx.fillRect(0, 0, finalW, finalH);
+
+  tctx.drawImage(psPhoto, 0, 0, photoW, photoH);
+
+  if (nameText) {
+    tctx.fillStyle = '#000000';
+    tctx.font = `bold ${Math.round(nameAreaH * 0.55)}px Arial, sans-serif`;
+    tctx.textAlign = 'center';
+    tctx.textBaseline = 'middle';
+    tctx.fillText(nameText, finalW / 2, photoAreaH + nameAreaH / 2);
+  }
+
+  if (hasSignature && psCanvas) {
+    tctx.drawImage(psCanvas, 0, photoAreaH + nameAreaH, finalW, sigAreaH);
+  }
+
+  psResult = temp.toDataURL('image/jpeg', 0.95);
+  document.getElementById('psResultImg').src = psResult;
+  document.getElementById('psResultBox').style.display = 'block';
+  showToast('Merged ✨');
+}
+
+function downloadPhotoSignature() {
+  if (!psResult) { showToast('Merge first'); return; }
+  const fileName = 'picly-photo-signature-' + Date.now() + '.jpg';
+  const a = document.createElement('a');
+  a.href = psResult;
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  addHistory('Photo + Signature', fileName, psResult);
+  showToast('Downloaded! 🎉');
+}
+
 // ==================== BUILD CONTROLS ====================
 function buildControls(type) {
   const c = document.getElementById('dynamicControls');
@@ -193,6 +403,7 @@ function buildControls(type) {
   else if (type === 'text') { c.innerHTML = '<div class="control-label">Add Text</div><div class="manual-row"><input type="text" id="textInput" placeholder="Type text..." class="manual-input"></div><div class="manual-row"><input type="number" id="textSize" value="60" class="manual-input"></div><div class="control-row"><button class="ctrl-btn primary" onclick="addTextDrag()">Add Text</button></div>'; }
   else if (type === 'stickers') { c.innerHTML = '<div class="control-label">Stickers</div><div class="sticker-grid">' + ['😂','🥰','😎','❤️','🌟','💯','🦁','🎉'].map(e => '<button class="sticker-btn" onclick="addStickerDrag(\'' + e + '\')">' + e + '</button>').join('') + '</div>'; }
   else if (type === 'passport') { c.innerHTML = '<div class="control-label">Size</div><div class="control-row"><button class="ctrl-btn" onclick="makePassport(35,45)">35×45mm</button><button class="ctrl-btn" onclick="makePassport(51,51)">2×2 inch</button></div>'; }
+  else if (type === 'photo-signature') { c.innerHTML = '<div class="control-label">Upload Photo</div><div class="upload-area" onclick="document.getElementById(\'psPhotoInput\').click()" style="margin-bottom:12px;"><input type="file" id="psPhotoInput" accept="image/*" onchange="loadPhotoSigImage(this)" style="display:none;"><p id="psUploadTitle">Tap to upload photo</p></div><div id="psPhotoActive" style="display:none;"><img id="psPhotoPreview" style="width:100%;max-height:280px;object-fit:contain;border-radius:18px;margin-bottom:12px;"><div class="control-label">Name (Optional)</div><input type="text" id="psNameInput" placeholder="Type your name..." class="manual-input" style="width:100%;margin-bottom:12px;"><div class="control-label">Signature (Draw below)</div><div style="position:relative;background:#fff;border-radius:12px;margin-bottom:12px;overflow:hidden;"><canvas id="psSignCanvas" style="width:100%;height:160px;display:block;touch-action:none;cursor:crosshair;"></canvas></div><div class="control-row" style="margin-bottom:8px;"><button class="ctrl-btn active" onclick="setPsColor(\'#000000\', this)" style="flex:1;">⚫ Black</button><button class="ctrl-btn" onclick="setPsColor(\'#0033cc\', this)" style="flex:1;">🔵 Blue</button></div><div class="control-row" style="margin-bottom:8px;"><button class="ctrl-btn" onclick="setPsBrush(2, this)" style="flex:1;">Thin</button><button class="ctrl-btn active" onclick="setPsBrush(3, this)" style="flex:1;">Normal</button><button class="ctrl-btn" onclick="setPsBrush(5, this)" style="flex:1;">Thick</button></div><div class="control-row" style="margin-bottom:8px;"><button class="ctrl-btn" onclick="undoPsSignature()" style="flex:1;">↶ Undo</button><button class="ctrl-btn" onclick="clearPsSignature()" style="flex:1;">🗑️ Clear</button></div><button class="ctrl-btn primary" onclick="mergePhotoSignature()" style="width:100%;padding:18px;margin-top:8px;">✨ Merge & Preview</button><div id="psResultBox" style="display:none;margin-top:16px;"><img id="psResultImg" style="width:100%;border-radius:18px;margin-bottom:12px;"><button class="ctrl-btn primary" onclick="downloadPhotoSignature()" style="width:100%;padding:16px;">⬇️ Download</button></div></div>'; }
   else if (type === 'compress') { c.innerHTML = '<div class="control-label">Quality</div><div class="control-row"><button class="ctrl-btn" onclick="compressImage(0.9)">High</button><button class="ctrl-btn" onclick="compressImage(0.6)">Medium</button><button class="ctrl-btn" onclick="compressImage(0.3)">Low</button></div>'; }
   else if (type === 'pdf') { c.innerHTML = '<div class="control-label">PDF</div><div class="control-row"><button class="ctrl-btn primary" onclick="exportPDF()">Download PDF</button></div>'; }
   else if (type === 'convert') { c.innerHTML = '<div class="control-label">Format</div><div class="control-row"><button class="ctrl-btn" onclick="convertFormat(\'jpeg\')">JPG</button><button class="ctrl-btn" onclick="convertFormat(\'png\')">PNG</button><button class="ctrl-btn" onclick="convertFormat(\'webp\')">WEBP</button></div>'; }
@@ -371,6 +582,7 @@ window.navTo = navTo; window.addHistory = addHistory; window.getHistory = getHis
 window.updateStats = updateStats; window.updateNotifBadge = updateNotifBadge; window.renderNotifications = renderNotifications;
 window.applyFrame = applyFrame; window.selectCollageLayout = selectCollageLayout; window.addCollagePhotos = addCollagePhotos; window.createCollage = createCollage;
 window.showToast = showToast; window.showLoader = showLoader; window.hideLoader = hideLoader; window.uploadWithProgress = uploadWithProgress; window.requestWakeLock = requestWakeLock; window.releaseWakeLock = releaseWakeLock; window.timeAgo = timeAgo;
+window.loadPhotoSigImage = loadPhotoSigImage; window.setPsColor = setPsColor; window.setPsBrush = setPsBrush; window.clearPsSignature = clearPsSignature; window.undoPsSignature = undoPsSignature; window.mergePhotoSignature = mergePhotoSignature; window.downloadPhotoSignature = downloadPhotoSignature;
 
 // Init
 if (document.readyState === 'loading') {
