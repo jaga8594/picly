@@ -1,4 +1,3 @@
-// ==================== CONFIG ====================
 const SERVER_URL = 'https://picly-server-production.up.railway.app';
 
 const categories = {
@@ -56,7 +55,6 @@ const categories = {
   ]}
 };
 
-// ==================== GLOBAL STATE ====================
 let currentCategory = null;
 let currentTool = null;
 let originalImage = null;
@@ -90,7 +88,6 @@ let currentCleanupResult = null;
 let currentRestoreImage = null;
 let currentRestoreResult = null;
 let wakeLock = null;
-let dotsInterval = null;
 let isProcessing = false;
 
 const CALCULATOR_TYPES = ['emi','gst','age','bmi','unit','qr'];
@@ -98,7 +95,6 @@ const VIDEO_TYPES = ['video-trim','video-compress','video-gif','video-mp3','vide
 const AI_MAGIC_TYPES = ['ai-enhance','ai-glow'];
 const AI_STUDIO_TYPES = ['ai-text-image','ai-bg-remove','ai-bg-replace','ai-editor','ai-upscale','ai-cleanup','ai-restore'];
 
-// ==================== NAVIGATION ====================
 function showScreen(id) { document.querySelectorAll('.screen').forEach(s => s.classList.remove('active')); const el = document.getElementById(id); if (el) el.classList.add('active'); window.scrollTo(0, 0); }
 function goHome() { showScreen('homeScreen'); currentCategory = null; }
 function openCategory(catId) { currentCategory = catId; const cat = categories[catId]; if (!cat) return; document.getElementById('catPageTitle').textContent = cat.name; document.getElementById('catHeroName').textContent = cat.name; document.getElementById('catHeroDesc').textContent = cat.desc; document.getElementById('toolsList').innerHTML = cat.tools.map(tool => { const img = tool.img || 'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=100&q=80'; return `<div class="tool-item" onclick="openTool('${tool.id}')"><img class="tool-bg" src="${img}" alt="" loading="lazy"><div class="tool-icon"><svg viewBox="0 0 24 24"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg></div><img class="tool-thumb" src="${img}" alt="${tool.name}" loading="lazy"><div class="tool-info"><div class="tool-name">${tool.name}</div><div class="tool-desc">${tool.desc}</div></div><div class="tool-arrow">›</div></div>`; }).join(''); showScreen('categoryScreen'); }
@@ -136,71 +132,11 @@ function openTool(toolId) {
 
 function openToolFromHome(toolId) { currentCategory = null; openTool(toolId); }
 function handleGlobalUpload(input) { if (input.files && input.files[0]) { openCategory('edit'); setTimeout(() => openTool('crop'), 100); setTimeout(() => loadImage(input), 200); } }
-
-function loadImage(input) {
-  const file = input.files ? input.files[0] : input;
-  if (!file) return;
-  if (file.type.startsWith('video/')) { loadVideo(input); return; }
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    const img = new Image();
-    img.onload = () => {
-      originalImage = img; currentImage = img;
-      if (canvas) { canvas.width = img.width; canvas.height = img.height; ctx.drawImage(img, 0, 0); }
-      document.getElementById('uploadArea').style.display = 'none';
-      document.getElementById('canvasWrap').style.display = 'block';
-      showToast('Photo loaded ✨');
-    };
-    img.src = e.target.result;
-  };
-  reader.readAsDataURL(file);
-}
-
+function loadImage(input) { const file = input.files ? input.files[0] : input; if (!file) return; if (file.type.startsWith('video/')) { loadVideo(input); return; } const reader = new FileReader(); reader.onload = (e) => { const img = new Image(); img.onload = () => { originalImage = img; currentImage = img; if (canvas) { canvas.width = img.width; canvas.height = img.height; ctx.drawImage(img, 0, 0); } document.getElementById('uploadArea').style.display = 'none'; document.getElementById('canvasWrap').style.display = 'block'; showToast('Photo loaded ✨'); }; img.src = e.target.result; }; reader.readAsDataURL(file); }
 function redraw() { if (!currentImage || !canvas) return; canvas.width = currentImage.width; canvas.height = currentImage.height; ctx.drawImage(currentImage, 0, 0); }
+function resetImage() { if (originalImage && canvas) { currentImage = originalImage; redraw(); canvas.style.filter = 'none'; overlayItems = []; if (overlayLayer) overlayLayer.innerHTML = ''; showToast('Reset done'); } }
 
-function resetImage() {
-  if (originalImage && canvas) {
-    currentImage = originalImage; redraw(); canvas.style.filter = 'none';
-    overlayItems = []; if (overlayLayer) overlayLayer.innerHTML = '';
-    showToast('Reset done');
-  }
-}
-
-function loadVideo(input) {
-  const file = input.files ? input.files[0] : input;
-  if (!file) return;
-  currentVideoFile = file;
-  const video = document.getElementById('videoPreview');
-  video.src = URL.createObjectURL(file);
-  video.style.display = 'block';
-  document.getElementById('uploadArea').style.display = 'none';
-  video.onloadedmetadata = () => {
-    currentVideoDuration = video.duration;
-    const sizeMB = (file.size / 1024 / 1024).toFixed(2);
-    const pending = document.getElementById('videoPendingMsg'); if (pending) pending.style.display = 'none';
-    const activeUI = document.getElementById('videoActiveUI'); if (activeUI) activeUI.style.display = 'block';
-    const type = currentTool.type;
-    if (type === 'video-trim') {
-      const ss = document.getElementById('trimStartSlider');
-      const es = document.getElementById('trimEndSlider');
-      if (ss && es) {
-        ss.max = currentVideoDuration; es.max = currentVideoDuration; es.value = currentVideoDuration;
-        document.getElementById('trimEndLabel').textContent = currentVideoDuration.toFixed(1) + 's';
-        document.getElementById('trimDuration').textContent = currentVideoDuration.toFixed(1) + 's';
-        document.getElementById('trimSize').textContent = sizeMB + 'MB';
-        ss.oninput = () => { if (parseFloat(ss.value) >= parseFloat(es.value)) ss.value = parseFloat(es.value) - 0.1; document.getElementById('trimStartLabel').textContent = parseFloat(ss.value).toFixed(1) + 's'; document.getElementById('trimDuration').textContent = (parseFloat(es.value) - parseFloat(ss.value)).toFixed(1) + 's'; video.currentTime = parseFloat(ss.value); };
-        es.oninput = () => { if (parseFloat(es.value) <= parseFloat(ss.value)) es.value = parseFloat(ss.value) + 0.1; document.getElementById('trimEndLabel').textContent = parseFloat(es.value).toFixed(1) + 's'; document.getElementById('trimDuration').textContent = (parseFloat(es.value) - parseFloat(ss.value)).toFixed(1) + 's'; video.currentTime = parseFloat(es.value); };
-      }
-    } else if (type === 'video-compress') {
-      const o = document.getElementById('compressOrigSize'); const d = document.getElementById('compressDuration');
-      if (o) o.textContent = sizeMB + 'MB'; if (d) d.textContent = currentVideoDuration.toFixed(1) + 's';
-    } else if (type === 'video-mp3') {
-      const d = document.getElementById('mp3Duration'); const s = document.getElementById('mp3Size');
-      if (d) d.textContent = currentVideoDuration.toFixed(1) + 's'; if (s) s.textContent = sizeMB + 'MB';
-    }
-    showToast('Video loaded — ' + sizeMB + 'MB ✨');
-  };
-}
+function loadVideo(input) { const file = input.files ? input.files[0] : input; if (!file) return; currentVideoFile = file; const video = document.getElementById('videoPreview'); video.src = URL.createObjectURL(file); video.style.display = 'block'; document.getElementById('uploadArea').style.display = 'none'; video.onloadedmetadata = () => { currentVideoDuration = video.duration; const sizeMB = (file.size / 1024 / 1024).toFixed(2); const pending = document.getElementById('videoPendingMsg'); if (pending) pending.style.display = 'none'; const activeUI = document.getElementById('videoActiveUI'); if (activeUI) activeUI.style.display = 'block'; const type = currentTool.type; if (type === 'video-trim') { const ss = document.getElementById('trimStartSlider'); const es = document.getElementById('trimEndSlider'); if (ss && es) { ss.max = currentVideoDuration; es.max = currentVideoDuration; es.value = currentVideoDuration; document.getElementById('trimEndLabel').textContent = currentVideoDuration.toFixed(1) + 's'; document.getElementById('trimDuration').textContent = currentVideoDuration.toFixed(1) + 's'; document.getElementById('trimSize').textContent = sizeMB + 'MB'; ss.oninput = () => { if (parseFloat(ss.value) >= parseFloat(es.value)) ss.value = parseFloat(es.value) - 0.1; document.getElementById('trimStartLabel').textContent = parseFloat(ss.value).toFixed(1) + 's'; document.getElementById('trimDuration').textContent = (parseFloat(es.value) - parseFloat(ss.value)).toFixed(1) + 's'; video.currentTime = parseFloat(ss.value); }; es.oninput = () => { if (parseFloat(es.value) <= parseFloat(ss.value)) es.value = parseFloat(ss.value) + 0.1; document.getElementById('trimEndLabel').textContent = parseFloat(es.value).toFixed(1) + 's'; document.getElementById('trimDuration').textContent = (parseFloat(es.value) - parseFloat(ss.value)).toFixed(1) + 's'; video.currentTime = parseFloat(es.value); }; } } else if (type === 'video-compress') { const o = document.getElementById('compressOrigSize'); const d = document.getElementById('compressDuration'); if (o) o.textContent = sizeMB + 'MB'; if (d) d.textContent = currentVideoDuration.toFixed(1) + 's'; } else if (type === 'video-mp3') { const d = document.getElementById('mp3Duration'); const s = document.getElementById('mp3Size'); if (d) d.textContent = currentVideoDuration.toFixed(1) + 's'; if (s) s.textContent = sizeMB + 'MB'; } showToast('Video loaded — ' + sizeMB + 'MB ✨'); }; }
 
 function selectCompressQuality(q, btn) { selectedCompressQuality = q; btn.parentElement.querySelectorAll('.ctrl-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); }
 function selectEnhanceType(t, btn) { selectedEnhanceType = t; btn.parentElement.querySelectorAll('.ctrl-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); }
@@ -210,7 +146,6 @@ function selectAiRatio(ratio, btn) { selectedAiRatio = ratio; btn.parentElement.
 function selectUpscaleScale(scale, btn) { selectedUpscaleScale = scale; btn.parentElement.querySelectorAll('.ctrl-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); }
 function selectGifFps(fps, btn) { btn.parentElement.querySelectorAll('.ctrl-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); btn.dataset.fps = fps; }
 
-// ==================== AI FUNCTIONS ====================
 function loadAiImage(input) { const file = input.files ? input.files[0] : input; if (!file) return; if (!file.type.startsWith('image/')) { showToast('Please upload an image'); return; } currentAiImage = file; const reader = new FileReader(); reader.onload = (e) => { const preview = document.getElementById('aiImagePreview'); if (preview) { preview.src = e.target.result; preview.style.display = 'block'; } const pending = document.getElementById('aiPendingMsg'); if (pending) pending.style.display = 'none'; const activeUI = document.getElementById('aiActiveUI'); if (activeUI) activeUI.style.display = 'block'; showToast('Image loaded ✨'); }; reader.readAsDataURL(file); }
 
 async function applyAiMagic() { if (isProcessing) return; if (!currentAiImage) { showToast('Upload image first'); return; } isProcessing = true; await requestWakeLock(); showLoader('🎨 Applying AI Magic'); try { const formData = new FormData(); formData.append('image', currentAiImage); formData.append('type', selectedAiMagic); const blob = await uploadWithProgress(SERVER_URL + '/api/ai-magic', formData, updateProgress); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `picly-${selectedAiMagic}-${Date.now()}.jpg`; a.click(); hideLoader(); showToast('✅ Done!'); } catch (err) { hideLoader(); showToast('Error: ' + err.message); } await releaseWakeLock(); isProcessing = false; }
@@ -245,375 +180,107 @@ function loadCleanupImage(input) { const file = input.files ? input.files[0] : i
 
 async function runCleanup() { if (isProcessing) return; if (!currentCleanupImage) { showToast('Upload photo'); return; } isProcessing = true; await requestWakeLock(); showLoader('🧹 Cleaning up'); try { const formData = new FormData(); formData.append('image', currentCleanupImage); const blob = await uploadWithProgress(SERVER_URL + '/api/cleanup', formData, updateProgress); currentCleanupResult = URL.createObjectURL(blob); document.getElementById('cleanupResultImg').src = currentCleanupResult; document.getElementById('cleanupResult').style.display = 'block'; hideLoader(); showToast('✅ Cleaned!'); } catch (err) { hideLoader(); showToast('Error: ' + err.message); } await releaseWakeLock(); isProcessing = false; }
 
-// ==================== RESTORE (ASYNC) ====================
-function loadRestoreImage(input) {
-  const file = input.files ? input.files[0] : input;
-  if (!file) return;
-  if (!file.type.startsWith('image/')) { showToast('Upload an image'); return; }
-  currentRestoreImage = file;
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    const preview = document.getElementById('restorePreview');
-    if (preview) { preview.src = e.target.result; preview.style.display = 'block'; }
-    const pending = document.getElementById('restorePendingMsg');
-    if (pending) pending.style.display = 'none';
-    const activeUI = document.getElementById('restoreActiveUI');
-    if (activeUI) activeUI.style.display = 'block';
-    showToast('Photo loaded ✨');
-  };
-  reader.readAsDataURL(file);
-}
+function downloadCleanup() { if (!currentCleanupResult) return; const a = document.createElement('a'); a.href = currentCleanupResult; a.download = 'picly-cleanup-' + Date.now() + '.jpg'; a.click(); }
 
-async function runRestore() {
-  if (isProcessing) return;
-  if (!currentRestoreImage) { showToast('Upload photo'); return; }
-  isProcessing = true;
-  await requestWakeLock();
-  showLoader('🎨 Restoring photo (30-60 sec)');
+function loadRestoreImage(input) { const file = input.files ? input.files[0] : input; if (!file) return; currentRestoreImage = file; const reader = new FileReader(); reader.onload = (e) => { document.getElementById('restorePreview').src = e.target.result; document.getElementById('restorePending').style.display = 'none'; document.getElementById('restoreActive').style.display = 'block'; }; reader.readAsDataURL(file); }
 
-  try {
-    const formData = new FormData();
-    formData.append('image', currentRestoreImage);
+async function runRestore() { if (isProcessing) return; if (!currentRestoreImage) { showToast('Upload photo'); return; } isProcessing = true; await requestWakeLock(); showLoader('🎨 Restoring photo (30-60 sec)'); try { const formData = new FormData(); formData.append('image', currentRestoreImage); const blob = await uploadWithProgress(SERVER_URL + '/api/restore', formData, updateProgress); currentRestoreResult = URL.createObjectURL(blob); document.getElementById('restoreResultImg').src = currentRestoreResult; document.getElementById('restoreResult').style.display = 'block'; hideLoader(); showToast('✅ Restored!'); } catch (err) { hideLoader(); showToast('Error: ' + err.message); } await releaseWakeLock(); isProcessing = false; }
 
-    const uploadRes = await fetch(SERVER_URL + '/api/restore', { method: 'POST', body: formData });
-    if (!uploadRes.ok) throw new Error('Upload failed: ' + uploadRes.status);
-    const { jobId } = await uploadRes.json();
-    if (!jobId) throw new Error('No job ID received');
-    console.log('Job ID:', jobId);
+function downloadRestore() { if (!currentRestoreResult) return; const a = document.createElement('a'); a.href = currentRestoreResult; a.download = 'picly-restored-' + Date.now() + '.png'; a.click(); }
 
-    let attempts = 0;
-    const maxAttempts = 60;
+async function requestWakeLock() { try { if ('wakeLock' in navigator) { wakeLock = await navigator.wakeLock.request('screen'); } } catch (err) {} }
+async function releaseWakeLock() { if (wakeLock) { try { await wakeLock.release(); } catch(e) {} wakeLock = null; } }
 
-    while (attempts < maxAttempts) {
-      await new Promise(r => setTimeout(r, 3000));
-      attempts++;
+function updateProgress(percent) { const circle = document.getElementById('progressCircle'); const percentEl = document.getElementById('progressPercent'); const stageEl = document.getElementById('progressStage'); const p = Math.max(0, Math.min(100, percent)); if (circle) circle.style.strokeDashoffset = 440 - (440 * p / 100); if (percentEl) percentEl.textContent = Math.floor(p) + '%'; if (stageEl) { if (p < 40) stageEl.textContent = '📤 Uploading'; else if (p < 90) stageEl.textContent = '⚡ Processing'; else if (p < 100) stageEl.textContent = '📥 Downloading'; else stageEl.textContent = '✨ Complete'; } }
 
-      const statusRes = await fetch(SERVER_URL + '/api/restore-status/' + jobId);
-      if (!statusRes.ok) {
-        if (statusRes.status === 404) throw new Error('Job expired');
-        continue;
-      }
+function showLoader(msg) { let el = document.getElementById('videoLoader'); if (!el) { el = document.createElement('div'); el.id = 'videoLoader'; el.style.cssText = 'position:fixed;inset:0;background:rgba(6,3,13,0.96);backdrop-filter:blur(20px);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:28px;padding:24px;'; el.innerHTML = `<div style="position:relative;width:160px;height:160px;"><svg width="160" height="160" viewBox="0 0 160 160" style="transform:rotate(-90deg);"><defs><linearGradient id="progressGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#ff0080"/><stop offset="50%" stop-color="#a855f7"/><stop offset="100%" stop-color="#00d4ff"/></linearGradient></defs><circle cx="80" cy="80" r="70" stroke="rgba(168,85,247,0.12)" stroke-width="10" fill="none"/><circle id="progressCircle" cx="80" cy="80" r="70" stroke="url(#progressGrad)" stroke-width="10" fill="none" stroke-linecap="round" stroke-dasharray="440" stroke-dashoffset="440" style="transition:stroke-dashoffset 0.3s;"/></svg><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;"><div id="progressPercent" style="font-size:38px;font-weight:900;background:linear-gradient(135deg,#ff0080,#a855f7,#00d4ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-family:'Arial Black',sans-serif;">0%</div></div></div><div style="text-align:center;"><p id="videoLoaderMsg" style="color:#fff;font-weight:800;font-size:17px;">Processing</p><p id="progressStage" style="color:#a855f7;font-size:13px;font-weight:700;margin-top:8px;">📤 Uploading</p></div>`; document.body.appendChild(el); } document.getElementById('videoLoaderMsg').textContent = msg; el.style.display = 'flex'; updateProgress(0); }
 
-      const statusData = await statusRes.json();
-      console.log(`Poll ${attempts}:`, statusData.status);
+function hideLoader() { updateProgress(100); setTimeout(() => { const el = document.getElementById('videoLoader'); if (el) el.style.display = 'none'; }, 500); }
 
-      if (statusData.status === 'completed') {
-        const resultRes = await fetch(SERVER_URL + '/api/restore-result/' + jobId);
-        if (!resultRes.ok) throw new Error('Download failed');
+function uploadWithProgress(url, formData, onProgress) { return new Promise((resolve, reject) => { const xhr = new XMLHttpRequest(); xhr.open('POST', url, true); xhr.responseType = 'blob'; xhr.timeout = 180000; xhr.upload.onprogress = (e) => { if (e.lengthComputable) onProgress((e.loaded / e.total) * 40); }; xhr.upload.onload = () => { onProgress(45); let fake = 45; window.serverProgressInterval = setInterval(() => { if (fake < 90) { fake += 1.5; onProgress(fake); } }, 400); }; xhr.onload = () => { if (window.serverProgressInterval) { clearInterval(window.serverProgressInterval); window.serverProgressInterval = null; } if (xhr.status >= 200 && xhr.status < 300) { onProgress(95); resolve(xhr.response); } else reject(new Error('Server error: ' + xhr.status)); }; xhr.onerror = () => { if (window.serverProgressInterval) { clearInterval(window.serverProgressInterval); window.serverProgressInterval = null; } reject(new Error('Network error')); }; xhr.ontimeout = () => { if (window.serverProgressInterval) { clearInterval(window.serverProgressInterval); window.serverProgressInterval = null; } reject(new Error('Request timed out')); }; xhr.send(formData); }); }
 
-        const blob = await resultRes.blob();
-        currentRestoreResult = URL.createObjectURL(blob);
-        document.getElementById('restoreResultImg').src = currentRestoreResult;
-        document.getElementById('restoreResult').style.display = 'block';
+async function trimVideo() { if (isProcessing) return; if (!currentVideoFile) { showToast('Upload video first'); return; } const s = parseFloat(document.getElementById('trimStartSlider').value); const e = parseFloat(document.getElementById('trimEndSlider').value); if (e <= s) { showToast('Invalid range'); return; } isProcessing = true; await requestWakeLock(); showLoader('✂️ Trimming video'); try { const formData = new FormData(); formData.append('video', currentVideoFile); formData.append('start', s); formData.append('end', e); const blob = await uploadWithProgress(SERVER_URL + '/api/trim', formData, updateProgress); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'picly-trimmed-' + Date.now() + '.mp4'; a.click(); hideLoader(); showToast('✅ Ready!'); } catch (err) { hideLoader(); showToast('Error: ' + err.message); } await releaseWakeLock(); isProcessing = false; }
 
-        hideLoader();
-        showToast('✅ Restored!');
-        await releaseWakeLock();
-        isProcessing = false;
-        return;
-      }
+async function compressVideo() { if (isProcessing) return; if (!currentVideoFile) { showToast('Upload video first'); return; } isProcessing = true; await requestWakeLock(); showLoader('🗜️ Compressing video'); try { const formData = new FormData(); formData.append('video', currentVideoFile); formData.append('quality', selectedCompressQuality); const blob = await uploadWithProgress(SERVER_URL + '/api/compress', formData, updateProgress); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'picly-compressed-' + Date.now() + '.mp4'; a.click(); hideLoader(); showToast('✅ Done!'); } catch (err) { hideLoader(); showToast('Error: ' + err.message); } await releaseWakeLock(); isProcessing = false; }
 
-      if (statusData.status === 'failed') throw new Error(statusData.error || 'Restore failed');
+async function extractMp3() { if (isProcessing) return; if (!currentVideoFile) { showToast('Upload video first'); return; } isProcessing = true; await requestWakeLock(); showLoader('🎵 Extracting audio'); try { const formData = new FormData(); formData.append('video', currentVideoFile); const blob = await uploadWithProgress(SERVER_URL + '/api/mp3', formData, updateProgress); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'picly-audio-' + Date.now() + '.mp3'; a.click(); hideLoader(); showToast('✅ Audio ready!'); } catch (err) { hideLoader(); showToast('Error: ' + err.message); } await releaseWakeLock(); isProcessing = false; }
 
-      showLoader(`🎨 Processing... (${attempts * 3}s)`);
-    }
+async function videoToGif() { if (isProcessing) return; if (!currentVideoFile) { showToast('Upload video first'); return; } const s = parseFloat(document.getElementById('gifStart').value) || 0; const d = parseFloat(document.getElementById('gifDuration').value) || 3; const f = document.getElementById('gifFps').value || 10; isProcessing = true; await requestWakeLock(); showLoader('🎞️ Creating GIF'); try { const formData = new FormData(); formData.append('video', currentVideoFile); formData.append('start', s); formData.append('duration', d); formData.append('fps', f); const blob = await uploadWithProgress(SERVER_URL + '/api/gif', formData, updateProgress); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'picly-' + Date.now() + '.gif'; a.click(); hideLoader(); showToast('✅ GIF ready!'); } catch (err) { hideLoader(); showToast('Error: ' + err.message); } await releaseWakeLock(); isProcessing = false; }
 
-    throw new Error('Timeout — 180 sec exceed');
-  } catch (err) {
-    hideLoader();
-    console.error('❌', err);
-    showToast('Error: ' + err.message);
-  }
-  await releaseWakeLock();
-  isProcessing = false;
-}
+async function enhanceVideo() { if (isProcessing) return; if (!currentVideoFile) { showToast('Upload video first'); return; } isProcessing = true; await requestWakeLock(); showLoader('✨ Enhancing video'); try { const formData = new FormData(); formData.append('video', currentVideoFile); formData.append('type', selectedEnhanceType); formData.append('resolution', selectedResolution); const blob = await uploadWithProgress(SERVER_URL + '/api/enhance', formData, updateProgress); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'picly-enhanced-' + Date.now() + '.mp4'; a.click(); hideLoader(); showToast('✅ Enhanced!'); } catch (err) { hideLoader(); showToast('Error: ' + err.message); } await releaseWakeLock(); isProcessing = false; }
 
-function downloadRestoreResult() {
-  if (!currentRestoreResult) { showToast('No result yet'); return; }
-  const a = document.createElement('a');
-  a.href = currentRestoreResult;
-  a.download = 'picly-restored-' + Date.now() + '.png';
-  a.click();
-  showToast('✅ Downloaded!');
-}
-
-// ==================== HELPERS ====================
-function showLoader(text) {
-  let loader = document.getElementById('globalLoader');
-  if (!loader) {
-    loader = document.createElement('div');
-    loader.id = 'globalLoader';
-    loader.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.8);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;color:#fff;font-family:Inter,sans-serif;';
-    loader.innerHTML = '<div style="width:48px;height:48px;border:4px solid rgba(255,255,255,0.2);border-top-color:#00d4ff;border-radius:50%;animation:spin 0.8s linear infinite;margin-bottom:16px;"></div><div id="loaderText" style="font-size:16px;font-weight:600;">Processing</div>';
-    document.body.appendChild(loader);
-  }
-  const t = document.getElementById('loaderText');
-  if (t) t.textContent = text || 'Processing';
-  loader.style.display = 'flex';
-}
-
-function hideLoader() {
-  const loader = document.getElementById('globalLoader');
-  if (loader) loader.style.display = 'none';
-}
-
-function updateProgress(percent) {
-  const t = document.getElementById('loaderText');
-  if (t && percent != null) t.textContent = `Processing... ${Math.round(percent)}%`;
-}
-
-function showToast(msg) {
-  let toast = document.getElementById('globalToast');
-  if (!toast) {
-    toast = document.createElement('div');
-    toast.id = 'globalToast';
-    toast.style.cssText = 'position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:#1a1a1a;color:#fff;padding:12px 24px;border-radius:30px;font-family:Inter,sans-serif;font-size:14px;z-index:10000;box-shadow:0 8px 24px rgba(0,0,0,0.4);transition:opacity 0.3s;';
-    document.body.appendChild(toast);
-  }
-  toast.textContent = msg;
-  toast.style.opacity = '1';
-  clearTimeout(toast._t);
-  toast._t = setTimeout(() => { toast.style.opacity = '0'; }, 2500);
-}
-
-async function requestWakeLock() {
-  try {
-    if ('wakeLock' in navigator) {
-      wakeLock = await navigator.wakeLock.request('screen');
-      wakeLock.addEventListener('release', () => { wakeLock = null; });
-    }
-  } catch (e) {}
-}
-
-async function releaseWakeLock() {
-  try { if (wakeLock) { await wakeLock.release(); wakeLock = null; } } catch (e) {}
-}
-
-function uploadWithProgress(url, formData, onProgress) {
-  return new Promise((resolve, reject) => {
-    const xhr = new XMLHttpRequest();
-    xhr.open('POST', url);
-    xhr.upload.onprogress = (e) => {
-      if (e.lengthComputable && onProgress) onProgress((e.loaded / e.total) * 100);
-    };
-    xhr.onload = () => {
-      if (xhr.status >= 200 && xhr.status < 300) {
-        resolve(new Blob([xhr.response], { type: xhr.getResponseHeader('Content-Type') || 'application/octet-stream' }));
-      } else {
-        reject(new Error('Upload failed: ' + xhr.status));
-      }
-    };
-    xhr.onerror = () => reject(new Error('Network error'));
-    xhr.responseType = 'arraybuffer';
-    xhr.send(formData);
-  });
-}
-
-// ==================== BUILD CONTROLS (WITH FALLBACK) ====================
 function buildControls(type) {
-  let wrap = document.getElementById('toolControls');
-  if (!wrap) {
-    const editorBody = document.querySelector('.editor-body') || document.querySelector('.canvas-container')?.parentElement || document.body;
-    wrap = document.createElement('div');
-    wrap.id = 'toolControls';
-    wrap.style.cssText = 'margin-top:16px;';
-    editorBody.appendChild(wrap);
-  }
-  if (!wrap) return;
-  wrap.innerHTML = '';
-
-  if (type === 'crop') {
-    wrap.innerHTML = `<div class="control-group"><label>Preset</label><div class="ctrl-row"><button class="ctrl-btn" onclick="applyCropPreset(1,1,this)">1:1</button><button class="ctrl-btn" onclick="applyCropPreset(4,5,this)">4:5</button><button class="ctrl-btn" onclick="applyCropPreset(9,16,this)">9:16</button><button class="ctrl-btn" onclick="applyCropPreset(16,9,this)">16:9</button></div></div>`;
-  } else if (type === 'filters') {
-    const filters = [{ name: 'Original', css: 'none' },{ name: 'B&W', css: 'grayscale(1)' },{ name: 'Sepia', css: 'sepia(0.8)' },{ name: 'Vivid', css: 'saturate(1.8) contrast(1.1)' },{ name: 'Cool', css: 'hue-rotate(180deg) saturate(1.2)' },{ name: 'Warm', css: 'sepia(0.3) saturate(1.4)' },{ name: 'Vintage', css: 'sepia(0.5) contrast(0.9) brightness(1.1)' },{ name: 'Fade', css: 'contrast(0.8) brightness(1.15) saturate(0.7)' },{ name: 'Dramatic', css: 'contrast(1.4) brightness(0.9) saturate(1.2)' },{ name: 'Chrome', css: 'contrast(1.2) saturate(1.3)' },{ name: 'Invert', css: 'invert(1)' },{ name: 'Blur', css: 'blur(2px)' },{ name: 'Bright', css: 'brightness(1.3)' },{ name: 'Dark', css: 'brightness(0.7)' }];
-    wrap.innerHTML = `<div class="control-group"><label>Filter</label><div class="filter-scroll">${filters.map(f => `<button class="filter-btn" onclick="applyFilter('${f.css}',this)">${f.name}</button>`).join('')}</div></div>`;
-  } else if (type === 'adjust') {
-    wrap.innerHTML = `<div class="control-group"><label>Brightness</label><input type="range" id="adjBrightness" min="0.5" max="1.5" step="0.05" value="1" oninput="applyAdjust()"></div><div class="control-group"><label>Contrast</label><input type="range" id="adjContrast" min="0.5" max="1.5" step="0.05" value="1" oninput="applyAdjust()"></div><div class="control-group"><label>Saturation</label><input type="range" id="adjSaturation" min="0" max="2" step="0.05" value="1" oninput="applyAdjust()"></div>`;
-  } else if (type === 'resize') {
-    wrap.innerHTML = `<div class="control-group"><label>Width (px)</label><input type="number" id="resizeWidth" placeholder="Width" oninput="applyResize()"></div><div class="control-group"><label>Height (px)</label><input type="number" id="resizeHeight" placeholder="Height" oninput="applyResize()"></div>`;
-  } else if (type === 'rotate') {
-    wrap.innerHTML = `<div class="control-group"><label>Rotate</label><div class="ctrl-row"><button class="ctrl-btn" onclick="rotateImage(-90)">↺ 90°</button><button class="ctrl-btn" onclick="rotateImage(90)">↻ 90°</button><button class="ctrl-btn" onclick="flipImage('h')">↔ Flip</button><button class="ctrl-btn" onclick="flipImage('v')">↕ Flip</button></div></div>`;
-  } else if (type === 'text') {
-    wrap.innerHTML = `<div class="control-group"><label>Text</label><input type="text" id="textInput" placeholder="Enter text"></div><div class="control-group"><label>Color</label><input type="color" id="textColor" value="#ffffff" onchange="selectedTextColor=this.value"></div><div class="control-group"><label>Font</label><select id="fontSelect"><option>Arial Black</option><option>Arial</option><option>Georgia</option><option>Courier New</option><option>Impact</option></select></div><button class="primary-btn" onclick="addTextOverlay()">Add Text</button>`;
-  } else if (type === 'stickers') {
-    const emojis = ['😀','😂','❤️','🔥','⭐','🌈','🎉','👍','✨','💯','🎨','📸','🌟','💖','😎','🤩','🥰','😍','🙌','👏','🎯','🚀','💪','🌈','☀️','🌙','⚡','🎵','🌸','🍀','🦋','🐶','🐱','🦁','🐼'];
-    wrap.innerHTML = `<div class="control-group"><label>Stickers</label><div style="display:flex;flex-wrap:wrap;gap:8px;">${emojis.map(e => `<button style="font-size:28px;background:none;border:none;cursor:pointer;" onclick="addSticker('${e}')">${e}</button>`).join('')}</div></div>`;
-  } else if (type === 'video-trim') {
-    wrap.innerHTML = `<div class="control-group"><label>Start: <span id="trimStartLabel">0.0s</span></label><input type="range" id="trimStartSlider" min="0" step="0.1" value="0"></div><div class="control-group"><label>End: <span id="trimEndLabel">0.0s</span></label><input type="range" id="trimEndSlider" min="0" step="0.1" value="0"></div><div class="ctrl-row"><span>Duration: <b id="trimDuration">0s</b></span><span>Size: <b id="trimSize">0MB</b></span></div><button class="primary-btn" onclick="runTrim()">✂️ Trim Video</button>`;
-  } else if (type === 'video-compress') {
-    wrap.innerHTML = `<div class="control-group"><label>Quality</label><div class="ctrl-row"><button class="ctrl-btn" onclick="selectCompressQuality('high',this)">High</button><button class="ctrl-btn active" onclick="selectCompressQuality('medium',this)">Medium</button><button class="ctrl-btn" onclick="selectCompressQuality('low',this)">Low</button></div></div><div class="ctrl-row"><span>Original: <b id="compressOrigSize">0MB</b></span><span>Duration: <b id="compressDuration">0s</b></span></div><button class="primary-btn" onclick="runCompress()">📦 Compress Video</button>`;
-  } else if (type === 'video-gif') {
-    wrap.innerHTML = `<div class="control-group"><label>Start (sec)</label><input type="number" id="gifStart" value="0" min="0" step="0.5"></div><div class="control-group"><label>Duration (sec)</label><input type="number" id="gifDuration" value="3" min="0.5" step="0.5"></div><div class="control-group"><label>FPS</label><div class="ctrl-row"><button class="ctrl-btn" onclick="selectGifFps('8',this)">8</button><button class="ctrl-btn active" onclick="selectGifFps('10',this)">10</button><button class="ctrl-btn" onclick="selectGifFps('15',this)">15</button></div></div><button class="primary-btn" onclick="runGif()">🎞️ Convert to GIF</button>`;
-  } else if (type === 'video-mp3') {
-    wrap.innerHTML = `<div class="ctrl-row"><span>Duration: <b id="mp3Duration">0s</b></span><span>Size: <b id="mp3Size">0MB</b></span></div><button class="primary-btn" onclick="runMp3()">🎵 Extract MP3</button>`;
-  } else if (type === 'video-enhance') {
-    const types = [{ id: 'bright', name: 'Bright' },{ id: 'contrast', name: 'Contrast' },{ id: 'sharpen', name: 'Sharpen' },{ id: 'denoise', name: 'Denoise' },{ id: 'autocolor', name: 'Auto Color' },{ id: 'cinematic', name: 'Cinematic' },{ id: 'vivid', name: 'Vivid' },{ id: 'warm', name: 'Warm' },{ id: 'cool', name: 'Cool' },{ id: 'vintage', name: 'Vintage' },{ id: 'bw', name: 'B&W' },{ id: 'stabilize', name: 'Stabilize' }];
-    wrap.innerHTML = `<div class="control-group"><label>Enhance Type</label><div class="filter-scroll">${types.map(t => `<button class="ctrl-btn" onclick="selectEnhanceType('${t.id}',this)">${t.name}</button>`).join('')}</div></div><div class="control-group"><label>Resolution</label><div class="ctrl-row"><button class="ctrl-btn" onclick="selectResolution('480',this)">480p</button><button class="ctrl-btn active" onclick="selectResolution('720',this)">720p</button><button class="ctrl-btn" onclick="selectResolution('1080',this)">1080p</button><button class="ctrl-btn" onclick="selectResolution('2k',this)">2K</button></div></div><button class="primary-btn" onclick="runVideoEnhance()">✨ Enhance Video</button>`;
-  } else if (type === 'ai-text-image') {
-    wrap.innerHTML = `<div class="control-group"><label>Prompt</label><textarea id="aiPromptInput" rows="3" placeholder="Describe your image..."></textarea></div><div class="control-group"><label>Aspect Ratio</label><div class="ctrl-row"><button class="ctrl-btn active" onclick="selectAiRatio('1:1',this)">1:1</button><button class="ctrl-btn" onclick="selectAiRatio('16:9',this)">16:9</button><button class="ctrl-btn" onclick="selectAiRatio('9:16',this)">9:16</button></div></div><button class="primary-btn" onclick="generateAiImage()">🎨 Generate</button><div id="aiResultBox" style="display:none;margin-top:16px;"><img id="aiResultImg" style="width:100%;border-radius:12px;"><button class="primary-btn" style="margin-top:8px;" onclick="downloadAiImage()">⬇️ Download</button></div>`;
-  } else if (type === 'ai-bg-remove') {
-    wrap.innerHTML = `<div class="control-group"><label>Upload Image</label><input type="file" accept="image/*" onchange="loadRemoveBgImage(this)"></div><div id="removeBgActive" style="display:none;margin-top:12px;"><img id="removeBgPreview" style="width:100%;max-height:250px;object-fit:contain;border-radius:12px;"><button class="primary-btn" style="margin-top:12px;" onclick="removeBgOnly()">🖼️ Remove Background</button></div>`;
-  } else if (type === 'ai-bg-replace') {
-    wrap.innerHTML = `<div class="control-group"><label>Upload Image</label><input type="file" accept="image/*" onchange="loadBgImage(this)"></div><div id="bgActiveUI" style="display:none;margin-top:12px;"><img id="bgImagePreview" style="width:100%;max-height:250px;object-fit:contain;border-radius:12px;"><div class="control-group" style="margin-top:12px;"><label>Background Prompt</label><input type="text" id="bgPromptInput" placeholder="e.g. beach sunset..."></div><button class="primary-btn" onclick="replaceBackground()">🎨 Replace Background</button></div>`;
-  } else if (type === 'ai-editor') {
-    wrap.innerHTML = `<div class="control-group"><label>Upload Photo</label><input type="file" accept="image/*" onchange="loadEditorImage(this)"></div><div id="editorActiveUI" style="display:none;margin-top:12px;"><img id="editorPreview" style="width:100%;max-height:250px;object-fit:contain;border-radius:12px;"><div class="control-group" style="margin-top:12px;"><label>Edit Prompt</label><input type="text" id="editorPromptInput" placeholder="e.g. make it look like a painting..."></div><div class="ctrl-row"><button class="ctrl-btn" onclick="setEditorPrompt('vintage photo')">Vintage</button><button class="ctrl-btn" onclick="setEditorPrompt('oil painting')">Painting</button></div><button class="primary-btn" onclick="runAiEditor()">🎨 Apply Edit</button><div id="editorResultBox" style="display:none;margin-top:16px;"><img id="editorResultImg" style="width:100%;border-radius:12px;"><button class="primary-btn" style="margin-top:8px;" onclick="downloadEditorResult()">⬇️ Download</button></div></div>`;
-  } else if (type === 'ai-upscale') {
-    wrap.innerHTML = `<div class="control-group"><label>Upload Photo</label><input type="file" accept="image/*" onchange="loadUpscaleImage(this)"></div><div id="upscaleActive" style="display:none;margin-top:12px;"><img id="upscalePreview" style="width:100%;max-height:250px;object-fit:contain;border-radius:12px;"><div class="control-group" style="margin-top:12px;"><label>Scale</label><div class="ctrl-row"><button class="ctrl-btn active" onclick="selectUpscaleScale(2,this)">2x</button><button class="ctrl-btn" onclick="selectUpscaleScale(4,this)">4x</button></div></div><button class="primary-btn" onclick="runUpscale()">🖼️ Upscale</button><div id="upscaleResult" style="display:none;margin-top:16px;"><img id="upscaleResultImg" style="width:100%;border-radius:12px;"><div id="upscaleInfo" style="margin-top:8px;color:#888;font-size:14px;"></div><button class="primary-btn" style="margin-top:8px;" onclick="downloadUpscale()">⬇️ Download</button></div></div>`;
-  } else if (type === 'ai-cleanup') {
-    wrap.innerHTML = `<div class="control-group"><label>Upload Photo</label><input type="file" accept="image/*" onchange="loadCleanupImage(this)"></div><div id="cleanupActive" style="display:none;margin-top:12px;"><img id="cleanupPreview" style="width:100%;max-height:250px;object-fit:contain;border-radius:12px;"><button class="primary-btn" style="margin-top:12px;" onclick="runCleanup()">🧹 Cleanup</button><div id="cleanupResult" style="display:none;margin-top:16px;"><img id="cleanupResultImg" style="width:100%;border-radius:12px;"><button class="primary-btn" style="margin-top:8px;" onclick="downloadCleanup()">⬇️ Download</button></div></div>`;
-  } else if (type === 'ai-restore') {
-    wrap.innerHTML = `<div class="control-group"><label>Upload Old Photo</label><input type="file" accept="image/*" onchange="loadRestoreImage(this)"></div><div id="restoreActiveUI" style="display:none;margin-top:12px;"><img id="restorePreview" style="width:100%;max-height:250px;object-fit:contain;border-radius:12px;"><button class="primary-btn" style="margin-top:12px;" onclick="runRestore()">🎨 Restore Photo</button><div id="restoreResult" style="display:none;margin-top:16px;"><img id="restoreResultImg" style="width:100%;border-radius:12px;"><button class="primary-btn" style="margin-top:8px;" onclick="downloadRestoreResult()">⬇️ Download</button></div></div>`;
-  } else if (type === 'ai-enhance' || type === 'ai-glow') {
-    wrap.innerHTML = `<div class="control-group"><label>Upload Photo</label><input type="file" accept="image/*" onchange="loadAiImage(this)"></div><div id="aiActiveUI" style="display:none;margin-top:12px;"><img id="aiImagePreview" style="width:100%;max-height:250px;object-fit:contain;border-radius:12px;"><div class="control-group" style="margin-top:12px;"><label>Effect</label><div class="ctrl-row"><button class="ctrl-btn ${type === 'ai-enhance' ? 'active' : ''}" onclick="selectAiMagic('enhance',this)">Enhance</button><button class="ctrl-btn ${type === 'ai-glow' ? 'active' : ''}" onclick="selectAiMagic('glow',this)">Glow</button></div><div id="aiMagicHint" style="margin-top:8px;color:#888;font-size:13px;"></div></div><button class="primary-btn" onclick="applyAiMagic()">✨ Apply</button></div>`;
-  } else if (type === 'emi') {
-    wrap.innerHTML = `<div class="control-group"><label>Loan Amount (₹)</label><input type="number" id="emiP" placeholder="500000"></div><div class="control-group"><label>Interest Rate (%)</label><input type="number" id="emiR" placeholder="8.5" step="0.1"></div><div class="control-group"><label>Tenure (months)</label><input type="number" id="emiN" placeholder="60"></div><button class="primary-btn" onclick="calcEmi()">Calculate EMI</button><div id="emiResult" style="margin-top:16px;font-size:18px;font-weight:600;"></div>`;
-  } else if (type === 'gst') {
-    wrap.innerHTML = `<div class="control-group"><label>Amount (₹)</label><input type="number" id="gstAmount" placeholder="1000"></div><div class="control-group"><label>GST Rate (%)</label><div class="ctrl-row"><button class="ctrl-btn" onclick="calcGst(5,this)">5%</button><button class="ctrl-btn" onclick="calcGst(12,this)">12%</button><button class="ctrl-btn" onclick="calcGst(18,this)">18%</button><button class="ctrl-btn" onclick="calcGst(28,this)">28%</button></div></div><div id="gstResult" style="margin-top:16px;font-size:18px;font-weight:600;"></div>`;
-  } else if (type === 'age') {
-    wrap.innerHTML = `<div class="control-group"><label>Date of Birth</label><input type="date" id="dobInput"></div><button class="primary-btn" onclick="calcAge()">Calculate Age</button><div id="ageResult" style="margin-top:16px;font-size:18px;font-weight:600;"></div>`;
-  } else if (type === 'bmi') {
-    wrap.innerHTML = `<div class="control-group"><label>Weight (kg)</label><input type="number" id="bmiWeight" placeholder="70"></div><div class="control-group"><label>Height (cm)</label><input type="number" id="bmiHeight" placeholder="175"></div><button class="primary-btn" onclick="calcBmi()">Calculate BMI</button><div id="bmiResult" style="margin-top:16px;font-size:18px;font-weight:600;"></div>`;
-  } else if (type === 'unit') {
-    wrap.innerHTML = `<div class="control-group"><label>Category</label><select id="unitCat" onchange="updateUnitList()"><option value="length">Length</option><option value="weight">Weight</option><option value="temp">Temperature</option></select></div><div class="control-group"><label>Value</label><input type="number" id="unitVal" placeholder="Enter value"></div><div class="ctrl-row"><select id="unitFrom" style="flex:1;"></select><span style="padding:0 8px;">→</span><select id="unitTo" style="flex:1;"></select></div><button class="primary-btn" onclick="convertUnit()">Convert</button><div id="unitResult" style="margin-top:16px;font-size:18px;font-weight:600;"></div>`;
-    setTimeout(updateUnitList, 50);
-  } else if (type === 'qr') {
-    wrap.innerHTML = `<div class="control-group"><label>Text / URL</label><input type="text" id="qrText" placeholder="https://example.com"></div><button class="primary-btn" onclick="generateQr()">Generate QR</button><div id="qrResult" style="margin-top:16px;text-align:center;"></div>`;
-  } else if (type === 'frames') {
-    const frames = ['none','simple','rounded','polaroid','vintage','neon','gold'];
-    wrap.innerHTML = `<div class="control-group"><label>Frame Style</label><div class="ctrl-row">${frames.map(f => `<button class="ctrl-btn" onclick="applyFrame('${f}',this)">${f.charAt(0).toUpperCase()+f.slice(1)}</button>`).join('')}</div></div>`;
-  } else if (type === 'collage') {
-    wrap.innerHTML = `<div class="control-group"><label>Layout</label><div class="ctrl-row"><button class="ctrl-btn" onclick="selectCollageLayout('2x2',this)">2×2</button><button class="ctrl-btn" onclick="selectCollageLayout('3x3',this)">3×3</button><button class="ctrl-btn" onclick="selectCollageLayout('1x2',this)">1×2</button></div></div><div class="control-group"><label>Photos</label><input type="file" accept="image/*" multiple id="collageInput" onchange="addCollagePhotos(this)"></div><button class="primary-btn" onclick="createCollage()">Create Collage</button><div id="collagePreview" style="margin-top:16px;"></div>`;
-  }
+  const c = document.getElementById('dynamicControls');
+  if (!c) return;
+  c.innerHTML = '';
+  if (type === 'emi') { c.innerHTML = `<div class="calc-header"><div class="calc-icon">💰</div><div class="calc-title">EMI Calculator</div></div><div class="calc-form"><div class="calc-field"><label>Loan Amount (₹)</label><input type="number" id="emiPrincipal" class="calc-input"></div><div class="calc-field"><label>Interest Rate (%)</label><input type="number" id="emiRate" step="0.1" class="calc-input"></div><div class="calc-field"><label>Tenure (Years)</label><input type="number" id="emiYears" class="calc-input"></div><button class="calc-btn" onclick="calculateEMI()">Calculate</button></div><div id="emiResult" class="calc-result"></div>`; }
+  else if (type === 'gst') { c.innerHTML = `<div class="calc-header"><div class="calc-icon">🧾</div><div class="calc-title">GST Calculator</div></div><div class="calc-form"><div class="calc-field"><label>Amount (₹)</label><input type="number" id="gstAmount" class="calc-input"></div><div class="calc-field"><label>GST Rate (%)</label><select id="gstRate" class="calc-select"><option value="5">5%</option><option value="12">12%</option><option value="18" selected>18%</option><option value="28">28%</option></select></div><div class="calc-btn-row"><button class="calc-btn" onclick="calcGST('add')">Add</button><button class="calc-btn" onclick="calcGST('remove')">Remove</button></div></div><div id="gstResult" class="calc-result"></div>`; }
+  else if (type === 'age') { c.innerHTML = `<div class="calc-header"><div class="calc-icon">🎂</div><div class="calc-title">Age Calculator</div></div><div class="calc-form"><div class="calc-field"><label>Date of Birth</label><input type="date" id="dobInput" class="calc-input"></div><button class="calc-btn" onclick="calculateAge()">Calculate</button></div><div id="ageResult" class="calc-result"></div>`; }
+  else if (type === 'bmi') { c.innerHTML = `<div class="calc-header"><div class="calc-icon">⚖️</div><div class="calc-title">BMI Calculator</div></div><div class="calc-form"><div class="calc-field"><label>Weight (kg)</label><input type="number" id="bmiWeight" step="0.1" class="calc-input"></div><div class="calc-field"><label>Height (cm)</label><input type="number" id="bmiHeight" step="0.1" class="calc-input"></div><button class="calc-btn" onclick="calculateBMI()">Calculate</button></div><div id="bmiResult" class="calc-result"></div>`; }
+  else if (type === 'unit') { c.innerHTML = `<div class="calc-header"><div class="calc-icon">📏</div><div class="calc-title">Unit Converter</div></div><div class="calc-form"><div class="calc-field"><label>Value</label><input type="number" id="unitValue" class="calc-input"></div><div class="calc-field"><label>From</label><select id="unitType" class="calc-select"><option value="length">Length (m)</option><option value="weight">Weight (kg)</option><option value="temp">Temp (°C)</option></select></div><button class="calc-btn" onclick="convertUnit()">Convert</button></div><div id="unitResult" class="calc-result"></div>`; }
+  else if (type === 'qr') { c.innerHTML = `<div class="calc-header"><div class="calc-icon">🔲</div><div class="calc-title">QR Generator</div></div><div class="calc-form"><div class="calc-field"><label>Text/URL</label><input type="text" id="qrText" class="calc-input"></div><div class="calc-field"><label>Size</label><input type="number" id="qrSize" value="400" class="calc-input"></div><button class="calc-btn" onclick="generateQR()">Generate</button></div><div id="qrResult" class="calc-result"></div>`; }
+  else if (type === 'crop') { c.innerHTML = `<div class="control-label">Quick Ratios</div><div class="control-row"><button class="ctrl-btn" onclick="cropImage(1,1)">1:1</button><button class="ctrl-btn" onclick="cropImage(16,9)">16:9</button><button class="ctrl-btn" onclick="cropImage(9,16)">9:16</button><button class="ctrl-btn" onclick="cropImage(4,5)">4:5</button><button class="ctrl-btn" onclick="cropImage(3,4)">3:4</button></div><div class="control-label">Manual</div><div class="manual-row"><input type="number" id="cropW" placeholder="W" class="manual-input"><input type="number" id="cropH" placeholder="H" class="manual-input"><button class="ctrl-btn primary" onclick="manualCrop()">Crop</button></div>`; }
+  else if (type === 'filters') { c.innerHTML = `<div class="control-label">Filters</div><div class="control-row"><button class="ctrl-btn" onclick="applyFilter('none')">Original</button><button class="ctrl-btn" onclick="applyFilter('grayscale')">B&W</button><button class="ctrl-btn" onclick="applyFilter('sepia')">Sepia</button><button class="ctrl-btn" onclick="applyFilter('saturate')">Vivid</button><button class="ctrl-btn" onclick="applyFilter('contrast')">Contrast</button><button class="ctrl-btn" onclick="applyFilter('brightness')">Bright</button><button class="ctrl-btn" onclick="applyFilter('invert')">Invert</button><button class="ctrl-btn" onclick="applyFilter('vintage')">Vintage</button></div>`; }
+  else if (type === 'resize') { c.innerHTML = `<div class="control-label">Quick</div><div class="control-row"><button class="ctrl-btn" onclick="resizeImage(50)">50%</button><button class="ctrl-btn" onclick="resizeImage(75)">75%</button><button class="ctrl-btn" onclick="resizeImage(150)">150%</button><button class="ctrl-btn" onclick="resizeImage(200)">200%</button></div><div class="control-label">Manual</div><div class="manual-row"><input type="number" id="resizeW" placeholder="W" class="manual-input"><input type="number" id="resizeH" placeholder="H" class="manual-input"><button class="ctrl-btn primary" onclick="manualResize()">Apply</button></div>`; }
+  else if (type === 'rotate') { c.innerHTML = `<div class="control-label">Rotate</div><div class="control-row"><button class="ctrl-btn" onclick="rotateImage(-90)">↺ 90°</button><button class="ctrl-btn" onclick="rotateImage(90)">↻ 90°</button><button class="ctrl-btn" onclick="rotateImage(180)">180°</button></div><div class="control-label">Flip</div><div class="control-row"><button class="ctrl-btn" onclick="flipImage('h')">↔ H</button><button class="ctrl-btn" onclick="flipImage('v')">↕ V</button></div>`; }
+  else if (type === 'text') { c.innerHTML = `<div class="control-label">Add Text</div><div class="manual-row"><input type="text" id="textInput" placeholder="Type text..." class="manual-input"></div><div class="manual-row"><input type="number" id="textSize" value="60" class="manual-input"></div><div class="control-row"><button class="ctrl-btn primary" onclick="addTextDrag()">Add Text</button></div>`; }
+  else if (type === 'stickers') { c.innerHTML = `<div class="control-label">Stickers</div><div class="sticker-grid">${['😂','🥰','😎','❤️','🌟','💯','🦁','🎉'].map(e => `<button class="sticker-btn" onclick="addStickerDrag('${e}')">${e}</button>`).join('')}</div>`; }
+  else if (type === 'passport') { c.innerHTML = `<div class="control-label">Size</div><div class="control-row"><button class="ctrl-btn" onclick="makePassport(35,45)">35×45mm</button><button class="ctrl-btn" onclick="makePassport(51,51)">2×2 inch</button></div>`; }
+  else if (type === 'compress') { c.innerHTML = `<div class="control-label">Quality</div><div class="control-row"><button class="ctrl-btn" onclick="compressImage(0.9)">High</button><button class="ctrl-btn" onclick="compressImage(0.6)">Medium</button><button class="ctrl-btn" onclick="compressImage(0.3)">Low</button></div>`; }
+  else if (type === 'pdf') { c.innerHTML = `<div class="control-label">PDF</div><div class="control-row"><button class="ctrl-btn primary" onclick="exportPDF()">Download PDF</button></div>`; }
+  else if (type === 'convert') { c.innerHTML = `<div class="control-label">Format</div><div class="control-row"><button class="ctrl-btn" onclick="convertFormat('jpeg')">JPG</button><button class="ctrl-btn" onclick="convertFormat('png')">PNG</button><button class="ctrl-btn" onclick="convertFormat('webp')">WEBP</button></div>`; }
+  else if (type === 'video-trim') { c.innerHTML = `<div id="videoPendingMsg"><p style="text-align:center;padding:40px 20px;">📹 Video upload karo</p></div><div id="videoActiveUI" style="display:none"><div class="control-label">Trim Range</div><input type="range" id="trimStartSlider" min="0" max="100" step="0.1" value="0" style="width:100%;"><input type="range" id="trimEndSlider" min="0" max="100" step="0.1" value="100" style="width:100%;"><div style="display:flex;justify-content:space-between;font-size:12px;color:#a99bc4;margin-top:8px;"><span>Start: <b id="trimStartLabel" style="color:#fff">0.0s</b></span><span>End: <b id="trimEndLabel" style="color:#fff">0.0s</b></span></div><p style="font-size:12px;color:#a99bc4;margin-top:8px;">Duration: <b id="trimDuration" style="color:#fff">0.0s</b> | Size: <b id="trimSize" style="color:#fff">0MB</b></p><button class="ctrl-btn primary" onclick="trimVideo()" style="width:100%;padding:18px;margin-top:16px;">✂️ Trim & Download</button></div>`; }
+  else if (type === 'video-compress') { c.innerHTML = `<div id="videoPendingMsg"><p style="text-align:center;padding:40px 20px;">📹 Video upload karo</p></div><div id="videoActiveUI" style="display:none"><div class="control-label">Quality</div><div class="control-row"><button class="ctrl-btn" onclick="selectCompressQuality('high',this)">High</button><button class="ctrl-btn active" onclick="selectCompressQuality('medium',this)">Medium</button><button class="ctrl-btn" onclick="selectCompressQuality('low',this)">Low</button></div><p style="font-size:12px;color:#a99bc4;margin-top:12px;">Original: <b id="compressOrigSize" style="color:#fff">0MB</b> | Duration: <b id="compressDuration" style="color:#fff">0.0s</b></p><button class="ctrl-btn primary" onclick="compressVideo()" style="width:100%;padding:18px;margin-top:16px;">🗜️ Compress</button></div>`; }
+  else if (type === 'video-gif') { c.innerHTML = `<div id="videoPendingMsg"><p style="text-align:center;padding:40px 20px;">📹 Video upload karo</p></div><div id="videoActiveUI" style="display:none"><div class="control-label">Start (sec)</div><input type="number" id="gifStart" value="0" step="0.1" class="manual-input"><div class="control-label">Duration (sec)</div><input type="number" id="gifDuration" value="3" step="0.1" class="manual-input"><div class="control-label">FPS</div><select id="gifFps" class="manual-select"><option value="8">8</option><option value="10" selected>10</option><option value="12">12</option></select><button class="ctrl-btn primary" onclick="videoToGif()" style="width:100%;padding:18px;margin-top:16px;">🎞️ Make GIF</button></div>`; }
+  else if (type === 'video-mp3') { c.innerHTML = `<div id="videoPendingMsg"><p style="text-align:center;padding:40px 20px;">📹 Video upload karo</p></div><div id="videoActiveUI" style="display:none"><p style="font-size:12px;color:#a99bc4;">Duration: <b id="mp3Duration" style="color:#fff">0.0s</b> | Size: <b id="mp3Size" style="color:#fff">0MB</b></p><button class="ctrl-btn primary" onclick="extractMp3()" style="width:100%;padding:18px;margin-top:16px;">🎵 Extract MP3</button></div>`; }
+  else if (type === 'video-enhance') { c.innerHTML = `<div id="videoPendingMsg"><p style="text-align:center;padding:40px 20px;">📹 Video upload karo</p></div><div id="videoActiveUI" style="display:none"><div class="control-label">Resolution</div><div class="control-row"><button class="ctrl-btn" onclick="selectResolution('720',this)">720p</button><button class="ctrl-btn active" onclick="selectResolution('1080',this)">1080p</button><button class="ctrl-btn" onclick="selectResolution('2k',this)">2K</button></div><div class="control-label">Type</div><div class="control-row"><button class="ctrl-btn active" onclick="selectEnhanceType('bright',this)">Bright</button><button class="ctrl-btn" onclick="selectEnhanceType('sharpen',this)">Sharpen</button><button class="ctrl-btn" onclick="selectEnhanceType('cinematic',this)">Cinematic</button><button class="ctrl-btn" onclick="selectEnhanceType('vivid',this)">Vivid</button></div><button class="ctrl-btn primary" onclick="enhanceVideo()" style="width:100%;padding:18px;margin-top:16px;">✨ Enhance</button></div>`; }
+  else if (type === 'ai-text-image') { c.innerHTML = `<div class="control-label">Text to Image</div><div style="padding:16px;background:linear-gradient(135deg, rgba(168,85,247,0.15), rgba(236,72,153,0.1));border:1.5px solid rgba(168,85,247,0.3);border-radius:18px;margin-bottom:16px;"><label style="font-size:12px;color:#c0b0d8;font-weight:700;display:block;margin-bottom:8px;">PROMPT</label><input type="text" id="aiPromptInput" placeholder="a beautiful sunset" class="manual-input" style="width:100%;padding:14px;margin-bottom:16px;"><label style="font-size:12px;color:#c0b0d8;font-weight:700;display:block;margin-bottom:8px;">ASPECT RATIO</label><div class="control-row" style="margin-bottom:8px;"><button class="ctrl-btn active" onclick="selectAiRatio('1:1',this)" style="flex:1;font-size:11px;">⬛ 1:1</button><button class="ctrl-btn" onclick="selectAiRatio('16:9',this)" style="flex:1;font-size:11px;">▬ 16:9</button><button class="ctrl-btn" onclick="selectAiRatio('9:16',this)" style="flex:1;font-size:11px;">▮ 9:16</button><button class="ctrl-btn" onclick="selectAiRatio('4:3',this)" style="flex:1;font-size:11px;">▭ 4:3</button></div><p style="font-size:11px;color:#aaff00;margin-bottom:12px;font-weight:700;">💡 Cloudflare FLUX · 10-20 sec</p><button class="ctrl-btn primary" onclick="generateAiImage()" style="width:100%;padding:18px;font-size:15px;">✨ Generate Image</button></div><div id="aiResultBox" style="display:none;"><div class="control-label">Result</div><img id="aiResultImg" style="width:100%;border-radius:18px;margin-bottom:16px;"><button class="ctrl-btn primary" onclick="downloadAiImage()" style="width:100%;padding:18px;">⬇️ Download</button></div>`; }
+  else if (type === 'ai-bg-remove') { c.innerHTML = `<div id="removeBgPending"><div class="control-label">🖼️ Background Remove</div><div class="upload-area" id="removeBgUploadArea" onclick="document.getElementById('removeBgInput').click()" style="padding:60px 24px;margin-top:16px;"><input type="file" id="removeBgInput" accept="image/*" onchange="loadRemoveBgImage(this)" style="display:none;"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg><p>Tap to upload photo</p><span>Background transparent ho jayega</span></div></div><div id="removeBgActive" style="display:none"><img id="removeBgPreview" style="width:100%;max-height:300px;object-fit:contain;border-radius:18px;margin-bottom:16px;"><p style="font-size:11px;color:#aaff00;margin-bottom:12px;font-weight:700;">💡 Local AI · 100% Free</p><button class="ctrl-btn primary" onclick="removeBgOnly()" style="width:100%;padding:18px;">🖼️ Remove Background</button></div>`; }
+  else if (type === 'ai-bg-replace') { c.innerHTML = `<div id="bgPendingMsg"><div class="control-label">🔄 Background Replace</div><div class="upload-area" id="bgUploadArea" onclick="document.getElementById('bgUploadInput').click()" style="padding:60px 24px;margin-top:16px;"><input type="file" id="bgUploadInput" accept="image/*" onchange="loadBgImage(this)" style="display:none;"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg><p>Tap to upload photo</p><span>Person photo + naya background</span></div></div><div id="bgActiveUI" style="display:none"><img id="bgImagePreview" style="width:100%;max-height:300px;object-fit:contain;border-radius:18px;margin-bottom:16px;"><label style="font-size:12px;color:#c0b0d8;font-weight:700;display:block;margin-bottom:8px;">NEW BACKGROUND PROMPT</label><input type="text" id="bgPromptInput" placeholder="lion walking in jungle, sunset" class="manual-input" style="width:100%;padding:14px;margin-bottom:16px;"><p style="font-size:11px;color:#aaff00;margin-bottom:12px;font-weight:700;">💡 Local BG Remove + Cloudflare FLUX · 15-30 sec</p><button class="ctrl-btn primary" onclick="replaceBackground()" style="width:100%;padding:18px;">🎨 Replace Background</button></div>`; }
+  else if (type === 'ai-editor') { c.innerHTML = `<div id="editorPendingMsg"><div class="control-label">🎨 AI Editor</div><div class="upload-area" id="editorUploadArea" onclick="document.getElementById('editorInput').click()" style="padding:60px 24px;margin-top:16px;"><input type="file" id="editorInput" accept="image/*" onchange="loadEditorImage(this)" style="display:none;"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg><p>Tap to upload photo</p><span>Kuch bhi edit karo prompt se</span></div></div><div id="editorActiveUI" style="display:none"><img id="editorPreview" style="width:100%;max-height:300px;object-fit:contain;border-radius:18px;margin-bottom:16px;"><label style="font-size:12px;color:#c0b0d8;font-weight:700;display:block;margin-bottom:8px;">PROMPT</label><textarea id="editorPromptInput" placeholder="anime style portrait" class="manual-input" style="width:100%;padding:14px;margin-bottom:12px;min-height:80px;font-family:inherit;"></textarea><div class="control-row" style="margin-bottom:12px;flex-wrap:wrap;"><button class="ctrl-btn" onclick="setEditorPrompt('anime style portrait, studio ghibli')" style="flex:1;font-size:11px;padding:10px 6px;">🎭 Anime</button><button class="ctrl-btn" onclick="setEditorPrompt('lion beside me, cinematic')" style="flex:1;font-size:11px;padding:10px 6px;">🦁 Lion</button><button class="ctrl-btn" onclick="setEditorPrompt('cyberpunk neon city')" style="flex:1;font-size:11px;padding:10px 6px;">🌆 Cyberpunk</button></div><button class="ctrl-btn primary" onclick="runAiEditor()" style="width:100%;padding:18px;">✨ Edit with AI</button></div><div id="editorResultBox" style="display:none;margin-top:20px;"><div class="control-label">Result</div><img id="editorResultImg" style="width:100%;border-radius:18px;margin-bottom:16px;"><button class="ctrl-btn primary" onclick="downloadEditorResult()" style="width:100%;padding:18px;">⬇️ Download</button></div>`; }
+  else if (type === 'ai-upscale') { c.innerHTML = `<div id="upscalePending"><div class="control-label">🖼️ Image Upscaler</div><div class="upload-area" id="upscaleUploadArea" onclick="document.getElementById('upscaleInput').click()" style="padding:60px 24px;margin-top:16px;"><input type="file" id="upscaleInput" accept="image/*" onchange="loadUpscaleImage(this)" style="display:none;"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg><p>Tap to upload photo</p><span>HD 2x ya Ultra 4x</span></div></div><div id="upscaleActive" style="display:none"><img id="upscalePreview" style="width:100%;max-height:300px;object-fit:contain;border-radius:18px;margin-bottom:16px;"><div class="control-label">Upscale Quality</div><div class="control-row" style="margin-bottom:16px;display:flex;gap:10px;"><button class="ctrl-btn active" onclick="selectUpscaleScale(2,this)" style="flex:1;padding:14px;">⚡ <b>2x HD</b><br><span style="font-size:10px;opacity:0.7;">~2-3 MB</span></button><button class="ctrl-btn" onclick="selectUpscaleScale(4,this)" style="flex:1;padding:14px;">💎 <b>4x Ultra</b><br><span style="font-size:10px;opacity:0.7;">~6-10 MB</span></button></div><p style="font-size:11px;color:#aaff00;margin-bottom:12px;font-weight:700;">💡 Clipdrop AI · 5-10 sec</p><button class="ctrl-btn primary" onclick="runUpscale()" style="width:100%;padding:18px;">🖼️ Upscale Image</button></div><div id="upscaleResult" style="display:none;margin-top:20px;"><div class="control-label">Result</div><img id="upscaleResultImg" style="width:100%;border-radius:18px;margin-bottom:16px;"><p id="upscaleInfo" style="font-size:12px;color:#aaff00;text-align:center;margin-bottom:12px;"></p><button class="ctrl-btn primary" onclick="downloadUpscale()" style="width:100%;padding:18px;">⬇️ Download</button></div>`; }
+  else if (type === 'ai-cleanup') { c.innerHTML = `<div id="cleanupPending"><div class="control-label">🧹 Cleanup</div><div class="upload-area" id="cleanupUploadArea" onclick="document.getElementById('cleanupInput').click()" style="padding:60px 24px;margin-top:16px;"><input type="file" id="cleanupInput" accept="image/*" onchange="loadCleanupImage(this)" style="display:none;"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg><p>Tap to upload photo</p><span>Remove unwanted objects</span></div></div><div id="cleanupActive" style="display:none"><img id="cleanupPreview" style="width:100%;max-height:300px;object-fit:contain;border-radius:18px;margin-bottom:16px;"><p style="font-size:11px;color:#aaff00;margin-bottom:12px;font-weight:700;">💡 Clipdrop · 3-5 sec</p><button class="ctrl-btn primary" onclick="runCleanup()" style="width:100%;padding:18px;">🧹 Cleanup Image</button></div><div id="cleanupResult" style="display:none;margin-top:20px;"><div class="control-label">Result</div><img id="cleanupResultImg" style="width:100%;border-radius:18px;margin-bottom:16px;"><button class="ctrl-btn primary" onclick="downloadCleanup()" style="width:100%;padding:18px;">⬇️ Download</button></div>`; }
+  else if (type === 'ai-restore') { c.innerHTML = `<div id="restorePending"><div class="control-label">🎨 Photo Restore</div><div class="upload-area" id="restoreUploadArea" onclick="document.getElementById('restoreInput').click()" style="padding:60px 24px;margin-top:16px;"><input type="file" id="restoreInput" accept="image/*" onchange="loadRestoreImage(this)" style="display:none;"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg><p>Tap to upload old photo</p><span>Restore + enhance faces</span></div></div><div id="restoreActive" style="display:none"><img id="restorePreview" style="width:100%;max-height:300px;object-fit:contain;border-radius:18px;margin-bottom:16px;"><p style="font-size:11px;color:#aaff00;margin-bottom:12px;font-weight:700;">💡 CodeFormer AI · 30-60 sec</p><button class="ctrl-btn primary" onclick="runRestore()" style="width:100%;padding:18px;">🎨 Restore Photo</button></div><div id="restoreResult" style="display:none;margin-top:20px;"><div class="control-label">Result</div><img id="restoreResultImg" style="width:100%;border-radius:18px;margin-bottom:16px;"><button class="ctrl-btn primary" onclick="downloadRestore()" style="width:100%;padding:18px;">⬇️ Download</button></div>`; }
+  else if (type === 'ai-enhance' || type === 'ai-glow') { const magicType = type.replace('ai-', ''); selectedAiMagic = magicType; c.innerHTML = `<div id="aiPendingMsg"><div class="control-label">AI Magic</div><div class="upload-area" id="aiUploadArea" onclick="document.getElementById('aiUploadInput').click()" style="padding:60px 24px;margin-top:16px;"><input type="file" id="aiUploadInput" accept="image/*" onchange="loadAiImage(this)" style="display:none;"><p>Tap to upload photo</p></div></div><div id="aiActiveUI" style="display:none"><img id="aiImagePreview" style="width:100%;max-height:300px;object-fit:contain;border-radius:18px;margin-bottom:16px;"><div class="control-row"><button class="ctrl-btn ${magicType === 'enhance' ? 'active' : ''}" onclick="selectAiMagic('enhance',this)">✨ Enhance</button><button class="ctrl-btn ${magicType === 'glow' ? 'active' : ''}" onclick="selectAiMagic('glow',this)">🌟 Glow</button></div><button class="ctrl-btn primary" onclick="applyAiMagic()" style="width:100%;padding:18px;margin-top:16px;">🎨 Apply</button></div>`; }
+  else { c.innerHTML = `<p style="padding:12px;color:#888;">Coming soon</p>`; }
 }
 
-// ==================== VIDEO FUNCTIONS ====================
-async function runTrim() { if (isProcessing || !currentVideoFile) return; const start = parseFloat(document.getElementById('trimStartSlider').value) || 0; const end = parseFloat(document.getElementById('trimEndSlider').value) || 0; if (end - start < 0.5) { showToast('Trim range too small'); return; } isProcessing = true; await requestWakeLock(); showLoader('✂️ Trimming video'); try { const fd = new FormData(); fd.append('video', currentVideoFile); fd.append('start', start); fd.append('end', end); const blob = await uploadWithProgress(SERVER_URL + '/api/trim', fd, updateProgress); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'picly-trimmed.mp4'; a.click(); hideLoader(); showToast('✅ Trimmed!'); } catch (e) { hideLoader(); showToast('Error: ' + e.message); } await releaseWakeLock(); isProcessing = false; }
+function calculateEMI() { const p = parseFloat(document.getElementById('emiPrincipal').value); const r = parseFloat(document.getElementById('emiRate').value); const y = parseFloat(document.getElementById('emiYears').value); const res = document.getElementById('emiResult'); if (!p || !r || !y) { res.classList.add('show','error'); res.innerHTML = '⚠️ Fill all'; return; } const mr = r/12/100, m = y*12; const emi = (p*mr*Math.pow(1+mr,m))/(Math.pow(1+mr,m)-1); const total = emi*m, interest = total-p; res.classList.remove('error'); res.classList.add('show'); res.innerHTML = `<div class="result-row"><span>EMI</span><strong>₹${emi.toFixed(0)}</strong></div><div class="result-row"><span>Interest</span><strong>₹${interest.toFixed(0)}</strong></div><div class="result-row"><span>Total</span><strong>₹${total.toFixed(0)}</strong></div>`; }
+function calcGST(mode) { const a = parseFloat(document.getElementById('gstAmount').value); const r = parseFloat(document.getElementById('gstRate').value); const res = document.getElementById('gstResult'); if (!a) { res.classList.add('show','error'); res.innerHTML = '⚠️ Enter amount'; return; } let b, g, t; if (mode === 'add') { b = a; g = a*r/100; t = b+g; } else { b = a/(1+r/100); g = a-b; t = a; } res.classList.remove('error'); res.classList.add('show'); res.innerHTML = `<div class="result-row"><span>Base</span><strong>₹${b.toFixed(2)}</strong></div><div class="result-row"><span>GST (${r}%)</span><strong>₹${g.toFixed(2)}</strong></div><div class="result-row"><span>Total</span><strong>₹${t.toFixed(2)}</strong></div>`; }
+function calculateAge() { const dob = new Date(document.getElementById('dobInput').value); const res = document.getElementById('ageResult'); if (isNaN(dob.getTime())) { res.classList.add('show','error'); res.innerHTML = '⚠️ Select date'; return; } const now = new Date(); let y = now.getFullYear()-dob.getFullYear(), m = now.getMonth()-dob.getMonth(), d = now.getDate()-dob.getDate(); if (d<0) { m--; d+=30; } if (m<0) { y--; m+=12; } const td = Math.floor((now-dob)/(1000*60*60*24)); res.classList.remove('error'); res.classList.add('show'); res.innerHTML = `<div class="result-row"><span>Age</span><strong>${y}y ${m}m ${d}d</strong></div><div class="result-row"><span>Total Days</span><strong>${td}</strong></div>`; }
+function calculateBMI() { const w = parseFloat(document.getElementById('bmiWeight').value); const h = parseFloat(document.getElementById('bmiHeight').value); const res = document.getElementById('bmiResult'); if (!w || !h) { res.classList.add('show','error'); res.innerHTML = '⚠️ Fill all'; return; } const bmi = w/Math.pow(h/100,2); let cat = '', col = ''; if (bmi<18.5) { cat='Underweight'; col='#60a5fa'; } else if (bmi<25) { cat='Normal'; col='#4ade80'; } else if (bmi<30) { cat='Overweight'; col='#fb923c'; } else { cat='Obese'; col='#f87171'; } res.classList.remove('error'); res.classList.add('show'); res.innerHTML = `<div class="result-row"><span>BMI</span><strong>${bmi.toFixed(2)}</strong></div><div class="result-row"><span>Category</span><strong style="color:${col}">${cat}</strong></div>`; }
+function convertUnit() { const v = parseFloat(document.getElementById('unitValue').value); const t = document.getElementById('unitType').value; const res = document.getElementById('unitResult'); if (!v) { res.classList.add('show','error'); res.innerHTML = '⚠️ Enter value'; return; } let html = ''; if (t === 'length') html = `<div class="result-row"><span>Feet</span><strong>${(v*3.28).toFixed(2)}</strong></div><div class="result-row"><span>KM</span><strong>${(v/1000).toFixed(4)}</strong></div>`; else if (t === 'weight') html = `<div class="result-row"><span>Pounds</span><strong>${(v*2.20).toFixed(2)}</strong></div><div class="result-row"><span>Grams</span><strong>${(v*1000).toFixed(0)}</strong></div>`; else html = `<div class="result-row"><span>Fahrenheit</span><strong>${((v*9/5)+32).toFixed(2)}°F</strong></div><div class="result-row"><span>Kelvin</span><strong>${(v+273.15).toFixed(2)}K</strong></div>`; res.classList.remove('error'); res.classList.add('show'); res.innerHTML = html; }
+function generateQR() { const text = document.getElementById('qrText').value; const size = parseInt(document.getElementById('qrSize').value) || 400; const res = document.getElementById('qrResult'); if (!text) { res.classList.add('show','error'); res.innerHTML = '⚠️ Enter text'; return; } const url = 'https://api.qrserver.com/v1/create-qr-code/?size='+size+'x'+size+'&data='+encodeURIComponent(text); res.classList.remove('error'); res.classList.add('show'); res.innerHTML = `<img src="${url}" style="max-width:100%;border-radius:12px;">`; }
+function cropImage(w, h) { if (!currentImage) { showToast('Upload photo'); return; } const iw = currentImage.width, ih = currentImage.height; const tr = w/h, ir = iw/ih; let nw, nh, ox, oy; if (ir > tr) { nh = ih; nw = ih*tr; ox = (iw-nw)/2; oy = 0; } else { nw = iw; nh = iw/tr; ox = 0; oy = (ih-nh)/2; } const t = document.createElement('canvas'); t.width = nw; t.height = nh; t.getContext('2d').drawImage(currentImage, ox, oy, nw, nh, 0, 0, nw, nh); const ni = new Image(); ni.onload = () => { currentImage = ni; redraw(); showToast('Cropped ✂️'); }; ni.src = t.toDataURL(); }
+function manualCrop() { const w = parseFloat(document.getElementById('cropW').value), h = parseFloat(document.getElementById('cropH').value); if (!w || !h) { showToast('Enter W and H'); return; } cropImage(w, h); }
+function rotateImage(deg) { if (!currentImage) { showToast('Upload photo'); return; } const t = document.createElement('canvas'); const a = deg*Math.PI/180; const c = Math.abs(Math.cos(a)), s = Math.abs(Math.sin(a)); t.width = currentImage.width*c + currentImage.height*s; t.height = currentImage.width*s + currentImage.height*c; const tc = t.getContext('2d'); tc.translate(t.width/2, t.height/2); tc.rotate(a); tc.drawImage(currentImage, -currentImage.width/2, -currentImage.height/2); const ni = new Image(); ni.onload = () => { currentImage = ni; redraw(); showToast('Rotated ↻'); }; ni.src = t.toDataURL(); }
+function flipImage(dir) { if (!currentImage) { showToast('Upload photo'); return; } const t = document.createElement('canvas'); t.width = currentImage.width; t.height = currentImage.height; const tc = t.getContext('2d'); if (dir === 'h') { tc.translate(currentImage.width, 0); tc.scale(-1, 1); } else { tc.translate(0, currentImage.height); tc.scale(1, -1); } tc.drawImage(currentImage, 0, 0); const ni = new Image(); ni.onload = () => { currentImage = ni; redraw(); showToast('Flipped'); }; ni.src = t.toDataURL(); }
+function applyFilter(type) { const f = { 'none':'none','grayscale':'grayscale(100%)','sepia':'sepia(80%)','saturate':'saturate(180%)','contrast':'contrast(150%)','brightness':'brightness(130%)','invert':'invert(100%)','vintage':'sepia(50%) contrast(90%)' }; if (canvas) canvas.style.filter = f[type] || 'none'; showToast('Filter applied ✨'); }
+function resizeImage(p) { if (!currentImage) { showToast('Upload photo'); return; } const t = document.createElement('canvas'); t.width = Math.round(currentImage.width*p/100); t.height = Math.round(currentImage.height*p/100); t.getContext('2d').drawImage(currentImage, 0, 0, t.width, t.height); const ni = new Image(); ni.onload = () => { currentImage = ni; redraw(); showToast('Resized'); }; ni.src = t.toDataURL(); }
+function manualResize() { const w = parseInt(document.getElementById('resizeW').value), h = parseInt(document.getElementById('resizeH').value); if (!w || !h) { showToast('Enter W and H'); return; } const t = document.createElement('canvas'); t.width = w; t.height = h; t.getContext('2d').drawImage(currentImage, 0, 0, w, h); const ni = new Image(); ni.onload = () => { currentImage = ni; redraw(); showToast('Resized'); }; ni.src = t.toDataURL(); }
+function compressImage(q) { if (!currentImage) { showToast('Upload photo'); return; } const url = canvas.toDataURL('image/jpeg', q); const ni = new Image(); ni.onload = () => { currentImage = ni; redraw(); showToast('Compressed'); }; ni.src = url; }
+function makePassport(wMM, hMM) { if (!currentImage) { showToast('Upload photo'); return; } const px = 11.8; const tw = Math.round(wMM*px), th = Math.round(hMM*px); const t = document.createElement('canvas'); t.width = tw; t.height = th; const tc = t.getContext('2d'); const ir = currentImage.width/currentImage.height, tr = tw/th; let dw, dh, ox, oy; if (ir > tr) { dh = th; dw = th*ir; ox = (tw-dw)/2; oy = 0; } else { dw = tw; dh = tw/ir; ox = 0; oy = (th-dh)/2; } tc.fillStyle = '#fff'; tc.fillRect(0,0,tw,th); tc.drawImage(currentImage, ox, oy, dw, dh); const ni = new Image(); ni.onload = () => { currentImage = ni; redraw(); showToast('Passport ready 📸'); }; ni.src = t.toDataURL(); }
+function exportPDF() { if (!window.jspdf || !currentImage) { showToast('Cannot export'); return; } try { const { jsPDF } = window.jspdf; const pdf = new jsPDF({ unit: 'pt', format: pdfSize }); const imgData = canvas.toDataURL('image/jpeg', 0.92); const imgW = 555; const imgH = (canvas.height/canvas.width)*imgW; pdf.addImage(imgData, 'JPEG', 20, 20, imgW, imgH); pdf.save('picly-' + Date.now() + '.pdf'); showToast('PDF ready 📄'); } catch (err) { showToast('PDF error'); } }
+function convertFormat(format) { if (!currentImage) { showToast('Upload photo'); return; } const url = canvas.toDataURL('image/'+format, 0.95); const a = document.createElement('a'); a.download = 'picly-' + Date.now() + '.' + (format === 'jpeg' ? 'jpg' : format); a.href = url; a.click(); showToast('Converted ✨'); }
+function addTextDrag() { if (!currentImage) { showToast('Upload photo'); return; } const text = document.getElementById('textInput').value; const size = parseInt(document.getElementById('textSize').value) || 60; if (!text) { showToast('Enter text'); return; } const d = document.createElement('div'); d.className = 'drag-item text-item'; d.style.fontFamily = selectedFont; d.style.color = selectedTextColor; d.style.fontSize = size+'px'; d.style.left = '50%'; d.style.top = '50%'; d.style.transform = 'translate(-50%,-50%)'; d.style.textShadow = '2px 2px 4px rgba(0,0,0,0.7)'; d.textContent = text; d.dataset.type = 'text'; d.dataset.size = size; makeDraggable(d); if (overlayLayer) overlayLayer.appendChild(d); overlayItems.push(d); showToast('Text added ✨'); }
+function addStickerDrag(emoji) { if (!currentImage) { showToast('Upload photo'); return; } const d = document.createElement('div'); d.className = 'drag-item sticker-item'; d.style.left = '50%'; d.style.top = '50%'; d.style.transform = 'translate(-50%,-50%)'; d.style.fontSize = '60px'; d.textContent = emoji; d.dataset.type = 'sticker'; d.dataset.emoji = emoji; d.dataset.size = 60; makeDraggable(d); if (overlayLayer) overlayLayer.appendChild(d); overlayItems.push(d); showToast('Sticker added ✨'); }
+function makeDraggable(el) { let drag = false, sx, sy, sl, st; const start = (e) => { drag = true; const p = e.touches ? e.touches[0] : e; const r = overlayLayer.getBoundingClientRect(); sx = p.clientX; sy = p.clientY; const er = el.getBoundingClientRect(); sl = er.left - r.left; st = er.top - r.top; e.preventDefault(); }; const move = (e) => { if (!drag) return; const p = e.touches ? e.touches[0] : e; el.style.transform = 'none'; el.style.left = (sl + p.clientX - sx) + 'px'; el.style.top = (st + p.clientY - sy) + 'px'; e.preventDefault(); }; const end = () => { drag = false; }; el.addEventListener('mousedown', start); el.addEventListener('touchstart', start); document.addEventListener('mousemove', move); document.addEventListener('touchmove', move); document.addEventListener('mouseup', end); document.addEventListener('touchend', end); }
+function applyOverlay() { if (overlayItems.length === 0 || !canvas) return; const cr = canvas.getBoundingClientRect(); overlayItems.forEach(item => { const ir = item.getBoundingClientRect(); const x = ir.left - cr.left, y = ir.top - cr.top; if (item.dataset.type === 'text') { ctx.font = 'bold ' + item.dataset.size + 'px ' + selectedFont; ctx.fillStyle = selectedTextColor; ctx.strokeStyle = selectedTextColor === '#000000' ? '#ffffff' : '#000000'; ctx.lineWidth = Math.round(item.dataset.size/15); ctx.textAlign = 'left'; ctx.textBaseline = 'top'; ctx.strokeText(item.textContent, x, y); ctx.fillText(item.textContent, x, y); } else if (item.dataset.type === 'sticker') { ctx.font = item.dataset.size + 'px sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'top'; ctx.fillText(item.dataset.emoji, x, y); } }); overlayItems = []; if (overlayLayer) overlayLayer.innerHTML = ''; showToast('Applied! ✨'); }
+function downloadImage() { if (!currentImage) { showToast('No image'); return; } if (overlayItems.length > 0) applyOverlay(); const a = document.createElement('a'); a.download = 'picly-' + Date.now() + '.jpg'; a.href = canvas.toDataURL('image/jpeg', 0.95); a.click(); showToast('Downloaded! 🎉'); }
+function startTrial() { showToast('🎉 Trial Activated!'); }
+function showToast(msg) { const t = document.getElementById('toast'); if (!t) return; t.textContent = msg; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2000); }
 
-async function runCompress() { if (isProcessing || !currentVideoFile) return; isProcessing = true; await requestWakeLock(); showLoader('📦 Compressing video'); try { const fd = new FormData(); fd.append('video', currentVideoFile); fd.append('quality', selectedCompressQuality); const blob = await uploadWithProgress(SERVER_URL + '/api/compress', fd, updateProgress); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'picly-compressed.mp4'; a.click(); hideLoader(); showToast('✅ Compressed!'); } catch (e) { hideLoader(); showToast('Error: ' + e.message); } await releaseWakeLock(); isProcessing = false; }
-
-async function runGif() { if (isProcessing || !currentVideoFile) return; const start = parseFloat(document.getElementById('gifStart').value) || 0; const duration = parseFloat(document.getElementById('gifDuration').value) || 3; const fps = document.querySelector('.ctrl-btn[data-fps].active')?.dataset?.fps || '10'; isProcessing = true; await requestWakeLock(); showLoader('🎞️ Converting to GIF'); try { const fd = new FormData(); fd.append('video', currentVideoFile); fd.append('start', start); fd.append('duration', duration); fd.append('fps', fps); const blob = await uploadWithProgress(SERVER_URL + '/api/gif', fd, updateProgress); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'picly.gif'; a.click(); hideLoader(); showToast('✅ GIF ready!'); } catch (e) { hideLoader(); showToast('Error: ' + e.message); } await releaseWakeLock(); isProcessing = false; }
-
-async function runMp3() { if (isProcessing || !currentVideoFile) return; isProcessing = true; await requestWakeLock(); showLoader('🎵 Extracting audio'); try { const fd = new FormData(); fd.append('video', currentVideoFile); const blob = await uploadWithProgress(SERVER_URL + '/api/mp3', fd, updateProgress); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'picly-audio.mp3'; a.click(); hideLoader(); showToast('✅ MP3 ready!'); } catch (e) { hideLoader(); showToast('Error: ' + e.message); } await releaseWakeLock(); isProcessing = false; }
-
-async function runVideoEnhance() { if (isProcessing || !currentVideoFile) return; isProcessing = true; await requestWakeLock(); showLoader('✨ Enhancing video'); try { const fd = new FormData(); fd.append('video', currentVideoFile); fd.append('type', selectedEnhanceType); fd.append('resolution', selectedResolution); const blob = await uploadWithProgress(SERVER_URL + '/api/enhance', fd, updateProgress); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'picly-enhanced.mp4'; a.click(); hideLoader(); showToast('✅ Enhanced!'); } catch (e) { hideLoader(); showToast('Error: ' + e.message); } await releaseWakeLock(); isProcessing = false; }
-
-// ==================== EDIT TOOLS ====================
-function applyCropPreset(w, h, btn) { if (!currentImage || !canvas) { showToast('Upload image first'); return; } const srcW = currentImage.width, srcH = currentImage.height; const targetRatio = w / h; let newW = srcW, newH = srcW / targetRatio; if (newH > srcH) { newH = srcH; newW = srcH * targetRatio; } const sx = (srcW - newW) / 2, sy = (srcH - newH) / 2; const tmp = document.createElement('canvas'); tmp.width = newW; tmp.height = newH; tmp.getContext('2d').drawImage(currentImage, sx, sy, newW, newH, 0, 0, newW, newH); const img = new Image(); img.onload = () => { currentImage = img; redraw(); showToast('Cropped ✅'); }; img.src = tmp.toDataURL(); }
-
-function applyFilter(css, btn) { if (!canvas) { showToast('Upload image first'); return; } canvas.style.filter = css === 'none' ? 'none' : css; btn.parentElement.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); }
-
-function applyAdjust() { if (!canvas) return; const b = document.getElementById('adjBrightness')?.value || 1; const c = document.getElementById('adjContrast')?.value || 1; const s = document.getElementById('adjSaturation')?.value || 1; canvas.style.filter = `brightness(${b}) contrast(${c}) saturate(${s})`; }
-
-function applyResize() { if (!currentImage || !canvas) return; const w = parseInt(document.getElementById('resizeWidth')?.value); const h = parseInt(document.getElementById('resizeHeight')?.value); if (!w || !h) return; const tmp = document.createElement('canvas'); tmp.width = w; tmp.height = h; tmp.getContext('2d').drawImage(currentImage, 0, 0, w, h); const img = new Image(); img.onload = () => { currentImage = img; redraw(); }; img.src = tmp.toDataURL(); }
-
-function rotateImage(deg) { if (!currentImage || !canvas) return; const tmp = document.createElement('canvas'); const rad = deg * Math.PI / 180; const sin = Math.abs(Math.sin(rad)), cos = Math.abs(Math.cos(rad)); tmp.width = currentImage.height * sin + currentImage.width * cos; tmp.height = currentImage.height * cos + currentImage.width * sin; const tctx = tmp.getContext('2d'); tctx.translate(tmp.width / 2, tmp.height / 2); tctx.rotate(rad); tctx.drawImage(currentImage, -currentImage.width / 2, -currentImage.height / 2); const img = new Image(); img.onload = () => { currentImage = img; redraw(); showToast('Rotated ✅'); }; img.src = tmp.toDataURL(); }
-
-function flipImage(dir) { if (!currentImage || !canvas) return; const tmp = document.createElement('canvas'); tmp.width = currentImage.width; tmp.height = currentImage.height; const tctx = tmp.getContext('2d'); if (dir === 'h') { tctx.translate(tmp.width, 0); tctx.scale(-1, 1); } else { tctx.translate(0, tmp.height); tctx.scale(1, -1); } tctx.drawImage(currentImage, 0, 0); const img = new Image(); img.onload = () => { currentImage = img; redraw(); showToast('Flipped ✅'); }; img.src = tmp.toDataURL(); }
-
-function addTextOverlay() { if (!canvas || !overlayLayer) { showToast('Upload image first'); return; } const text = document.getElementById('textInput')?.value.trim(); if (!text) { showToast('Enter text'); return; } const color = document.getElementById('textColor')?.value || '#ffffff'; const font = document.getElementById('fontSelect')?.value || 'Arial Black'; const div = document.createElement('div'); div.textContent = text; div.style.cssText = `position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);color:${color};font-family:${font};font-size:32px;font-weight:bold;cursor:move;user-select:none;text-shadow:2px 2px 4px rgba(0,0,0,0.5);`; let isDragging = false, startX, startY, offsetX, offsetY; div.addEventListener('mousedown', (e) => { isDragging = true; startX = e.clientX; startY = e.clientY; offsetX = div.offsetLeft; offsetY = div.offsetTop; }); div.addEventListener('touchstart', (e) => { isDragging = true; const t = e.touches[0]; startX = t.clientX; startY = t.clientY; offsetX = div.offsetLeft; offsetY = div.offsetTop; e.preventDefault(); }); document.addEventListener('mousemove', (e) => { if (!isDragging) return; div.style.left = (offsetX + e.clientX - startX) + 'px'; div.style.top = (offsetY + e.clientY - startY) + 'px'; div.style.transform = 'none'; }); document.addEventListener('touchmove', (e) => { if (!isDragging) return; const t = e.touches[0]; div.style.left = (offsetX + t.clientX - startX) + 'px'; div.style.top = (offsetY + t.clientY - startY) + 'px'; div.style.transform = 'none'; e.preventDefault(); }); document.addEventListener('mouseup', () => { isDragging = false; }); document.addEventListener('touchend', () => { isDragging = false; }); overlayLayer.appendChild(div); overlayItems.push({ type: 'text', el: div, text, color, font }); showToast('Text added ✅'); }
-
-function addSticker(emoji) { if (!canvas || !overlayLayer) { showToast('Upload image first'); return; } const div = document.createElement('div'); div.textContent = emoji; div.style.cssText = 'position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:64px;cursor:move;user-select:none;'; let isDragging = false, startX, startY, offsetX, offsetY; div.addEventListener('mousedown', (e) => { isDragging = true; startX = e.clientX; startY = e.clientY; offsetX = div.offsetLeft; offsetY = div.offsetTop; }); div.addEventListener('touchstart', (e) => { isDragging = true; const t = e.touches[0]; startX = t.clientX; startY = t.clientY; offsetX = div.offsetLeft; offsetY = div.offsetTop; e.preventDefault(); }); document.addEventListener('mousemove', (e) => { if (!isDragging) return; div.style.left = (offsetX + e.clientX - startX) + 'px'; div.style.top = (offsetY + e.clientY - startY) + 'px'; div.style.transform = 'none'; }); document.addEventListener('touchmove', (e) => { if (!isDragging) return; const t = e.touches[0]; div.style.left = (offsetX + t.clientX - startX) + 'px'; div.style.top = (offsetY + t.clientY - startY) + 'px'; div.style.transform = 'none'; e.preventDefault(); }); document.addEventListener('mouseup', () => { isDragging = false; }); document.addEventListener('touchend', () => { isDragging = false; }); overlayLayer.appendChild(div); overlayItems.push({ type: 'sticker', el: div, emoji }); showToast('Sticker added ✅'); }
-
-function applyFrame(style, btn) { if (!canvas) { showToast('Upload image first'); return; } canvas.style.border = 'none'; canvas.style.boxShadow = 'none'; canvas.style.borderRadius = '0'; if (style === 'simple') canvas.style.border = '8px solid #fff'; else if (style === 'rounded') { canvas.style.borderRadius = '24px'; canvas.style.border = '6px solid #fff'; } else if (style === 'polaroid') { canvas.style.border = '20px solid #fff'; canvas.style.borderBottomWidth = '80px'; canvas.style.boxShadow = '0 8px 20px rgba(0,0,0,0.3)'; } else if (style === 'vintage') { canvas.style.border = '12px solid #8b7355'; } else if (style === 'neon') { canvas.style.border = '4px solid #00d4ff'; canvas.style.boxShadow = '0 0 20px #00d4ff'; } else if (style === 'gold') { canvas.style.border = '8px solid #d4af37'; } btn.parentElement.querySelectorAll('.ctrl-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); showToast('Frame applied ✅'); }
-
-// ==================== UTILITY TOOLS ====================
-function calcEmi() { const P = parseFloat(document.getElementById('emiP')?.value); const r = parseFloat(document.getElementById('emiR')?.value) / 12 / 100; const n = parseFloat(document.getElementById('emiN')?.value); if (!P || !r || !n) { showToast('Fill all fields'); return; } const emi = (P * r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1); document.getElementById('emiResult').innerHTML = `EMI: <span style="color:#00d4ff;">₹${emi.toFixed(2)}</span> / month<br>Total: ₹${(emi * n).toFixed(2)}<br>Interest: ₹${(emi * n - P).toFixed(2)}`; }
-
-function calcGst(rate, btn) { const amount = parseFloat(document.getElementById('gstAmount')?.value); if (!amount) { showToast('Enter amount'); return; } const gst = amount * rate / 100; document.getElementById('gstResult').innerHTML = `Base: ₹${amount.toFixed(2)}<br>GST (${rate}%): ₹${gst.toFixed(2)}<br>Total: <span style="color:#00d4ff;">₹${(amount + gst).toFixed(2)}</span>`; btn.parentElement.querySelectorAll('.ctrl-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); }
-
-function calcAge() { const dob = document.getElementById('dobInput')?.value; if (!dob) { showToast('Select date'); return; } const birth = new Date(dob); const now = new Date(); let years = now.getFullYear() - birth.getFullYear(); let months = now.getMonth() - birth.getMonth(); let days = now.getDate() - birth.getDate(); if (days < 0) { months--; days += new Date(now.getFullYear(), now.getMonth(), 0).getDate(); } if (months < 0) { years--; months += 12; } const totalDays = Math.floor((now - birth) / (1000 * 60 * 60 * 24)); document.getElementById('ageResult').innerHTML = `Age: <span style="color:#00d4ff;">${years}y ${months}m ${days}d</span><br>Total days: ${totalDays}`; }
-
-function calcBmi() { const w = parseFloat(document.getElementById('bmiWeight')?.value); const h = parseFloat(document.getElementById('bmiHeight')?.value) / 100; if (!w || !h) { showToast('Enter values'); return; } const bmi = w / (h * h); let cat = 'Normal'; if (bmi < 18.5) cat = 'Underweight'; else if (bmi < 25) cat = 'Normal'; else if (bmi < 30) cat = 'Overweight'; else cat = 'Obese'; document.getElementById('bmiResult').innerHTML = `BMI: <span style="color:#00d4ff;">${bmi.toFixed(1)}</span><br>Category: ${cat}`; }
-
-function updateUnitList() { const cat = document.getElementById('unitCat')?.value; const units = { length: ['Meter','Kilometer','Centimeter','Millimeter','Mile','Yard','Foot','Inch'], weight: ['Kilogram','Gram','Milligram','Pound','Ounce','Ton'], temp: ['Celsius','Fahrenheit','Kelvin'] }[cat] || []; const from = document.getElementById('unitFrom'); const to = document.getElementById('unitTo'); if (!from || !to) return; from.innerHTML = units.map(u => `<option>${u}</option>`).join(''); to.innerHTML = units.map(u => `<option>${u}</option>`).join(''); to.selectedIndex = 1; }
-
-function convertUnit() { const cat = document.getElementById('unitCat')?.value; const val = parseFloat(document.getElementById('unitVal')?.value); const from = document.getElementById('unitFrom')?.value; const to = document.getElementById('unitTo')?.value; if (isNaN(val)) { showToast('Enter value'); return; } if (cat === 'temp') { let c; if (from === 'Celsius') c = val; else if (from === 'Fahrenheit') c = (val - 32) * 5 / 9; else c = val - 273.15; let result; if (to === 'Celsius') result = c; else if (to === 'Fahrenheit') result = c * 9 / 5 + 32; else result = c + 273.15; document.getElementById('unitResult').innerHTML = `${val} ${from} = <span style="color:#00d4ff;">${result.toFixed(2)} ${to}</span>`; return; } const factors = { length: { Meter:1, Kilometer:1000, Centimeter:0.01, Millimeter:0.001, Mile:1609.34, Yard:0.9144, Foot:0.3048, Inch:0.0254 }, weight: { Kilogram:1, Gram:0.001, Milligram:0.000001, Pound:0.453592, Ounce:0.0283495, Ton:1000 } }; const f = factors[cat]; if (!f) return; const result = val * f[from] / f[to]; document.getElementById('unitResult').innerHTML = `${val} ${from} = <span style="color:#00d4ff;">${result.toFixed(4)} ${to}</span>`; }
-
-function generateQr() { const text = document.getElementById('qrText')?.value.trim(); if (!text) { showToast('Enter text'); return; } document.getElementById('qrResult').innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(text)}" style="border-radius:12px;background:#fff;padding:12px;">`; }
-
-// ==================== COLLAGE ====================
-function selectCollageLayout(layout, btn) { collageLayout = layout; btn.parentElement.querySelectorAll('.ctrl-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); }
-
-function addCollagePhotos(input) { const files = Array.from(input.files || []); files.forEach(f => { const reader = new FileReader(); reader.onload = (e) => { const img = new Image(); img.onload = () => { collagePhotos.push(img); showToast('Photo added ✅'); }; img.src = e.target.result; }; reader.readAsDataURL(f); }); }
-
-function createCollage() { if (collagePhotos.length < 2) { showToast('Add at least 2 photos'); return; } const tmp = document.createElement('canvas'); const cols = collageLayout === '1x2' ? 1 : (collageLayout === '2x1' ? 2 : parseInt(collageLayout)); const rows = collageLayout === '1x2' ? 2 : (collageLayout === '2x1' ? 1 : parseInt(collageLayout)); const cellW = 400, cellH = 400; tmp.width = cols * cellW; tmp.height = rows * cellH; const tctx = tmp.getContext('2d'); tctx.fillStyle = '#000'; tctx.fillRect(0, 0, tmp.width, tmp.height); collagePhotos.slice(0, cols * rows).forEach((img, i) => { const col = i % cols, row = Math.floor(i / cols); const x = col * cellW, y = row * cellH; const scale = Math.max(cellW / img.width, cellH / img.height); const w = img.width * scale, h = img.height * scale; tctx.drawImage(img, x + (cellW - w) / 2, y + (cellH - h) / 2, w, h); }); const preview = document.getElementById('collagePreview'); if (preview) preview.innerHTML = `<img src="${tmp.toDataURL()}" style="width:100%;border-radius:12px;">`; const a = document.createElement('a'); a.href = tmp.toDataURL(); a.download = 'picly-collage.png'; a.click(); showToast('✅ Collage created!'); }
-
-// ==================== INIT ====================
-function init() {
-  canvas = document.getElementById('photoCanvas');
+window.addEventListener('DOMContentLoaded', function() {
+  canvas = document.getElementById('canvas');
   if (canvas) ctx = canvas.getContext('2d');
   overlayLayer = document.getElementById('overlayLayer');
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  const home = document.getElementById('homeScreen');
-  if (home) home.classList.add('active');
-  console.log('✅ App initialized');
-}
-
-window.addEventListener('load', init);
-
-// Expose all functions to global
-window.showScreen = showScreen;
-window.goHome = goHome;
-window.openCategory = openCategory;
-window.openTool = openTool;
-window.openToolFromHome = openToolFromHome;
-window.backToCategory = backToCategory;
-window.handleGlobalUpload = handleGlobalUpload;
-window.loadImage = loadImage;
-window.resetImage = resetImage;
-window.loadVideo = loadVideo;
-window.selectCompressQuality = selectCompressQuality;
-window.selectEnhanceType = selectEnhanceType;
-window.selectResolution = selectResolution;
-window.selectAiMagic = selectAiMagic;
-window.selectAiRatio = selectAiRatio;
-window.selectUpscaleScale = selectUpscaleScale;
-window.selectGifFps = selectGifFps;
-window.loadAiImage = loadAiImage;
-window.applyAiMagic = applyAiMagic;
-window.generateAiImage = generateAiImage;
-window.downloadAiImage = downloadAiImage;
-window.loadRemoveBgImage = loadRemoveBgImage;
-window.removeBgOnly = removeBgOnly;
-window.loadBgImage = loadBgImage;
-window.replaceBackground = replaceBackground;
-window.loadEditorImage = loadEditorImage;
-window.setEditorPrompt = setEditorPrompt;
-window.runAiEditor = runAiEditor;
-window.downloadEditorResult = downloadEditorResult;
-window.loadUpscaleImage = loadUpscaleImage;
-window.runUpscale = runUpscale;
-window.downloadUpscale = downloadUpscale;
-window.loadCleanupImage = loadCleanupImage;
-window.runCleanup = runCleanup;
-window.downloadCleanup = function() { if (!currentCleanupResult) return; const a = document.createElement('a'); a.href = currentCleanupResult; a.download = 'picly-cleanup-' + Date.now() + '.jpg'; a.click(); };
-window.loadRestoreImage = loadRestoreImage;
-window.runRestore = runRestore;
-window.downloadRestoreResult = downloadRestoreResult;
-window.runTrim = runTrim;
-window.runCompress = runCompress;
-window.runGif = runGif;
-window.runMp3 = runMp3;
-window.runVideoEnhance = runVideoEnhance;
-window.applyCropPreset = applyCropPreset;
-window.applyFilter = applyFilter;
-window.applyAdjust = applyAdjust;
-window.applyResize = applyResize;
-window.rotateImage = rotateImage;
-window.flipImage = flipImage;
-window.addTextOverlay = addTextOverlay;
-window.addSticker = addSticker;
-window.applyFrame = applyFrame;
-window.calcEmi = calcEmi;
-window.calcGst = calcGst;
-window.calcAge = calcAge;
-window.calcBmi = calcBmi;
-window.updateUnitList = updateUnitList;
-window.convertUnit = convertUnit;
-window.generateQr = generateQr;
-window.selectCollageLayout = selectCollageLayout;
-window.addCollagePhotos = addCollagePhotos;
-window.createCollage = createCollage;
-window.showToast = showToast;
-window.showLoader = showLoader;
-window.hideLoader = hideLoader;
+  const slider = document.getElementById('slider');
+  const dots = document.querySelectorAll('#dots .dot');
+  let currentSlide = 0, interval;
+  function updateDots(i) { dots.forEach((d,x) => d.classList.toggle('active', x===i)); }
+  function scrollToSlide(i) { if (!slider || !slider.children[i]) return; slider.scrollTo({ left: slider.children[i].offsetLeft - 20, behavior: 'smooth' }); updateDots(i); }
+  function nextSlide() { if (!slider) return; currentSlide = (currentSlide + 1) % slider.children.length; scrollToSlide(currentSlide); }
+  function start() { interval = setInterval(nextSlide, 3000); }
+  function stop() { clearInterval(interval); }
+  if (slider) { start(); slider.addEventListener('touchstart', stop); slider.addEventListener('touchend', () => setTimeout(start, 4000)); slider.addEventListener('mouseenter', stop); slider.addEventListener('mouseleave', start); }
+});
