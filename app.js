@@ -413,8 +413,7 @@ function uploadWithProgress(url, formData, onProgress) {
 function buildControls(type) {
   let wrap = document.getElementById('toolControls');
   if (!wrap) {
-    // Fallback: khud se container banao
-    const editorBody = document.querySelector('.editor-body') || document.querySelector('.canvas-container')?.parentElement || document.querySelector('.editor-body') || document.body;
+    const editorBody = document.querySelector('.editor-body') || document.querySelector('.canvas-container')?.parentElement || document.body;
     wrap = document.createElement('div');
     wrap.id = 'toolControls';
     wrap.style.cssText = 'margin-top:16px;';
