@@ -156,7 +156,38 @@ function openTool(toolId) {
 
 function openToolFromHome(toolId) { currentCategory = null; openTool(toolId); }
 function handleGlobalUpload(input) { if (input.files && input.files[0]) { openCategory('edit'); setTimeout(() => openTool('crop'), 100); setTimeout(() => loadImage(input), 200); } }
-function loadImage(input) { const file = input.files ? input.files[0] : input; if (!file) return; if (file.type.startsWith('video/')) { loadVideo(input); return; } const reader = new FileReader(); reader.onload = (e) => { const img = new Image(); img.onload = () => { originalImage = img; currentImage = img; if (canvas) { canvas.width = img.width; canvas.height = img.height; ctx.drawImage(img, 0, 0); } document.getElementById('uploadArea').style.display = 'none'; document.getElementById('canvasWrap').style.display = 'block'; showToast('Photo loaded ✨'); }; img.src = e.target.result; }; reader.readAsDataURL(file); }
+
+function loadImage(input) { 
+  const file = input.files ? input.files[0] : input; 
+  if (!file) return; 
+  
+  // ✅ Photo Signature special handling
+  if (currentTool && currentTool.type === 'photo-signature') {
+    loadPhotoSigImage(input);
+    return;
+  }
+  
+  if (file.type.startsWith('video/')) { loadVideo(input); return; } 
+  const reader = new FileReader(); 
+  reader.onload = (e) => { 
+    const img = new Image(); 
+    img.onload = () => { 
+      originalImage = img; 
+      currentImage = img; 
+      if (canvas) { 
+        canvas.width = img.width; 
+        canvas.height = img.height; 
+        ctx.drawImage(img, 0, 0); 
+      } 
+      document.getElementById('uploadArea').style.display = 'none'; 
+      document.getElementById('canvasWrap').style.display = 'block'; 
+      showToast('Photo loaded ✨'); 
+    }; 
+    img.src = e.target.result; 
+  }; 
+  reader.readAsDataURL(file); 
+}
+
 function redraw() { if (!currentImage || !canvas) return; canvas.width = currentImage.width; canvas.height = currentImage.height; ctx.drawImage(currentImage, 0, 0); }
 function resetImage() { if (originalImage && canvas) { currentImage = originalImage; redraw(); canvas.style.filter = 'none'; overlayItems = []; if (overlayLayer) overlayLayer.innerHTML = ''; showToast('Reset done'); } }
 function loadVideo(input) { const file = input.files ? input.files[0] : input; if (!file) return; currentVideoFile = file; const video = document.getElementById('videoPreview'); video.src = URL.createObjectURL(file); video.style.display = 'block'; document.getElementById('uploadArea').style.display = 'none'; video.onloadedmetadata = () => { currentVideoDuration = video.duration; const sizeMB = (file.size / 1024 / 1024).toFixed(2); const pending = document.getElementById('videoPendingMsg'); if (pending) pending.style.display = 'none'; const activeUI = document.getElementById('videoActiveUI'); if (activeUI) activeUI.style.display = 'block'; showToast('Video loaded — ' + sizeMB + 'MB ✨'); }; }
@@ -198,10 +229,17 @@ function loadPhotoSigImage(input) {
     const img = new Image();
     img.onload = () => {
       psPhoto = img;
-      document.getElementById('psPhotoPreview').src = e.target.result;
-      document.getElementById('psUploadTitle').textContent = 'Change photo';
-      document.getElementById('psPhotoActive').style.display = 'block';
+      const preview = document.getElementById('psPhotoPreview');
+      if (preview) preview.src = e.target.result;
+      // ✅ psUploadTitle safely handle kiya
+      const title = document.getElementById('psUploadTitle');
+      if (title) title.textContent = 'Change photo';
+      const active = document.getElementById('psPhotoActive');
+      if (active) active.style.display = 'block';
+      document.getElementById('uploadArea').style.display = 'none';
+      document.getElementById('canvasWrap').style.display = 'block';
       setTimeout(setupPsCanvas, 200);
+      showToast('Photo loaded ✨');
     };
     img.src = e.target.result;
   };
@@ -403,7 +441,7 @@ function buildControls(type) {
   else if (type === 'text') { c.innerHTML = '<div class="control-label">Add Text</div><div class="manual-row"><input type="text" id="textInput" placeholder="Type text..." class="manual-input"></div><div class="manual-row"><input type="number" id="textSize" value="60" class="manual-input"></div><div class="control-row"><button class="ctrl-btn primary" onclick="addTextDrag()">Add Text</button></div>'; }
   else if (type === 'stickers') { c.innerHTML = '<div class="control-label">Stickers</div><div class="sticker-grid">' + ['😂','🥰','😎','❤️','🌟','💯','🦁','🎉'].map(e => '<button class="sticker-btn" onclick="addStickerDrag(\'' + e + '\')">' + e + '</button>').join('') + '</div>'; }
   else if (type === 'passport') { c.innerHTML = '<div class="control-label">Size</div><div class="control-row"><button class="ctrl-btn" onclick="makePassport(35,45)">35×45mm</button><button class="ctrl-btn" onclick="makePassport(51,51)">2×2 inch</button></div>'; }
-  else if (type === 'photo-signature') { c.innerHTML = '<div class="control-label">Upload Photo</div><div class="upload-area" onclick="document.getElementById(\'psPhotoInput\').click()" style="margin-bottom:12px;"><input type="file" id="psPhotoInput" accept="image/*" onchange="loadPhotoSigImage(this)" style="display:none;"><p id="psUploadTitle">Tap to upload photo</p></div><div id="psPhotoActive" style="display:none;"><img id="psPhotoPreview" style="width:100%;max-height:280px;object-fit:contain;border-radius:18px;margin-bottom:12px;"><div class="control-label">Name (Optional)</div><input type="text" id="psNameInput" placeholder="Type your name..." class="manual-input" style="width:100%;margin-bottom:12px;"><div class="control-label">Signature (Draw below)</div><div style="position:relative;background:#fff;border-radius:12px;margin-bottom:12px;overflow:hidden;"><canvas id="psSignCanvas" style="width:100%;height:160px;display:block;touch-action:none;cursor:crosshair;"></canvas></div><div class="control-row" style="margin-bottom:8px;"><button class="ctrl-btn active" onclick="setPsColor(\'#000000\', this)" style="flex:1;">⚫ Black</button><button class="ctrl-btn" onclick="setPsColor(\'#0033cc\', this)" style="flex:1;">🔵 Blue</button></div><div class="control-row" style="margin-bottom:8px;"><button class="ctrl-btn" onclick="setPsBrush(2, this)" style="flex:1;">Thin</button><button class="ctrl-btn active" onclick="setPsBrush(3, this)" style="flex:1;">Normal</button><button class="ctrl-btn" onclick="setPsBrush(5, this)" style="flex:1;">Thick</button></div><div class="control-row" style="margin-bottom:8px;"><button class="ctrl-btn" onclick="undoPsSignature()" style="flex:1;">↶ Undo</button><button class="ctrl-btn" onclick="clearPsSignature()" style="flex:1;">🗑️ Clear</button></div><button class="ctrl-btn primary" onclick="mergePhotoSignature()" style="width:100%;padding:18px;margin-top:8px;">✨ Merge & Preview</button><div id="psResultBox" style="display:none;margin-top:16px;"><img id="psResultImg" style="width:100%;border-radius:18px;margin-bottom:12px;"><button class="ctrl-btn primary" onclick="downloadPhotoSignature()" style="width:100%;padding:16px;">⬇️ Download</button></div></div>'; }
+  else if (type === 'photo-signature') { c.innerHTML = '<input type="file" id="psPhotoInput" accept="image/*" onchange="loadPhotoSigImage(this)" style="display:none;"><div id="psPhotoActive" style="display:none;"><div class="control-label">Name (Optional)</div><input type="text" id="psNameInput" placeholder="Type your name..." class="manual-input" style="width:100%;margin-bottom:12px;"><div class="control-label">Signature (Draw below)</div><div style="position:relative;background:#fff;border-radius:12px;margin-bottom:12px;overflow:hidden;"><canvas id="psSignCanvas" style="width:100%;height:160px;display:block;touch-action:none;cursor:crosshair;"></canvas></div><div class="control-row" style="margin-bottom:8px;"><button class="ctrl-btn active" onclick="setPsColor(\'#000000\', this)" style="flex:1;">⚫ Black</button><button class="ctrl-btn" onclick="setPsColor(\'#0033cc\', this)" style="flex:1;">🔵 Blue</button></div><div class="control-row" style="margin-bottom:8px;"><button class="ctrl-btn" onclick="setPsBrush(2, this)" style="flex:1;">Thin</button><button class="ctrl-btn active" onclick="setPsBrush(3, this)" style="flex:1;">Normal</button><button class="ctrl-btn" onclick="setPsBrush(5, this)" style="flex:1;">Thick</button></div><div class="control-row" style="margin-bottom:8px;"><button class="ctrl-btn" onclick="undoPsSignature()" style="flex:1;">↶ Undo</button><button class="ctrl-btn" onclick="clearPsSignature()" style="flex:1;">🗑️ Clear</button></div><button class="ctrl-btn primary" onclick="mergePhotoSignature()" style="width:100%;padding:18px;margin-top:8px;">✨ Merge & Preview</button><div id="psResultBox" style="display:none;margin-top:16px;"><img id="psResultImg" style="width:100%;border-radius:18px;margin-bottom:12px;"><button class="ctrl-btn primary" onclick="downloadPhotoSignature()" style="width:100%;padding:16px;">⬇️ Download</button></div></div>'; }
   else if (type === 'compress') { c.innerHTML = '<div class="control-label">Quality</div><div class="control-row"><button class="ctrl-btn" onclick="compressImage(0.9)">High</button><button class="ctrl-btn" onclick="compressImage(0.6)">Medium</button><button class="ctrl-btn" onclick="compressImage(0.3)">Low</button></div>'; }
   else if (type === 'pdf') { c.innerHTML = '<div class="control-label">PDF</div><div class="control-row"><button class="ctrl-btn primary" onclick="exportPDF()">Download PDF</button></div>'; }
   else if (type === 'convert') { c.innerHTML = '<div class="control-label">Format</div><div class="control-row"><button class="ctrl-btn" onclick="convertFormat(\'jpeg\')">JPG</button><button class="ctrl-btn" onclick="convertFormat(\'png\')">PNG</button><button class="ctrl-btn" onclick="convertFormat(\'webp\')">WEBP</button></div>'; }
