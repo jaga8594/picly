@@ -55,6 +55,7 @@ const categories = {
   ]}
 };
 
+// ==================== GLOBAL STATE ====================
 let currentCategory = null;
 let currentTool = null;
 let originalImage = null;
@@ -87,14 +88,21 @@ let currentCleanupImage = null;
 let currentCleanupResult = null;
 let currentRestoreImage = null;
 let currentRestoreResult = null;
+let currentRestoreExt = 'png';
 let wakeLock = null;
 let isProcessing = false;
+
+// Cleanup mask state
+let cleanupMaskCtx = null;
+let cleanupBrushSize = 25;
+let cleanupIsDrawing = false;
 
 const CALCULATOR_TYPES = ['emi','gst','age','bmi','unit','qr'];
 const VIDEO_TYPES = ['video-trim','video-compress','video-gif','video-mp3','video-enhance'];
 const AI_MAGIC_TYPES = ['ai-enhance','ai-glow'];
 const AI_STUDIO_TYPES = ['ai-text-image','ai-bg-remove','ai-bg-replace','ai-editor','ai-upscale','ai-cleanup','ai-restore'];
 
+// ==================== NAVIGATION ====================
 function showScreen(id) { document.querySelectorAll('.screen').forEach(s => s.classList.remove('active')); const el = document.getElementById(id); if (el) el.classList.add('active'); window.scrollTo(0, 0); }
 function goHome() { showScreen('homeScreen'); currentCategory = null; }
 function openCategory(catId) { currentCategory = catId; const cat = categories[catId]; if (!cat) return; document.getElementById('catPageTitle').textContent = cat.name; document.getElementById('catHeroName').textContent = cat.name; document.getElementById('catHeroDesc').textContent = cat.desc; document.getElementById('toolsList').innerHTML = cat.tools.map(tool => { const img = tool.img || 'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=100&q=80'; return `<div class="tool-item" onclick="openTool('${tool.id}')"><img class="tool-bg" src="${img}" alt="" loading="lazy"><div class="tool-icon"><svg viewBox="0 0 24 24"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg></div><img class="tool-thumb" src="${img}" alt="${tool.name}" loading="lazy"><div class="tool-info"><div class="tool-name">${tool.name}</div><div class="tool-desc">${tool.desc}</div></div><div class="tool-arrow">›</div></div>`; }).join(''); showScreen('categoryScreen'); }
@@ -146,6 +154,7 @@ function selectAiRatio(ratio, btn) { selectedAiRatio = ratio; btn.parentElement.
 function selectUpscaleScale(scale, btn) { selectedUpscaleScale = scale; btn.parentElement.querySelectorAll('.ctrl-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); }
 function selectGifFps(fps, btn) { btn.parentElement.querySelectorAll('.ctrl-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); btn.dataset.fps = fps; }
 
+// ==================== AI FUNCTIONS ====================
 function loadAiImage(input) { const file = input.files ? input.files[0] : input; if (!file) return; if (!file.type.startsWith('image/')) { showToast('Please upload an image'); return; } currentAiImage = file; const reader = new FileReader(); reader.onload = (e) => { const preview = document.getElementById('aiImagePreview'); if (preview) { preview.src = e.target.result; preview.style.display = 'block'; } const pending = document.getElementById('aiPendingMsg'); if (pending) pending.style.display = 'none'; const activeUI = document.getElementById('aiActiveUI'); if (activeUI) activeUI.style.display = 'block'; showToast('Image loaded ✨'); }; reader.readAsDataURL(file); }
 
 async function applyAiMagic() { if (isProcessing) return; if (!currentAiImage) { showToast('Upload image first'); return; } isProcessing = true; await requestWakeLock(); showLoader('🎨 Applying AI Magic'); try { const formData = new FormData(); formData.append('image', currentAiImage); formData.append('type', selectedAiMagic); const blob = await uploadWithProgress(SERVER_URL + '/api/ai-magic', formData, updateProgress); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `picly-${selectedAiMagic}-${Date.now()}.jpg`; a.click(); hideLoader(); showToast('✅ Done!'); } catch (err) { hideLoader(); showToast('Error: ' + err.message); } await releaseWakeLock(); isProcessing = false; }
@@ -176,76 +185,278 @@ async function runUpscale() { if (isProcessing) return; if (!currentUpscaleImage
 
 function downloadUpscale() { if (!currentUpscaleResult) return; const a = document.createElement('a'); a.href = currentUpscaleResult; a.download = `picly-upscaled-${selectedUpscaleScale}x-${Date.now()}.png`; a.click(); }
 
-function loadCleanupImage(input) { const file = input.files ? input.files[0] : input; if (!file) return; currentCleanupImage = file; const reader = new FileReader(); reader.onload = (e) => { document.getElementById('cleanupPreview').src = e.target.result; document.getElementById('cleanupPending').style.display = 'none'; document.getElementById('cleanupActive').style.display = 'block'; }; reader.readAsDataURL(file); }
+// ==================== MANUAL CLEANUP ====================
+function loadCleanupImage(input) {
+  const file = input.files ? input.files[0] : input;
+  if (!file) return;
+  currentCleanupImage = file;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const img = document.getElementById('cleanupPreview');
+    img.onload = () => { setTimeout(setupMaskCanvas, 200); };
+    img.src = e.target.result;
+    document.getElementById('cleanupPending').style.display = 'none';
+    document.getElementById('cleanupActive').style.display = 'block';
+    showToast('Photo loaded — ab object pe brush karo');
+  };
+  reader.readAsDataURL(file);
+}
 
-async function runCleanup() { if (isProcessing) return; if (!currentCleanupImage) { showToast('Upload photo'); return; } isProcessing = true; await requestWakeLock(); showLoader('🧹 Cleaning up'); try { const formData = new FormData(); formData.append('image', currentCleanupImage); const blob = await uploadWithProgress(SERVER_URL + '/api/cleanup', formData, updateProgress); currentCleanupResult = URL.createObjectURL(blob); document.getElementById('cleanupResultImg').src = currentCleanupResult; document.getElementById('cleanupResult').style.display = 'block'; hideLoader(); showToast('✅ Cleaned!'); } catch (err) { hideLoader(); showToast('Error: ' + err.message); } await releaseWakeLock(); isProcessing = false; }
+function setupMaskCanvas() {
+  const img = document.getElementById('cleanupPreview');
+  const canvas = document.getElementById('cleanupMaskCanvas');
+  if (!img || !canvas) return;
+  const rect = img.getBoundingClientRect();
+  canvas.width = rect.width;
+  canvas.height = rect.height;
+  canvas.style.width = rect.width + 'px';
+  canvas.style.height = rect.height + 'px';
+  cleanupMaskCtx = canvas.getContext('2d');
+  cleanupMaskCtx.clearRect(0, 0, canvas.width, canvas.height);
+  
+  // Remove previous listeners
+  canvas.onmousedown = null; canvas.onmousemove = null; canvas.onmouseup = null; canvas.onmouseleave = null;
+  canvas.ontouchstart = null; canvas.ontouchmove = null; canvas.ontouchend = null;
+  
+  // Add new listeners
+  canvas.onmousedown = (e) => { e.preventDefault(); cleanupIsDrawing = true; drawMask(e); };
+  canvas.onmousemove = (e) => { if (cleanupIsDrawing) drawMask(e); };
+  canvas.onmouseup = () => { cleanupIsDrawing = false; };
+  canvas.onmouseleave = () => { cleanupIsDrawing = false; };
+  canvas.ontouchstart = (e) => { e.preventDefault(); cleanupIsDrawing = true; drawMask(e.touches[0]); };
+  canvas.ontouchmove = (e) => { e.preventDefault(); if (cleanupIsDrawing) drawMask(e.touches[0]); };
+  canvas.ontouchend = (e) => { e.preventDefault(); cleanupIsDrawing = false; };
+  
+  console.log('✅ Mask canvas setup');
+}
 
-function downloadCleanup() { if (!currentCleanupResult) return; const a = document.createElement('a'); a.href = currentCleanupResult; a.download = 'picly-cleanup-' + Date.now() + '.jpg'; a.click(); }
+function drawMask(e) {
+  if (!cleanupMaskCtx) return;
+  const canvas = document.getElementById('cleanupMaskCanvas');
+  const rect = canvas.getBoundingClientRect();
+  const x = (e.clientX || e.pageX) - rect.left;
+  const y = (e.clientY || e.pageY) - rect.top;
+  
+  cleanupMaskCtx.fillStyle = 'rgba(255, 0, 128, 0.6)';
+  cleanupMaskCtx.beginPath();
+  cleanupMaskCtx.arc(x, y, cleanupBrushSize, 0, Math.PI * 2);
+  cleanupMaskCtx.fill();
+}
 
-function loadRestoreImage(input) { const file = input.files ? input.files[0] : input; if (!file) return; currentRestoreImage = file; const reader = new FileReader(); reader.onload = (e) => { document.getElementById('restorePreview').src = e.target.result; document.getElementById('restorePending').style.display = 'none'; document.getElementById('restoreActive').style.display = 'block'; }; reader.readAsDataURL(file); }
+function setBrushSize(size) {
+  cleanupBrushSize = size;
+  document.querySelectorAll('.ctrl-btn').forEach(b => {
+    if (['Small', 'Medium', 'Large'].includes(b.textContent.trim())) b.classList.remove('active');
+  });
+  event.target.classList.add('active');
+  showToast(`Brush: ${size}px`);
+}
 
-// ==================== ASYNC RESTORE — NO TIMEOUT ====================
+function clearMask() {
+  const canvas = document.getElementById('cleanupMaskCanvas');
+  if (canvas && cleanupMaskCtx) {
+    cleanupMaskCtx.clearRect(0, 0, canvas.width, canvas.height);
+    showToast('Mask cleared');
+  }
+}
+
+async function runCleanup() {
+  if (isProcessing) return;
+  if (!currentCleanupImage) { showToast('Upload photo first'); return; }
+  
+  const maskCanvas = document.getElementById('cleanupMaskCanvas');
+  const previewImg = document.getElementById('cleanupPreview');
+  if (!maskCanvas || !previewImg) { showToast('Setup error'); return; }
+  
+  // Check if anything drawn
+  const testCtx = maskCanvas.getContext('2d');
+  const testData = testCtx.getImageData(0, 0, maskCanvas.width, maskCanvas.height);
+  let hasDrawing = false;
+  for (let i = 3; i < testData.data.length; i += 4) {
+    if (testData.data[i] > 0) { hasDrawing = true; break; }
+  }
+  if (!hasDrawing) { showToast('Object pe brush karo pehle'); return; }
+  
+  isProcessing = true;
+  await requestWakeLock();
+  showLoader('🧹 Removing selected object');
+  
+  try {
+    // Get original image
+    const origImg = new Image();
+    origImg.crossOrigin = 'anonymous';
+    await new Promise((resolve, reject) => {
+      origImg.onload = resolve;
+      origImg.onerror = reject;
+      origImg.src = previewImg.src;
+    });
+    
+    // Create full-size mask at original resolution
+    const maskFull = document.createElement('canvas');
+    maskFull.width = origImg.width;
+    maskFull.height = origImg.height;
+    const mctx = maskFull.getContext('2d');
+    
+    // Fill black
+    mctx.fillStyle = 'black';
+    mctx.fillRect(0, 0, maskFull.width, maskFull.height);
+    
+    // Scale display mask to original size
+    const scaleX = origImg.width / maskCanvas.width;
+    const scaleY = origImg.height / maskCanvas.height;
+    
+    const displayData = testData;
+    const finalData = mctx.getImageData(0, 0, maskFull.width, maskFull.height);
+    
+    // For each display pixel that's painted, mark corresponding original pixels as white
+    for (let dy = 0; dy < maskCanvas.height; dy++) {
+      for (let dx = 0; dx < maskCanvas.width; dx++) {
+        const di = (dy * maskCanvas.width + dx) * 4;
+        if (displayData.data[di + 3] > 0) {
+          // Map to original coords
+          const ox = Math.floor(dx * scaleX);
+          const oy = Math.floor(dy * scaleY);
+          const brushScale = cleanupBrushSize * Math.max(scaleX, scaleY);
+          
+          // Draw white circle at original res
+          mctx.fillStyle = 'white';
+          mctx.beginPath();
+          mctx.arc(ox, oy, brushScale, 0, Math.PI * 2);
+          mctx.fill();
+        }
+      }
+    }
+    
+    // Convert to blob
+    const maskBlob = await new Promise(r => maskFull.toBlob(r, 'image/png'));
+    console.log('🎭 Mask generated:', (maskBlob.size / 1024).toFixed(0), 'KB');
+    
+    // Send to server
+    const formData = new FormData();
+    formData.append('image', currentCleanupImage);
+    formData.append('mask', maskBlob, 'mask.png');
+    
+    const blob = await uploadWithProgress(SERVER_URL + '/api/cleanup', formData, updateProgress);
+    currentCleanupResult = URL.createObjectURL(blob);
+    document.getElementById('cleanupResultImg').src = currentCleanupResult;
+    document.getElementById('cleanupResult').style.display = 'block';
+    hideLoader();
+    showToast('✅ Object removed!');
+  } catch (err) {
+    hideLoader();
+    console.error('❌', err);
+    showToast('Error: ' + err.message);
+  }
+  await releaseWakeLock();
+  isProcessing = false;
+}
+
+function downloadCleanup() {
+  if (!currentCleanupResult) { showToast('No result yet'); return; }
+  const a = document.createElement('a');
+  a.href = currentCleanupResult;
+  a.download = 'picly-cleanup-' + Date.now() + '.jpg';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  showToast('✅ Downloaded!');
+}
+
+// ==================== RESTORE (ASYNC) ====================
+function loadRestoreImage(input) {
+  const file = input.files ? input.files[0] : input;
+  if (!file) return;
+  currentRestoreImage = file;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    document.getElementById('restorePreview').src = e.target.result;
+    document.getElementById('restorePending').style.display = 'none';
+    document.getElementById('restoreActive').style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+}
+
 async function runRestore() {
   if (isProcessing) return;
   if (!currentRestoreImage) { showToast('Upload photo'); return; }
   isProcessing = true;
   await requestWakeLock();
   showLoader('🎨 Restoring photo (30-60 sec)');
-
+  
+  let fakeProgress = 0;
+  const progressInterval = setInterval(() => {
+    if (fakeProgress < 90) { fakeProgress += 2; updateProgress(fakeProgress); }
+  }, 800);
+  
   try {
-    // Step 1: Upload + get job ID (fast, ~1 sec)
     const formData = new FormData();
     formData.append('image', currentRestoreImage);
-
+    updateProgress(5);
+    
     const uploadRes = await fetch(SERVER_URL + '/api/restore', { method: 'POST', body: formData });
     if (!uploadRes.ok) throw new Error('Upload failed: ' + uploadRes.status);
     const { jobId } = await uploadRes.json();
     if (!jobId) throw new Error('No job ID received');
     console.log('Job ID:', jobId);
-
-    // Step 2: Poll status every 3 sec (max 180 sec)
+    updateProgress(10);
+    
     let attempts = 0;
     const maxAttempts = 60;
-
+    
     while (attempts < maxAttempts) {
       await new Promise(r => setTimeout(r, 3000));
       attempts++;
-
+      
+      const pollProgress = 10 + Math.min(75, (attempts / maxAttempts) * 75);
+      updateProgress(pollProgress);
+      
       const statusRes = await fetch(SERVER_URL + '/api/restore-status/' + jobId);
       if (!statusRes.ok) {
         if (statusRes.status === 404) throw new Error('Job expired');
         continue;
       }
-
+      
       const statusData = await statusRes.json();
       console.log(`Poll ${attempts}:`, statusData.status);
-
+      
       if (statusData.status === 'completed') {
-        // Step 3: Download result
+        updateProgress(90);
         const resultRes = await fetch(SERVER_URL + '/api/restore-result/' + jobId);
         if (!resultRes.ok) throw new Error('Download failed');
-
-        const blob = await resultRes.blob();
+        updateProgress(95);
+        
+        const arrayBuffer = await resultRes.arrayBuffer();
+        const bytes = new Uint8Array(arrayBuffer);
+        let mimeType = 'image/png'; let ext = 'png';
+        if (bytes[0] === 0xFF && bytes[1] === 0xD8) { mimeType = 'image/jpeg'; ext = 'jpg'; }
+        else if (bytes[0] === 0x89 && bytes[1] === 0x50) { mimeType = 'image/png'; ext = 'png'; }
+        else if (bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[8] === 0x57) { mimeType = 'image/webp'; ext = 'webp'; }
+        
+        const blob = new Blob([arrayBuffer], { type: mimeType });
         currentRestoreResult = URL.createObjectURL(blob);
+        currentRestoreExt = ext;
+        
         const img = document.getElementById('restoreResultImg');
         img.src = currentRestoreResult;
         img.style.display = 'block';
         document.getElementById('restoreResult').style.display = 'block';
-
+        
+        clearInterval(progressInterval);
+        updateProgress(100);
         hideLoader();
         showToast('✅ Restored!');
         await releaseWakeLock();
         isProcessing = false;
         return;
       }
-
+      
       if (statusData.status === 'failed') throw new Error(statusData.error || 'Restore failed');
-
       showLoader(`🎨 Processing... (${attempts * 3}s)`);
     }
-
+    
     throw new Error('Timeout — 180 sec exceed');
   } catch (err) {
+    clearInterval(progressInterval);
     hideLoader();
     console.error('❌', err);
     showToast('Error: ' + err.message);
@@ -256,9 +467,10 @@ async function runRestore() {
 
 function downloadRestore() {
   if (!currentRestoreResult) { showToast('No result yet'); return; }
+  const ext = currentRestoreExt || 'png';
   const a = document.createElement('a');
   a.href = currentRestoreResult;
-  a.download = 'picly-restored-' + Date.now() + '.png';
+  a.download = 'picly-restored-' + Date.now() + '.' + ext;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -287,6 +499,7 @@ async function videoToGif() { if (isProcessing) return; if (!currentVideoFile) {
 
 async function enhanceVideo() { if (isProcessing) return; if (!currentVideoFile) { showToast('Upload video first'); return; } isProcessing = true; await requestWakeLock(); showLoader('✨ Enhancing video'); try { const formData = new FormData(); formData.append('video', currentVideoFile); formData.append('type', selectedEnhanceType); formData.append('resolution', selectedResolution); const blob = await uploadWithProgress(SERVER_URL + '/api/enhance', formData, updateProgress); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'picly-enhanced-' + Date.now() + '.mp4'; a.click(); hideLoader(); showToast('✅ Enhanced!'); } catch (err) { hideLoader(); showToast('Error: ' + err.message); } await releaseWakeLock(); isProcessing = false; }
 
+// ==================== BUILD CONTROLS ====================
 function buildControls(type) {
   const c = document.getElementById('dynamicControls');
   if (!c) return;
@@ -317,7 +530,7 @@ function buildControls(type) {
   else if (type === 'ai-bg-replace') { c.innerHTML = `<div id="bgPendingMsg"><div class="control-label">🔄 Background Replace</div><div class="upload-area" id="bgUploadArea" onclick="document.getElementById('bgUploadInput').click()" style="padding:60px 24px;margin-top:16px;"><input type="file" id="bgUploadInput" accept="image/*" onchange="loadBgImage(this)" style="display:none;"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg><p>Tap to upload photo</p><span>Person photo + naya background</span></div></div><div id="bgActiveUI" style="display:none"><img id="bgImagePreview" style="width:100%;max-height:300px;object-fit:contain;border-radius:18px;margin-bottom:16px;"><label style="font-size:12px;color:#c0b0d8;font-weight:700;display:block;margin-bottom:8px;">NEW BACKGROUND PROMPT</label><input type="text" id="bgPromptInput" placeholder="lion walking in jungle, sunset" class="manual-input" style="width:100%;padding:14px;margin-bottom:16px;"><p style="font-size:11px;color:#aaff00;margin-bottom:12px;font-weight:700;">💡 Local BG Remove + Cloudflare FLUX · 15-30 sec</p><button class="ctrl-btn primary" onclick="replaceBackground()" style="width:100%;padding:18px;">🎨 Replace Background</button></div>`; }
   else if (type === 'ai-editor') { c.innerHTML = `<div id="editorPendingMsg"><div class="control-label">🎨 AI Editor</div><div class="upload-area" id="editorUploadArea" onclick="document.getElementById('editorInput').click()" style="padding:60px 24px;margin-top:16px;"><input type="file" id="editorInput" accept="image/*" onchange="loadEditorImage(this)" style="display:none;"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg><p>Tap to upload photo</p><span>Kuch bhi edit karo prompt se</span></div></div><div id="editorActiveUI" style="display:none"><img id="editorPreview" style="width:100%;max-height:300px;object-fit:contain;border-radius:18px;margin-bottom:16px;"><label style="font-size:12px;color:#c0b0d8;font-weight:700;display:block;margin-bottom:8px;">PROMPT</label><textarea id="editorPromptInput" placeholder="anime style portrait" class="manual-input" style="width:100%;padding:14px;margin-bottom:12px;min-height:80px;font-family:inherit;"></textarea><div class="control-row" style="margin-bottom:12px;flex-wrap:wrap;"><button class="ctrl-btn" onclick="setEditorPrompt('anime style portrait, studio ghibli')" style="flex:1;font-size:11px;padding:10px 6px;">🎭 Anime</button><button class="ctrl-btn" onclick="setEditorPrompt('lion beside me, cinematic')" style="flex:1;font-size:11px;padding:10px 6px;">🦁 Lion</button><button class="ctrl-btn" onclick="setEditorPrompt('cyberpunk neon city')" style="flex:1;font-size:11px;padding:10px 6px;">🌆 Cyberpunk</button></div><button class="ctrl-btn primary" onclick="runAiEditor()" style="width:100%;padding:18px;">✨ Edit with AI</button></div><div id="editorResultBox" style="display:none;margin-top:20px;"><div class="control-label">Result</div><img id="editorResultImg" style="width:100%;border-radius:18px;margin-bottom:16px;"><button class="ctrl-btn primary" onclick="downloadEditorResult()" style="width:100%;padding:18px;">⬇️ Download</button></div>`; }
   else if (type === 'ai-upscale') { c.innerHTML = `<div id="upscalePending"><div class="control-label">🖼️ Image Upscaler</div><div class="upload-area" id="upscaleUploadArea" onclick="document.getElementById('upscaleInput').click()" style="padding:60px 24px;margin-top:16px;"><input type="file" id="upscaleInput" accept="image/*" onchange="loadUpscaleImage(this)" style="display:none;"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg><p>Tap to upload photo</p><span>HD 2x ya Ultra 4x</span></div></div><div id="upscaleActive" style="display:none"><img id="upscalePreview" style="width:100%;max-height:300px;object-fit:contain;border-radius:18px;margin-bottom:16px;"><div class="control-label">Upscale Quality</div><div class="control-row" style="margin-bottom:16px;display:flex;gap:10px;"><button class="ctrl-btn active" onclick="selectUpscaleScale(2,this)" style="flex:1;padding:14px;">⚡ <b>2x HD</b><br><span style="font-size:10px;opacity:0.7;">~2-3 MB</span></button><button class="ctrl-btn" onclick="selectUpscaleScale(4,this)" style="flex:1;padding:14px;">💎 <b>4x Ultra</b><br><span style="font-size:10px;opacity:0.7;">~6-10 MB</span></button></div><p style="font-size:11px;color:#aaff00;margin-bottom:12px;font-weight:700;">💡 Clipdrop AI · 5-10 sec</p><button class="ctrl-btn primary" onclick="runUpscale()" style="width:100%;padding:18px;">🖼️ Upscale Image</button></div><div id="upscaleResult" style="display:none;margin-top:20px;"><div class="control-label">Result</div><img id="upscaleResultImg" style="width:100%;border-radius:18px;margin-bottom:16px;"><p id="upscaleInfo" style="font-size:12px;color:#aaff00;text-align:center;margin-bottom:12px;"></p><button class="ctrl-btn primary" onclick="downloadUpscale()" style="width:100%;padding:18px;">⬇️ Download</button></div>`; }
-  else if (type === 'ai-cleanup') { c.innerHTML = `<div id="cleanupPending"><div class="control-label">🧹 Cleanup</div><div class="upload-area" id="cleanupUploadArea" onclick="document.getElementById('cleanupInput').click()" style="padding:60px 24px;margin-top:16px;"><input type="file" id="cleanupInput" accept="image/*" onchange="loadCleanupImage(this)" style="display:none;"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg><p>Tap to upload photo</p><span>Remove unwanted objects</span></div></div><div id="cleanupActive" style="display:none"><img id="cleanupPreview" style="width:100%;max-height:300px;object-fit:contain;border-radius:18px;margin-bottom:16px;"><p style="font-size:11px;color:#aaff00;margin-bottom:12px;font-weight:700;">💡 Clipdrop · 3-5 sec</p><button class="ctrl-btn primary" onclick="runCleanup()" style="width:100%;padding:18px;">🧹 Cleanup Image</button></div><div id="cleanupResult" style="display:none;margin-top:20px;"><div class="control-label">Result</div><img id="cleanupResultImg" style="width:100%;border-radius:18px;margin-bottom:16px;"><button class="ctrl-btn primary" onclick="downloadCleanup()" style="width:100%;padding:18px;">⬇️ Download</button></div>`; }
+  else if (type === 'ai-cleanup') { c.innerHTML = `<div id="cleanupPending"><div class="control-label">🧹 Cleanup — Object Remove</div><div class="upload-area" id="cleanupUploadArea" onclick="document.getElementById('cleanupInput').click()" style="padding:60px 24px;margin-top:16px;"><input type="file" id="cleanupInput" accept="image/*" onchange="loadCleanupImage(this)" style="display:none;"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg><p>Tap to upload photo</p><span>Object select karke remove karo</span></div></div><div id="cleanupActive" style="display:none"><p style="font-size:12px;color:#aaff00;margin-bottom:8px;font-weight:700;">✏️ Object pe brush karo (finger se drag)</p><div style="position:relative;border-radius:18px;overflow:hidden;background:#000;display:inline-block;max-width:100%;"><img id="cleanupPreview" style="max-width:100%;display:block;max-height:400px;object-fit:contain;"><canvas id="cleanupMaskCanvas" style="position:absolute;top:0;left:0;cursor:crosshair;touch-action:none;"></canvas></div><div class="control-row" style="margin-top:12px;"><button class="ctrl-btn" onclick="setBrushSize(10,this)">Small</button><button class="ctrl-btn active" onclick="setBrushSize(25,this)">Medium</button><button class="ctrl-btn" onclick="setBrushSize(50,this)">Large</button><button class="ctrl-btn" onclick="clearMask()">Clear</button></div><p style="font-size:11px;color:#aaff00;margin:12px 0;font-weight:700;">💡 Clipdrop AI · 5-10 sec</p><button class="ctrl-btn primary" onclick="runCleanup()" style="width:100%;padding:18px;">🧹 Remove Selected</button></div><div id="cleanupResult" style="display:none;margin-top:20px;"><div class="control-label">Result</div><img id="cleanupResultImg" style="width:100%;border-radius:18px;margin-bottom:16px;"><button class="ctrl-btn primary" onclick="downloadCleanup()" style="width:100%;padding:18px;">⬇️ Download</button></div>`; }
   else if (type === 'ai-restore') { c.innerHTML = `<div id="restorePending"><div class="control-label">🎨 Photo Restore</div><div class="upload-area" id="restoreUploadArea" onclick="document.getElementById('restoreInput').click()" style="padding:60px 24px;margin-top:16px;"><input type="file" id="restoreInput" accept="image/*" onchange="loadRestoreImage(this)" style="display:none;"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg><p>Tap to upload old photo</p><span>Restore + enhance faces</span></div></div><div id="restoreActive" style="display:none"><img id="restorePreview" style="width:100%;max-height:300px;object-fit:contain;border-radius:18px;margin-bottom:16px;"><p style="font-size:11px;color:#aaff00;margin-bottom:12px;font-weight:700;">💡 CodeFormer AI · 30-60 sec</p><button class="ctrl-btn primary" onclick="runRestore()" style="width:100%;padding:18px;">🎨 Restore Photo</button></div><div id="restoreResult" style="display:none;margin-top:20px;"><div class="control-label">Result</div><img id="restoreResultImg" style="width:100%;border-radius:18px;margin-bottom:16px;"><button class="ctrl-btn primary" onclick="downloadRestore()" style="width:100%;padding:18px;">⬇️ Download</button></div>`; }
   else if (type === 'ai-enhance' || type === 'ai-glow') { const magicType = type.replace('ai-', ''); selectedAiMagic = magicType; c.innerHTML = `<div id="aiPendingMsg"><div class="control-label">AI Magic</div><div class="upload-area" id="aiUploadArea" onclick="document.getElementById('aiUploadInput').click()" style="padding:60px 24px;margin-top:16px;"><input type="file" id="aiUploadInput" accept="image/*" onchange="loadAiImage(this)" style="display:none;"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg><p>Tap to upload photo</p></div></div><div id="aiActiveUI" style="display:none"><img id="aiImagePreview" style="width:100%;max-height:300px;object-fit:contain;border-radius:18px;margin-bottom:16px;"><div class="control-row"><button class="ctrl-btn ${magicType === 'enhance' ? 'active' : ''}" onclick="selectAiMagic('enhance',this)">✨ Enhance</button><button class="ctrl-btn ${magicType === 'glow' ? 'active' : ''}" onclick="selectAiMagic('glow',this)">🌟 Glow</button></div><button class="ctrl-btn primary" onclick="applyAiMagic()" style="width:100%;padding:18px;margin-top:16px;">🎨 Apply</button></div>`; }
   else { c.innerHTML = `<p style="padding:12px;color:#888;">Coming soon</p>`; }
