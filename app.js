@@ -543,7 +543,9 @@ function buildControls(type) {
   else if (type === 'ai-cleanup') { c.innerHTML = `<div id="cleanupPending"><div class="control-label">🧹 Cleanup — Object Remove</div><div class="upload-area" id="cleanupUploadArea" onclick="document.getElementById('cleanupInput').click()" style="padding:60px 24px;margin-top:16px;"><input type="file" id="cleanupInput" accept="image/*" onchange="loadCleanupImage(this)" style="display:none;"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg><p>Tap to upload photo</p><span>Object select karke remove karo</span></div></div><div id="cleanupActive" style="display:none"><p style="font-size:12px;color:#aaff00;margin-bottom:8px;font-weight:700;">✏️ Object pe brush karo (finger se drag)</p><div style="position:relative;border-radius:18px;overflow:hidden;background:#000;display:inline-block;max-width:100%;"><img id="cleanupPreview" style="max-width:100%;display:block;max-height:400px;object-fit:contain;"><canvas id="cleanupMaskCanvas" style="position:absolute;top:0;left:0;cursor:crosshair;touch-action:none;"></canvas></div><div class="control-row" style="margin-top:12px;"><button class="ctrl-btn" onclick="setBrushSize(10,this)">Small</button><button class="ctrl-btn active" onclick="setBrushSize(25,this)">Medium</button><button class="ctrl-btn" onclick="setBrushSize(50,this)">Large</button><button class="ctrl-btn" onclick="clearMask()">Clear</button></div><p style="font-size:11px;color:#aaff00;margin:12px 0;font-weight:700;">💡 Clipdrop AI · 5-10 sec</p><button class="ctrl-btn primary" onclick="runCleanup()" style="width:100%;padding:18px;">🧹 Remove Selected</button></div><div id="cleanupResult" style="display:none;margin-top:20px;"><div class="control-label">Result</div><img id="cleanupResultImg" style="width:100%;border-radius:18px;margin-bottom:16px;"><button class="ctrl-btn primary" onclick="downloadCleanup()" style="width:100%;padding:18px;">⬇️ Download</button></div>`; }
   else if (type === 'ai-restore') { c.innerHTML = `<div id="restorePending"><div class="control-label">🎨 Photo Restore</div><div class="upload-area" id="restoreUploadArea" onclick="document.getElementById('restoreInput').click()" style="padding:60px 24px;margin-top:16px;"><input type="file" id="restoreInput" accept="image/*" onchange="loadRestoreImage(this)" style="display:none;"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg><p>Tap to upload old photo</p><span>Restore + enhance faces</span></div></div><div id="restoreActive" style="display:none"><img id="restorePreview" style="width:100%;max-height:300px;object-fit:contain;border-radius:18px;margin-bottom:16px;"><p style="font-size:11px;color:#aaff00;margin-bottom:12px;font-weight:700;">💡 CodeFormer AI · 30-60 sec</p><button class="ctrl-btn primary" onclick="runRestore()" style="width:100%;padding:18px;">🎨 Restore Photo</button></div><div id="restoreResult" style="display:none;margin-top:20px;"><div class="control-label">Result</div><img id="restoreResultImg" style="width:100%;border-radius:18px;margin-bottom:16px;"><button class="ctrl-btn primary" onclick="downloadRestore()" style="width:100%;padding:18px;">⬇️ Download</button></div>`; }
   else if (type === 'ai-enhance' || type === 'ai-glow') { const magicType = type.replace('ai-', ''); selectedAiMagic = magicType; c.innerHTML = `<div id="aiPendingMsg"><div class="control-label">AI Magic</div><div class="upload-area" id="aiUploadArea" onclick="document.getElementById('aiUploadInput').click()" style="padding:60px 24px;margin-top:16px;"><input type="file" id="aiUploadInput" accept="image/*" onchange="loadAiImage(this)" style="display:none;"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg><p>Tap to upload photo</p></div></div><div id="aiActiveUI" style="display:none"><img id="aiImagePreview" style="width:100%;max-height:300px;object-fit:contain;border-radius:18px;margin-bottom:16px;"><div class="control-row"><button class="ctrl-btn ${magicType === 'enhance' ? 'active' : ''}" onclick="selectAiMagic('enhance',this)">✨ Enhance</button><button class="ctrl-btn ${magicType === 'glow' ? 'active' : ''}" onclick="selectAiMagic('glow',this)">🌟 Glow</button></div><button class="ctrl-btn primary" onclick="applyAiMagic()" style="width:100%;padding:18px;margin-top:16px;">🎨 Apply</button></div>`; }
-  else { c.innerHTML = `<p style="padding:12px;color:#888;">Coming soon</p>`; }
+    else if (type === 'frames') { c.innerHTML = '<div class="control-label">Frame Style</div><div class="control-row"><button class="ctrl-btn" onclick="applyFrame(\'none\',this)">None</button><button class="ctrl-btn" onclick="applyFrame(\'simple\',this)">Simple</button><button class="ctrl-btn" onclick="applyFrame(\'rounded\',this)">Rounded</button><button class="ctrl-btn" onclick="applyFrame(\'polaroid\',this)">Polaroid</button><button class="ctrl-btn" onclick="applyFrame(\'vintage\',this)">Vintage</button><button class="ctrl-btn" onclick="applyFrame(\'neon\',this)">Neon</button><button class="ctrl-btn" onclick="applyFrame(\'gold\',this)">Gold</button></div>'; }
+  else if (type === 'collage') { c.innerHTML = '<div class="control-label">Layout</div><div class="control-row"><button class="ctrl-btn" onclick="selectCollageLayout(\'2x2\',this)">2×2</button><button class="ctrl-btn" onclick="selectCollageLayout(\'3x3\',this)">3×3</button><button class="ctrl-btn" onclick="selectCollageLayout(\'1x2\',this)">1×2</button><button class="ctrl-btn" onclick="selectCollageLayout(\'2x1\',this)">2×1</button></div><div class="control-label">Photos</div><input type="file" accept="image/*" multiple id="collageInput" onchange="addCollagePhotos(this)" class="manual-input" style="width:100%;margin-bottom:12px;"><button class="ctrl-btn primary" onclick="createCollage()" style="width:100%;padding:18px;">Create Collage</button><div id="collagePreview" style="margin-top:16px;"></div>'; }
+  else { c.innerHTML = '<p style="padding:12px;color:#888;">Coming soon</p>'; }
 }
 
 function calculateEMI() { const p = parseFloat(document.getElementById('emiPrincipal').value); const r = parseFloat(document.getElementById('emiRate').value); const y = parseFloat(document.getElementById('emiYears').value); const res = document.getElementById('emiResult'); if (!p || !r || !y) { res.classList.add('show','error'); res.innerHTML = '⚠️ Fill all'; return; } const mr = r/12/100, m = y*12; const emi = (p*mr*Math.pow(1+mr,m))/(Math.pow(1+mr,m)-1); const total = emi*m, interest = total-p; res.classList.remove('error'); res.classList.add('show'); res.innerHTML = `<div class="result-row"><span>EMI</span><strong>₹${emi.toFixed(0)}</strong></div><div class="result-row"><span>Interest</span><strong>₹${interest.toFixed(0)}</strong></div><div class="result-row"><span>Total</span><strong>₹${total.toFixed(0)}</strong></div>`; }
@@ -794,3 +796,75 @@ function switchProfileTab(tab, btn) { document.querySelectorAll('.profile-tab').
 function renderProfileContent(tab) { if (!tab) { const a = document.querySelector('.profile-tab.active'); tab = a && a.textContent.includes('Gallery') ? 'gallery' : 'history'; } const container = document.getElementById('profileTabContent'); if (!container) return; const history = getHistory(); if (tab === 'history') { if (history.length === 0) { container.innerHTML = '<div style="text-align:center;padding:60px 20px;color:#665a7a;font-size:14px;">📜<br><br>No download history<br><span style="font-size:12px;">Files download karne ke baad yahan dikhengi</span></div>'; return; } container.innerHTML = history.map(item => '<div style="background:linear-gradient(135deg, rgba(168,85,247,0.08), rgba(255,0,128,0.04));border:1px solid rgba(168,85,247,0.2);border-radius:16px;padding:14px;margin-bottom:12px;display:flex;gap:12px;align-items:center;"><img src="' + (item.dataUrl || '') + '" onerror="this.style.display=\'none\'" style="width:60px;height:60px;border-radius:12px;object-fit:cover;flex-shrink:0;background:#1a0d2e;"><div style="flex:1;min-width:0;"><div style="font-size:11px;color:#a855f7;font-weight:700;text-transform:uppercase;margin-bottom:4px;">' + item.tool + '</div><div style="font-size:13px;font-weight:700;margin-bottom:4px;word-break:break-all;">' + item.fileName + '</div><div style="font-size:11px;color:#665a7a;">' + timeAgo(item.time) + '</div></div><button onclick="downloadHistoryItem(\'' + item.id + '\')" style="padding:8px 12px;border-radius:10px;background:linear-gradient(135deg,#ff0080,#a855f7);border:none;color:#fff;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;flex-shrink:0;">⬇️</button></div>').join(''); } else if (tab === 'gallery') { if (history.length === 0) { container.innerHTML = '<div style="text-align:center;padding:60px 20px;color:#665a7a;font-size:14px;">📸<br><br>No images yet<br><span style="font-size:12px;">Downloaded files yahan dikhengi</span></div>'; return; } container.innerHTML = '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;">' + history.map(item => '<div style="aspect-ratio:1;border-radius:16px;overflow:hidden;background:linear-gradient(135deg, rgba(168,85,247,0.1), rgba(0,212,255,0.05));border:1px solid rgba(168,85,247,0.2);position:relative;"><img src="' + (item.dataUrl || '') + '" onerror="this.style.opacity=\'0.3\'" style="width:100%;height:100%;object-fit:cover;"><div style="position:absolute;bottom:6px;left:6px;right:6px;font-size:10px;color:#fff;background:rgba(0,0,0,0.7);padding:4px 8px;border-radius:8px;text-align:center;font-weight:600;">' + timeAgo(item.time) + '</div></div>').join('') + '</div>'; } }
 function downloadHistoryItem(id) { const item = getHistory().find(x => x.id === id); if (!item) return; const a = document.createElement('a'); a.href = item.dataUrl; a.download = item.fileName; document.body.appendChild(a); a.click(); document.body.removeChild(a); showToast('Downloaded!'); }
 function navTo(page) { document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active')); if (page === 'home') { const b = document.getElementById('navHome'); if (b) b.classList.add('active'); showScreen('homeScreen'); currentCategory = null; } else if (page === 'search') { const b = document.getElementById('navSearch'); if (b) b.classList.add('active'); showScreen('searchScreen'); const inp = document.getElementById('searchInputPage'); if (inp) setTimeout(() => inp.focus(), 100); } else if (page === 'gallery') { const b = document.getElementById('navGallery'); if (b) b.classList.add('active'); showScreen('profileScreen'); const t = document.getElementById('tabGallery'); if (t) switchProfileTab('gallery', t); } else if (page === 'profile') { const b = document.getElementById('navProfile'); if (b) b.classList.add('active'); showScreen('profileScreen'); updateStats(); const t = document.getElementById('tabHistory'); if (t) switchProfileTab('history', t); } else if (page === 'plus') { const b = document.getElementById('navPlus'); if (b) b.classList.add('active'); showScreen('homeScreen'); } }
+
+// ==================== FRAMES & COLLAGE ====================
+function applyFrame(style, btn) {
+  if (!canvas) { showToast('Upload image first'); return; }
+  canvas.style.border = 'none';
+  canvas.style.boxShadow = 'none';
+  canvas.style.borderRadius = '0';
+  if (style === 'simple') canvas.style.border = '8px solid #fff';
+  else if (style === 'rounded') { canvas.style.borderRadius = '24px'; canvas.style.border = '6px solid #fff'; }
+  else if (style === 'polaroid') { canvas.style.border = '20px solid #fff'; canvas.style.borderBottomWidth = '80px'; canvas.style.boxShadow = '0 8px 20px rgba(0,0,0,0.3)'; }
+  else if (style === 'vintage') { canvas.style.border = '12px solid #8b7355'; }
+  else if (style === 'neon') { canvas.style.border = '4px solid #00d4ff'; canvas.style.boxShadow = '0 0 20px #00d4ff'; }
+  else if (style === 'gold') { canvas.style.border = '8px solid #d4af37'; canvas.style.boxShadow = '0 0 30px rgba(212,175,55,0.5)'; }
+  if (btn) { btn.parentElement.querySelectorAll('.ctrl-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); }
+  showToast('Frame applied ✨');
+}
+
+function selectCollageLayout(layout, btn) {
+  collageLayout = layout;
+  if (btn) { btn.parentElement.querySelectorAll('.ctrl-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); }
+  showToast('Layout: ' + layout);
+}
+
+function addCollagePhotos(input) {
+  const files = Array.from(input.files || []);
+  if (files.length === 0) return;
+  files.forEach(f => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        collagePhotos.push(img);
+        showToast('Photo added ✅ (' + collagePhotos.length + ')');
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(f);
+  });
+}
+
+function createCollage() {
+  if (collagePhotos.length < 2) { showToast('Add at least 2 photos'); return; }
+  const tmp = document.createElement('canvas');
+  const cols = collageLayout === '1x2' ? 1 : (collageLayout === '2x1' ? 2 : parseInt(collageLayout));
+  const rows = collageLayout === '1x2' ? 2 : (collageLayout === '2x1' ? 1 : parseInt(collageLayout));
+  const cellW = 400, cellH = 400;
+  tmp.width = cols * cellW;
+  tmp.height = rows * cellH;
+  const tctx = tmp.getContext('2d');
+  tctx.fillStyle = '#000';
+  tctx.fillRect(0, 0, tmp.width, tmp.height);
+  collagePhotos.slice(0, cols * rows).forEach((img, i) => {
+    const col = i % cols, row = Math.floor(i / cols);
+    const x = col * cellW, y = row * cellH;
+    const scale = Math.max(cellW / img.width, cellH / img.height);
+    const w = img.width * scale, h = img.height * scale;
+    tctx.drawImage(img, x + (cellW - w) / 2, y + (cellH - h) / 2, w, h);
+  });
+  const preview = document.getElementById('collagePreview');
+  if (preview) preview.innerHTML = '<img src="' + tmp.toDataURL() + '" style="width:100%;border-radius:12px;">';
+  const a = document.createElement('a');
+  a.href = tmp.toDataURL();
+  a.download = 'picly-collage.png';
+  a.click();
+  showToast('✅ Collage created!');
+}
+
+// Export these functions
+window.applyFrame = applyFrame;
+window.selectCollageLayout = selectCollageLayout;
+window.addCollagePhotos = addCollagePhotos;
+window.createCollage = createCollage;
