@@ -128,7 +128,7 @@ function openTool(toolId) {
   const actionBtns = document.querySelector('.action-btns');
   if (isCalculator) { if (uploadArea) uploadArea.style.display = 'none'; if (canvasWrap) canvasWrap.style.display = 'block'; if (canvasContainer) canvasContainer.style.display = 'none'; if (actionBtns) actionBtns.style.display = 'none'; }
   else if (isVideo) { if (uploadArea) uploadArea.style.display = 'block'; if (canvasWrap) canvasWrap.style.display = 'block'; if (canvasContainer) canvasContainer.style.display = 'none'; if (actionBtns) actionBtns.style.display = 'none'; const h = document.getElementById('uploadHint'); const i = document.getElementById('modalUpload'); const t = document.getElementById('uploadTitle'); if (h && i && t) { h.textContent = 'MP4, MOV, WEBM — max 50MB'; i.setAttribute('accept', 'video/*'); t.textContent = 'Tap to upload video'; } }
-  else if (isAiMagic || isAiStudio) { if (uploadArea) uploadArea.style.display = 'none'; if (canvasWrap) canvasWrap.style.display = 'block'; if (canvasContainer) canvasContainer.style.display = 'none'; if (actionBtns) actionBtns.style.display = 'none'; }
+  else if (isAiMagic || isAiStudio) { if (uploadArea) uploadArea.style.display = 'block'; if (canvasWrap) canvasWrap.style.display = 'block'; if (canvasContainer) canvasContainer.style.display = 'none'; if (actionBtns) actionBtns.style.display = 'none'; const h = document.getElementById('uploadHint'); const i = document.getElementById('modalUpload'); const t = document.getElementById('uploadTitle'); if (h && i && t) { h.textContent = 'JPG, PNG, WEBP — max 10MB'; i.setAttribute('accept', 'image/*'); t.textContent = 'Tap to upload photo'; } }
   else { if (uploadArea) uploadArea.style.display = 'block'; if (canvasWrap) canvasWrap.style.display = 'none'; if (canvasContainer) canvasContainer.style.display = 'flex'; if (actionBtns) actionBtns.style.display = 'flex'; const h = document.getElementById('uploadHint'); const i = document.getElementById('modalUpload'); const t = document.getElementById('uploadTitle'); if (h && i && t) { h.textContent = 'JPG, PNG, WEBP — max 10MB'; i.setAttribute('accept', 'image/*'); t.textContent = 'Tap to upload photo'; } }
   buildControls(tool.type);
   showScreen('editorScreen');
@@ -407,7 +407,9 @@ function uploadWithProgress(url, formData, onProgress) {
     xhr.responseType = 'arraybuffer';
     xhr.send(formData);
   });
-}// ==================== BUILD CONTROLS ====================
+}
+
+// ==================== BUILD CONTROLS ====================
 function buildControls(type) {
   const wrap = document.getElementById('toolControls');
   if (!wrap) return;
@@ -475,7 +477,7 @@ function buildControls(type) {
   } else if (type === 'collage') {
     wrap.innerHTML = `<div class="control-group"><label>Layout</label><div class="ctrl-row"><button class="ctrl-btn" onclick="selectCollageLayout('2x2',this)">2×2</button><button class="ctrl-btn" onclick="selectCollageLayout('3x3',this)">3×3</button><button class="ctrl-btn" onclick="selectCollageLayout('1x2',this)">1×2</button></div></div><div class="control-group"><label>Photos</label><input type="file" accept="image/*" multiple id="collageInput" onchange="addCollagePhotos(this)" style="width:100%;padding:10px;border-radius:8px;border:1px solid #333;background:#1a1a1a;color:#fff;"></div><button class="primary-btn" onclick="createCollage()">Create Collage</button><div id="collagePreview" style="margin-top:16px;"></div>`;
   }
-
+}
 
 // ==================== VIDEO FUNCTIONS ====================
 async function runTrim() { if (isProcessing || !currentVideoFile) return; const start = parseFloat(document.getElementById('trimStartSlider').value) || 0; const end = parseFloat(document.getElementById('trimEndSlider').value) || 0; if (end - start < 0.5) { showToast('Trim range too small'); return; } isProcessing = true; await requestWakeLock(); showLoader('✂️ Trimming video'); try { const fd = new FormData(); fd.append('video', currentVideoFile); fd.append('start', start); fd.append('end', end); const blob = await uploadWithProgress(SERVER_URL + '/api/trim', fd, updateProgress); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'picly-trimmed.mp4'; a.click(); hideLoader(); showToast('✅ Trimmed!'); } catch (e) { hideLoader(); showToast('Error: ' + e.message); } await releaseWakeLock(); isProcessing = false; }
@@ -607,4 +609,4 @@ window.addCollagePhotos = addCollagePhotos;
 window.createCollage = createCollage;
 window.showToast = showToast;
 window.showLoader = showLoader;
-window.hideLoader = hideLoader;}
+window.hideLoader = hideLoader;
