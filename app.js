@@ -31,8 +31,7 @@ const categories = {
     { id:'ai-cleanup', name:'Cleanup', desc:'Remove objects', type:'ai-cleanup', img:'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=100&q=80' },
     { id:'ai-restore', name:'Photo Restore', desc:'Restore old photos', type:'ai-restore', img:'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=100&q=80' }
   ]},
-  aimagic: { name:'AI Magic', desc:'Free photo effects', tools:[
-    { id:'ai-enhance', name:'Photo Enhance', desc:'Sharper · Brighter', type:'ai-enhance', img:'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=100&q=80' },
+  
     { id:'ai-glow', name:'Glow Effect', desc:'Soft dreamy glow', type:'ai-glow', img:'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&q=80' }
   ]},
   utility: { name:'Utility', desc:'Calculators · QR', tools:[
