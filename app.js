@@ -1,3 +1,13 @@
+// ==================== EARLY GLOBAL EXPORTS (Safety Net) ====================
+// Ye exports file ke top pe hain — taaki baad mein error aaye to bhi functions available rahen
+window.__piclyReady = false;
+window.__piclyError = null;
+
+// Global error handler
+window.addEventListener('error', function(e) {
+  console.error('❌ PICLY ERROR:', e.message, 'at', e.filename, ':', e.lineno);
+  window.__piclyError = e.message;
+});
 const SERVER_URL = 'https://picly-server-production.up.railway.app';
 
 const categories = {
@@ -575,3 +585,193 @@ window.addEventListener('DOMContentLoaded', function() {
   function stop() { clearInterval(interval); }
   if (slider) { start(); slider.addEventListener('touchstart', stop); slider.addEventListener('touchend', () => setTimeout(start, 4000)); slider.addEventListener('mouseenter', stop); slider.addEventListener('mouseleave', start); }
 });
+
+// ==================== GLOBAL EXPORTS ====================
+window.showScreen = showScreen;
+window.navTo = navTo;
+window.goHome = goHome;
+window.openCategory = openCategory;
+window.openTool = openTool;
+window.openToolFromHome = openToolFromHome;
+window.backToCategory = backToCategory;
+window.handleGlobalUpload = handleGlobalUpload;
+window.loadImage = loadImage;
+window.resetImage = resetImage;
+window.loadVideo = loadVideo;
+window.selectCompressQuality = selectCompressQuality;
+window.selectEnhanceType = selectEnhanceType;
+window.selectResolution = selectResolution;
+window.selectAiMagic = selectAiMagic;
+window.selectAiRatio = selectAiRatio;
+window.selectUpscaleScale = selectUpscaleScale;
+window.loadAiImage = loadAiImage;
+window.applyAiMagic = applyAiMagic;
+window.generateAiImage = generateAiImage;
+window.downloadAiImage = downloadAiImage;
+window.loadRemoveBgImage = loadRemoveBgImage;
+window.removeBgOnly = removeBgOnly;
+window.loadBgImage = loadBgImage;
+window.replaceBackground = replaceBackground;
+window.loadEditorImage = loadEditorImage;
+window.setEditorPrompt = setEditorPrompt;
+window.runAiEditor = runAiEditor;
+window.downloadEditorResult = downloadEditorResult;
+window.loadUpscaleImage = loadUpscaleImage;
+window.runUpscale = runUpscale;
+window.downloadUpscale = downloadUpscale;
+window.loadCleanupImage = loadCleanupImage;
+window.runCleanup = runCleanup;
+window.downloadCleanup = downloadCleanup;
+window.setBrushSize = setBrushSize;
+window.clearMask = clearMask;
+window.loadRestoreImage = loadRestoreImage;
+window.runRestore = runRestore;
+window.downloadRestore = downloadRestore;
+window.trimVideo = trimVideo;
+window.compressVideo = compressVideo;
+window.extractMp3 = extractMp3;
+window.videoToGif = videoToGif;
+window.enhanceVideo = enhanceVideo;
+window.cropImage = cropImage;
+window.applyFilter = applyFilter;
+window.resizeImage = resizeImage;
+window.rotateImage = rotateImage;
+window.flipImage = flipImage;
+window.compressImage = compressImage;
+window.makePassport = makePassport;
+window.exportPDF = exportPDF;
+window.convertFormat = convertFormat;
+window.addTextDrag = addTextDrag;
+window.addStickerDrag = addStickerDrag;
+window.downloadImage = downloadImage;
+window.calculateEMI = calculateEMI;
+window.calcGST = calcGST;
+window.calculateAge = calculateAge;
+window.calculateBMI = calculateBMI;
+window.convertUnit = convertUnit;
+window.generateQR = generateQR;
+window.buildControls = buildControls;
+
+// Search, Settings, Profile, Notifications
+window.openNotifications = openNotifications;
+window.closeNotifications = closeNotifications;
+window.clearAllNotifications = clearAllNotifications;
+window.searchTools = searchTools;
+window.openSettings = openSettings;
+window.clearAllData = clearAllData;
+window.switchProfileTab = switchProfileTab;
+window.renderProfileContent = renderProfileContent;
+window.downloadHistoryItem = downloadHistoryItem;
+window.addHistory = addHistory;
+window.getHistory = getHistory;
+window.updateStats = updateStats;
+window.updateNotifBadge = updateNotifBadge;
+window.renderNotifications = renderNotifications;
+window.downloadBlob = downloadBlob;
+window.showToast = showToast;
+window.showLoader = showLoader;
+window.hideLoader = hideLoader;
+window.uploadWithProgress = uploadWithProgress;
+window.requestWakeLock = requestWakeLock;
+window.releaseWakeLock = releaseWakeLock;
+window.timeAgo = timeAgo;
+
+// Init
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', function() { updateStats(); updateNotifBadge(); renderNotifications(); });
+} else {
+  updateStats(); updateNotifBadge(); renderNotifications();
+}
+
+// ==================== GLOBAL EXPORTS ====================
+// Ye exports saare functions ko window pe expose karte hain
+// taaki HTML ke onclick handlers inhe call kar sakein
+
+window.showScreen = showScreen;
+window.navTo = navTo;
+window.goHome = goHome;
+window.openCategory = openCategory;
+window.openTool = openTool;
+window.openToolFromHome = openToolFromHome;
+window.backToCategory = backToCategory;
+window.handleGlobalUpload = handleGlobalUpload;
+window.loadImage = loadImage;
+window.resetImage = resetImage;
+window.loadVideo = loadVideo;
+window.selectCompressQuality = selectCompressQuality;
+window.selectEnhanceType = selectEnhanceType;
+window.selectResolution = selectResolution;
+window.selectAiMagic = selectAiMagic;
+window.selectAiRatio = selectAiRatio;
+window.selectUpscaleScale = selectUpscaleScale;
+window.loadAiImage = loadAiImage;
+window.applyAiMagic = applyAiMagic;
+window.generateAiImage = generateAiImage;
+window.downloadAiImage = downloadAiImage;
+window.loadRemoveBgImage = loadRemoveBgImage;
+window.removeBgOnly = removeBgOnly;
+window.loadBgImage = loadBgImage;
+window.replaceBackground = replaceBackground;
+window.loadEditorImage = loadEditorImage;
+window.setEditorPrompt = setEditorPrompt;
+window.runAiEditor = runAiEditor;
+window.downloadEditorResult = downloadEditorResult;
+window.loadUpscaleImage = loadUpscaleImage;
+window.runUpscale = runUpscale;
+window.downloadUpscale = downloadUpscale;
+window.loadCleanupImage = loadCleanupImage;
+window.runCleanup = runCleanup;
+window.downloadCleanup = downloadCleanup;
+window.setBrushSize = setBrushSize;
+window.clearMask = clearMask;
+window.loadRestoreImage = loadRestoreImage;
+window.runRestore = runRestore;
+window.downloadRestore = downloadRestore;
+window.trimVideo = trimVideo;
+window.compressVideo = compressVideo;
+window.extractMp3 = extractMp3;
+window.videoToGif = videoToGif;
+window.enhanceVideo = enhanceVideo;
+window.cropImage = cropImage;
+window.applyFilter = applyFilter;
+window.resizeImage = resizeImage;
+window.rotateImage = rotateImage;
+window.flipImage = flipImage;
+window.compressImage = compressImage;
+window.makePassport = makePassport;
+window.exportPDF = exportPDF;
+window.convertFormat = convertFormat;
+window.addTextDrag = addTextDrag;
+window.addStickerDrag = addStickerDrag;
+window.downloadImage = downloadImage;
+window.calculateEMI = calculateEMI;
+window.calcGST = calcGST;
+window.calculateAge = calculateAge;
+window.calculateBMI = calculateBMI;
+window.convertUnit = convertUnit;
+window.generateQR = generateQR;
+window.buildControls = buildControls;
+
+// Search, Settings, Profile, Notifications
+window.openNotifications = openNotifications;
+window.closeNotifications = closeNotifications;
+window.clearAllNotifications = clearAllNotifications;
+window.searchTools = searchTools;
+window.openSettings = openSettings;
+window.clearAllData = clearAllData;
+window.switchProfileTab = switchProfileTab;
+window.renderProfileContent = renderProfileContent;
+window.downloadHistoryItem = downloadHistoryItem;
+window.addHistory = addHistory;
+window.getHistory = getHistory;
+window.updateStats = updateStats;
+window.updateNotifBadge = updateNotifBadge;
+window.renderNotifications = renderNotifications;
+window.downloadBlob = downloadBlob;
+window.showToast = showToast;
+window.showLoader = showLoader;
+window.hideLoader = hideLoader;
+window.uploadWithProgress = uploadWithProgress;
+window.requestWakeLock = requestWakeLock;
+window.releaseWakeLock = releaseWakeLock;
+window.timeAgo = timeAgo;
