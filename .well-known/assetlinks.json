@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "com.picly.app",
+        "sha256_cert_fingerprints": ["D7:E7:75:A4:16:7F:A1:16:89:7C:38:07:63:CB:31:79:39:39:D1:CB:4F:E2:D7:16:C7:63:60:54:90:E1:37:FC"]
+      }
+    }]
