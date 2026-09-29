@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Picly — All-in-One Photo Studio</title>
 <link rel="stylesheet" href="style.css">
 </head>
@@ -32,14 +32,19 @@
       <img class="anime-gif" src="https://i.ibb.co/8gKn7Q6X/Lonely-Vtuber-Sticker.gif" alt="anime">
     </div>
     <div class="header-actions">
-      <div class="icon-btn" onclick="showToast('Notifications soon')"><svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div>
-      <div class="icon-btn" onclick="showToast('Settings soon')"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></div>
+      <div class="icon-btn" onclick="openNotifications()" style="position:relative">
+        <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        <span id="notifBadge" style="position:absolute;top:-4px;right:-4px;background:#ff0080;color:#fff;font-size:10px;padding:2px 6px;border-radius:10px;font-weight:700;display:none;">0</span>
+      </div>
+      <div class="icon-btn" onclick="openSettings()">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </div>
     </div>
   </div>
 
-  <div class="search-bar">
+  <div class="search-bar" onclick="navTo('search')">
     <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-    <input type="text" placeholder="Search tools...">
+    <input type="text" placeholder="Search tools..." readonly>
   </div>
 
   <div class="hero">
@@ -198,24 +203,6 @@
       </div>
     </div>
 
-    <div class="category-card cc-7" onclick="openCategory('aimagic')">
-      <img class="cat-img" src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=500&q=80" alt="">
-      <div class="cc-overlay"></div>
-      <div class="cat-hook new">AI</div>
-      <div class="cat-content">
-        <div class="cat-thumbs">
-          <img class="cat-thumb" src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&q=80" alt="">
-          <img class="cat-thumb" src="https://images.unsplash.com/photo-1580489944761-15a19d654956?w=100&q=80" alt="">
-          <img class="cat-thumb" src="https://images.unsplash.com/photo-1578632767115-351597cf2477?w=100&q=80" alt="">
-        </div>
-        <div class="cat-bottom">
-          <div class="cat-name">AI Magic</div>
-          <div class="cat-desc">Enhance · anime · restore · glow</div>
-          <div class="cat-badge">4 tools</div>
-        </div>
-      </div>
-    </div>
-
     <div class="category-card cc-1" onclick="openCategory('utility')">
       <img class="cat-img" src="https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=500&q=80" alt="">
       <div class="cc-overlay"></div>
@@ -252,38 +239,11 @@
 
   </div>
 
-  <div class="pro-card">
-    <div class="pro-badge">👑 PRO</div>
-    <div class="pro-title">Unlock Everything</div>
-    <div class="pro-desc">All tools, no watermark, 4K export, priority processing.</div>
-    <div class="pro-pricing">
-      <div class="price-box">
-        <div class="amount">₹19</div>
-        <div class="period">per month</div>
-      </div>
-      <div class="price-box best">
-        <div class="price-tag">BEST VALUE</div>
-        <div class="amount">₹49</div>
-        <div class="period">per year</div>
-      </div>
-    </div>
-    <div class="pro-features">
-      <div class="pro-feature">✓ 7-Day Free Trial</div>
-      <div class="pro-feature">✓ No Watermark</div>
-      <div class="pro-feature">✓ 4K Export</div>
-      <div class="pro-feature">✓ All Tools</div>
-    </div>
-    <button class="pro-btn" onclick="startTrial()">Start 7-Day Free Trial</button>
-  </div>
-
   <div class="bottom-nav">
-    <div class="nav-item active" onclick="goHome()"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>Home</span></div>
-    <div class="nav-item" onclick="showToast('Search coming soon')"><svg class="nav-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><span>Search</span></div>
+    <div class="nav-item active" onclick="navTo('home')"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>Home</span></div>
     <div class="create-btn" onclick="document.getElementById('globalUpload').click()"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div>
-    <div class="nav-item" onclick="showToast('Gallery coming soon')"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg><span>Gallery</span></div>
-    <div class="nav-item" onclick="showToast('Profile coming soon')"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg><span>Profile</span></div>
+    <div class="nav-item" onclick="navTo('profile')"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg><span>Profile</span></div>
   </div>
-
 </div>
 
 <div id="categoryScreen" class="screen">
@@ -325,6 +285,78 @@
       </div>
     </div>
   </div>
+</div>
+
+<!-- SEARCH SCREEN -->
+<div class="screen" id="searchScreen">
+  <div class="cat-page-header">
+    <button class="back-btn" onclick="goHome()"><svg viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg></button>
+    <div class="cat-page-title">Search Tools</div>
+  </div>
+  <div style="padding:20px;">
+    <input type="text" id="searchInputPage" placeholder="Search tools..." oninput="searchTools(this.value)" style="width:100%;padding:14px 18px;border-radius:14px;border:1.5px solid rgba(168,85,247,0.3);background:rgba(168,85,247,0.05);color:#fff;font-size:15px;font-family:inherit;outline:none;margin-bottom:20px;">
+    <div id="searchResults"></div>
+  </div>
+</div>
+
+<!-- SETTINGS SCREEN -->
+<div class="screen" id="settingsScreen">
+  <div class="cat-page-header">
+    <button class="back-btn" onclick="goHome()"><svg viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg></button>
+    <div class="cat-page-title">Settings</div>
+  </div>
+  <div style="padding:20px;display:flex;flex-direction:column;gap:12px;">
+    <div style="padding:20px;background:linear-gradient(135deg, rgba(168,85,247,0.1), rgba(0,212,255,0.05));border:1px solid rgba(168,85,247,0.2);border-radius:16px;">
+      <div style="font-size:15px;font-weight:700;margin-bottom:4px;">🌙 Dark Mode</div>
+      <div style="font-size:12px;color:#a99bc4;">Always on</div>
+    </div>
+    <div style="padding:20px;background:linear-gradient(135deg, rgba(168,85,247,0.1), rgba(0,212,255,0.05));border:1px solid rgba(168,85,247,0.2);border-radius:16px;cursor:pointer;" onclick="clearAllData()">
+      <div style="font-size:15px;font-weight:700;margin-bottom:4px;">🗑️ Clear All Data</div>
+      <div style="font-size:12px;color:#a99bc4;">History + notifications delete</div>
+    </div>
+    <div style="padding:20px;background:linear-gradient(135deg, rgba(168,85,247,0.1), rgba(0,212,255,0.05));border:1px solid rgba(168,85,247,0.2);border-radius:16px;">
+      <div style="font-size:15px;font-weight:700;margin-bottom:4px;">ℹ️ About Picly</div>
+      <div style="font-size:12px;color:#a99bc4;">Version 1.0</div>
+    </div>
+  </div>
+</div>
+
+<!-- PROFILE SCREEN -->
+<div class="screen" id="profileScreen">
+  <div class="cat-page-header">
+    <button class="back-btn" onclick="goHome()"><svg viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg></button>
+    <div class="cat-page-title">Profile</div>
+  </div>
+  <div style="text-align:center;padding:24px 20px;">
+    <div style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,#ff0080,#a855f7,#00d4ff);display:flex;align-items:center;justify-content:center;font-size:36px;margin:0 auto 14px;">👤</div>
+    <div style="font-size:20px;font-weight:800;margin-bottom:4px;">Picly User</div>
+    <div style="font-size:13px;color:#a99bc4;">Free Account</div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:0 20px 20px;">
+    <div style="padding:20px;background:linear-gradient(135deg, rgba(168,85,247,0.1), rgba(0,212,255,0.05));border:1px solid rgba(168,85,247,0.2);border-radius:16px;text-align:center;">
+      <div style="font-size:28px;font-weight:900;background:linear-gradient(135deg,#ff0080,#a855f7,#00d4ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;" id="statDownloads">0</div>
+      <div style="font-size:11px;color:#a99bc4;font-weight:700;margin-top:4px;">Downloads</div>
+    </div>
+    <div style="padding:20px;background:linear-gradient(135deg, rgba(168,85,247,0.1), rgba(0,212,255,0.05));border:1px solid rgba(168,85,247,0.2);border-radius:16px;text-align:center;">
+      <div style="font-size:28px;font-weight:900;background:linear-gradient(135deg,#ff0080,#a855f7,#00d4ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;" id="statTools">0</div>
+      <div style="font-size:11px;color:#a99bc4;font-weight:700;margin-top:4px;">Tools Used</div>
+    </div>
+  </div>
+  <div style="display:flex;gap:8px;padding:0 20px 16px;">
+    <button class="profile-tab active" id="tabHistory" onclick="switchProfileTab('history', this)" style="flex:1;padding:12px;border-radius:12px;background:linear-gradient(135deg,#ff0080,#a855f7);color:#fff;border:none;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">📜 History</button>
+    <button class="profile-tab" id="tabGallery" onclick="switchProfileTab('gallery', this)" style="flex:1;padding:12px;border-radius:12px;background:rgba(168,85,247,0.08);border:1.5px solid rgba(168,85,247,0.2);color:#a99bc4;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">📸 Gallery</button>
+  </div>
+  <div id="profileTabContent" style="padding:0 20px 20px;"></div>
+</div>
+
+<!-- NOTIFICATION PANEL -->
+<div class="notif-overlay" id="notifOverlay" onclick="closeNotifications()" style="position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:998;opacity:0;pointer-events:none;transition:opacity 0.3s;"></div>
+<div class="notif-panel" id="notifPanel" style="position:fixed;top:0;right:-100%;width:85%;max-width:380px;height:100vh;background:linear-gradient(180deg,#0d0518,#06030d);border-left:1px solid rgba(168,85,247,0.2);z-index:999;transition:right 0.3s ease;overflow-y:auto;padding:20px;">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid rgba(168,85,247,0.15);">
+    <h3 style="font-size:18px;font-weight:800;background:linear-gradient(135deg,#ff0080,#a855f7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">🔔 Notifications</h3>
+    <button onclick="closeNotifications()" style="background:none;border:none;color:#a99bc4;font-size:28px;cursor:pointer;">×</button>
+  </div>
+  <div id="notifList"></div>
 </div>
 
 <input type="file" id="globalUpload" accept="image/*,video/*" style="display:none" onchange="handleGlobalUpload(this)">
