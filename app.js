@@ -184,10 +184,88 @@ function downloadCleanup() { if (!currentCleanupResult) return; const a = docume
 
 function loadRestoreImage(input) { const file = input.files ? input.files[0] : input; if (!file) return; currentRestoreImage = file; const reader = new FileReader(); reader.onload = (e) => { document.getElementById('restorePreview').src = e.target.result; document.getElementById('restorePending').style.display = 'none'; document.getElementById('restoreActive').style.display = 'block'; }; reader.readAsDataURL(file); }
 
-async function runRestore() { if (isProcessing) return; if (!currentRestoreImage) { showToast('Upload photo'); return; } isProcessing = true; await requestWakeLock(); showLoader('🎨 Restoring photo (30-60 sec)'); try { const formData = new FormData(); formData.append('image', currentRestoreImage); const blob = await uploadWithProgress(SERVER_URL + '/api/restore', formData, updateProgress); currentRestoreResult = URL.createObjectURL(blob); document.getElementById('restoreResultImg').src = currentRestoreResult; document.getElementById('restoreResult').style.display = 'block'; hideLoader(); showToast('✅ Restored!'); } catch (err) { hideLoader(); showToast('Error: ' + err.message); } await releaseWakeLock(); isProcessing = false; }
+// ==================== ASYNC RESTORE — NO TIMEOUT ====================
+async function runRestore() {
+  if (isProcessing) return;
+  if (!currentRestoreImage) { showToast('Upload photo'); return; }
+  isProcessing = true;
+  await requestWakeLock();
+  showLoader('🎨 Restoring photo (30-60 sec)');
 
-function downloadRestore() { if (!currentRestoreResult) return; const a = document.createElement('a'); a.href = currentRestoreResult; a.download = 'picly-restored-' + Date.now() + '.png'; a.click(); }
+  try {
+    // Step 1: Upload + get job ID (fast, ~1 sec)
+    const formData = new FormData();
+    formData.append('image', currentRestoreImage);
 
+    const uploadRes = await fetch(SERVER_URL + '/api/restore', { method: 'POST', body: formData });
+    if (!uploadRes.ok) throw new Error('Upload failed: ' + uploadRes.status);
+    const { jobId } = await uploadRes.json();
+    if (!jobId) throw new Error('No job ID received');
+    console.log('Job ID:', jobId);
+
+    // Step 2: Poll status every 3 sec (max 180 sec)
+    let attempts = 0;
+    const maxAttempts = 60;
+
+    while (attempts < maxAttempts) {
+      await new Promise(r => setTimeout(r, 3000));
+      attempts++;
+
+      const statusRes = await fetch(SERVER_URL + '/api/restore-status/' + jobId);
+      if (!statusRes.ok) {
+        if (statusRes.status === 404) throw new Error('Job expired');
+        continue;
+      }
+
+      const statusData = await statusRes.json();
+      console.log(`Poll ${attempts}:`, statusData.status);
+
+      if (statusData.status === 'completed') {
+        // Step 3: Download result
+        const resultRes = await fetch(SERVER_URL + '/api/restore-result/' + jobId);
+        if (!resultRes.ok) throw new Error('Download failed');
+
+        const blob = await resultRes.blob();
+        currentRestoreResult = URL.createObjectURL(blob);
+        const img = document.getElementById('restoreResultImg');
+        img.src = currentRestoreResult;
+        img.style.display = 'block';
+        document.getElementById('restoreResult').style.display = 'block';
+
+        hideLoader();
+        showToast('✅ Restored!');
+        await releaseWakeLock();
+        isProcessing = false;
+        return;
+      }
+
+      if (statusData.status === 'failed') throw new Error(statusData.error || 'Restore failed');
+
+      showLoader(`🎨 Processing... (${attempts * 3}s)`);
+    }
+
+    throw new Error('Timeout — 180 sec exceed');
+  } catch (err) {
+    hideLoader();
+    console.error('❌', err);
+    showToast('Error: ' + err.message);
+  }
+  await releaseWakeLock();
+  isProcessing = false;
+}
+
+function downloadRestore() {
+  if (!currentRestoreResult) { showToast('No result yet'); return; }
+  const a = document.createElement('a');
+  a.href = currentRestoreResult;
+  a.download = 'picly-restored-' + Date.now() + '.png';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  showToast('✅ Downloaded!');
+}
+
+// ==================== HELPERS ====================
 async function requestWakeLock() { try { if ('wakeLock' in navigator) { wakeLock = await navigator.wakeLock.request('screen'); } } catch (err) {} }
 async function releaseWakeLock() { if (wakeLock) { try { await wakeLock.release(); } catch(e) {} wakeLock = null; } }
 
