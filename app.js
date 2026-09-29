@@ -142,11 +142,13 @@ function openTool(toolId) {
   const isVideo = VIDEO_TYPES.includes(tool.type);
   const isAiMagic = AI_MAGIC_TYPES.includes(tool.type);
   const isAiStudio = AI_STUDIO_TYPES.includes(tool.type);
+  const isPhotoSig = (tool.type === 'photo-signature');
   const uploadArea = document.getElementById('uploadArea');
   const canvasWrap = document.getElementById('canvasWrap');
   const canvasContainer = document.querySelector('.canvas-container');
   const actionBtns = document.querySelector('.action-btns');
-  if (isCalculator) { if (uploadArea) uploadArea.style.display = 'none'; if (canvasWrap) canvasWrap.style.display = 'block'; if (canvasContainer) canvasContainer.style.display = 'none'; if (actionBtns) actionBtns.style.display = 'none'; }
+  if (isPhotoSig) { if (uploadArea) uploadArea.style.display = 'block'; if (canvasWrap) canvasWrap.style.display = 'block'; if (canvasContainer) canvasContainer.style.display = 'none'; if (actionBtns) actionBtns.style.display = 'none'; }
+  else if (isCalculator) { if (uploadArea) uploadArea.style.display = 'none'; if (canvasWrap) canvasWrap.style.display = 'block'; if (canvasContainer) canvasContainer.style.display = 'none'; if (actionBtns) actionBtns.style.display = 'none'; }
   else if (isVideo) { if (uploadArea) uploadArea.style.display = 'block'; if (canvasWrap) canvasWrap.style.display = 'block'; if (canvasContainer) canvasContainer.style.display = 'none'; if (actionBtns) actionBtns.style.display = 'none'; }
   else if (isAiMagic || isAiStudio) { if (uploadArea) uploadArea.style.display = 'block'; if (canvasWrap) canvasWrap.style.display = 'block'; if (canvasContainer) canvasContainer.style.display = 'none'; if (actionBtns) actionBtns.style.display = 'none'; }
   else { if (uploadArea) uploadArea.style.display = 'block'; if (canvasWrap) canvasWrap.style.display = 'none'; if (canvasContainer) canvasContainer.style.display = 'flex'; if (actionBtns) actionBtns.style.display = 'flex'; }
@@ -161,7 +163,6 @@ function loadImage(input) {
   const file = input.files ? input.files[0] : input; 
   if (!file) return; 
   
-  // ✅ Photo Signature special handling
   if (currentTool && currentTool.type === 'photo-signature') {
     loadPhotoSigImage(input);
     return;
@@ -231,8 +232,6 @@ function loadPhotoSigImage(input) {
       psPhoto = img;
       const preview = document.getElementById('psPhotoPreview');
       if (preview) preview.src = e.target.result;
-      const title = document.getElementById('psUploadTitle');
-      if (title) title.textContent = 'Change photo';
       const active = document.getElementById('psPhotoActive');
       if (active) active.style.display = 'block';
       document.getElementById('uploadArea').style.display = 'none';
