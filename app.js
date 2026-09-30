@@ -147,10 +147,9 @@ function openTool(toolId) {
   const canvasWrap = document.getElementById('canvasWrap');
   const canvasContainer = document.querySelector('.canvas-container');
   const actionBtns = document.querySelector('.action-btns');
-  if (isPhotoSig) { if (uploadArea) uploadArea.style.display = 'block'; if (canvasWrap) canvasWrap.style.display = 'block'; if (canvasContainer) canvasContainer.style.display = 'none'; if (actionBtns) actionBtns.style.display = 'none'; }
+  if (isPhotoSig || isAiMagic || isAiStudio) { if (uploadArea) uploadArea.style.display = 'none'; if (canvasWrap) canvasWrap.style.display = 'block'; if (canvasContainer) canvasContainer.style.display = 'none'; if (actionBtns) actionBtns.style.display = 'none'; }
   else if (isCalculator) { if (uploadArea) uploadArea.style.display = 'none'; if (canvasWrap) canvasWrap.style.display = 'block'; if (canvasContainer) canvasContainer.style.display = 'none'; if (actionBtns) actionBtns.style.display = 'none'; }
   else if (isVideo) { if (uploadArea) uploadArea.style.display = 'block'; if (canvasWrap) canvasWrap.style.display = 'block'; if (canvasContainer) canvasContainer.style.display = 'none'; if (actionBtns) actionBtns.style.display = 'none'; }
-  else if (isAiMagic || isAiStudio) { if (uploadArea) uploadArea.style.display = 'block'; if (canvasWrap) canvasWrap.style.display = 'block'; if (canvasContainer) canvasContainer.style.display = 'none'; if (actionBtns) actionBtns.style.display = 'none'; }
   else { if (uploadArea) uploadArea.style.display = 'block'; if (canvasWrap) canvasWrap.style.display = 'none'; if (canvasContainer) canvasContainer.style.display = 'flex'; if (actionBtns) actionBtns.style.display = 'flex'; }
   buildControls(tool.type);
   showScreen('editorScreen');
@@ -203,26 +202,9 @@ function showToast(msg) { const t = document.getElementById('toast'); if (!t) re
 // ==================== DOWNLOAD HELPER (WebView compatible) ====================
 function downloadFile(url, fileName) {
   if (typeof Android !== 'undefined' && Android.downloadBase64) {
-    fetch(url)
-      .then(res => res.blob())
-      .then(blob => {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          Android.downloadBase64(reader.result, blob.type || 'application/octet-stream');
-        };
-        reader.readAsDataURL(blob);
-      })
-      .catch(err => {
-        console.error('Download failed:', err);
-        showToast('Download failed: ' + err.message);
-      });
+    fetch(url).then(res => res.blob()).then(blob => { const reader = new FileReader(); reader.onloadend = () => { Android.downloadBase64(reader.result, blob.type || 'application/octet-stream'); }; reader.readAsDataURL(blob); }).catch(err => { console.error('Download failed:', err); showToast('Download failed: ' + err.message); });
   } else {
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = fileName;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    const a = document.createElement('a'); a.href = url; a.download = fileName; document.body.appendChild(a); a.click(); document.body.removeChild(a);
   }
 }
 
@@ -268,10 +250,7 @@ function setupPsCanvas() {
   psCanvas.width = rect.width * 2;
   psCanvas.height = rect.height * 2;
   psCtx = psCanvas.getContext('2d');
-  psCtx.lineCap = 'round';
-  psCtx.lineJoin = 'round';
-  psCtx.strokeStyle = psColor;
-  psCtx.lineWidth = psBrush * 2;
+  psCtx.lineCap = 'round'; psCtx.lineJoin = 'round'; psCtx.strokeStyle = psColor; psCtx.lineWidth = psBrush * 2;
   psStrokes = [];
   psCtx.clearRect(0, 0, psCanvas.width, psCanvas.height);
   const getPos = (e) => { const r = psCanvas.getBoundingClientRect(); const t = e.touches ? e.touches[0] : e; return { x: (t.clientX - r.left) * (psCanvas.width / r.width), y: (t.clientY - r.top) * (psCanvas.height / r.height) }; };
@@ -284,40 +263,19 @@ function setupPsCanvas() {
 function setPsColor(color, btn) { psColor = color; if (psCtx) psCtx.strokeStyle = color; if (btn) { btn.parentElement.querySelectorAll('.ctrl-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); } }
 function setPsBrush(size, btn) { psBrush = size; if (psCtx) psCtx.lineWidth = size * 2; if (btn) { btn.parentElement.querySelectorAll('.ctrl-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); } }
 function clearPsSignature() { if (!psCtx || !psCanvas) return; psCtx.clearRect(0, 0, psCanvas.width, psCanvas.height); psStrokes = []; showToast('Cleared'); }
-
-function undoPsSignature() {
-  if (!psCtx || !psCanvas || psStrokes.length === 0) { showToast('Nothing to undo'); return; }
-  let lastStart = -1;
-  for (let i = psStrokes.length - 1; i >= 0; i--) { if (psStrokes[i].type === 'start') { lastStart = i; break; } }
-  if (lastStart === -1) { clearPsSignature(); return; }
-  psStrokes = psStrokes.slice(0, lastStart);
-  redrawPsStrokes();
-  showToast('Undo');
-}
-
-function redrawPsStrokes() {
-  if (!psCtx || !psCanvas) return;
-  psCtx.clearRect(0, 0, psCanvas.width, psCanvas.height);
-  psStrokes.forEach(s => {
-    psCtx.strokeStyle = s.color; psCtx.fillStyle = s.color; psCtx.lineWidth = s.width;
-    if (s.type === 'start') { psCtx.beginPath(); psCtx.arc(s.x, s.y, s.width / 2, 0, Math.PI * 2); psCtx.fill(); }
-    else if (s.type === 'line') { psCtx.beginPath(); psCtx.moveTo(s.x1, s.y1); psCtx.lineTo(s.x2, s.y2); psCtx.stroke(); }
-  });
-}
+function undoPsSignature() { if (!psCtx || !psCanvas || psStrokes.length === 0) { showToast('Nothing to undo'); return; } let lastStart = -1; for (let i = psStrokes.length - 1; i >= 0; i--) { if (psStrokes[i].type === 'start') { lastStart = i; break; } } if (lastStart === -1) { clearPsSignature(); return; } psStrokes = psStrokes.slice(0, lastStart); redrawPsStrokes(); showToast('Undo'); }
+function redrawPsStrokes() { if (!psCtx || !psCanvas) return; psCtx.clearRect(0, 0, psCanvas.width, psCanvas.height); psStrokes.forEach(s => { psCtx.strokeStyle = s.color; psCtx.fillStyle = s.color; psCtx.lineWidth = s.width; if (s.type === 'start') { psCtx.beginPath(); psCtx.arc(s.x, s.y, s.width / 2, 0, Math.PI * 2); psCtx.fill(); } else if (s.type === 'line') { psCtx.beginPath(); psCtx.moveTo(s.x1, s.y1); psCtx.lineTo(s.x2, s.y2); psCtx.stroke(); } }); }
 
 function mergePhotoSignature() {
   if (!psPhoto) { showToast('Upload photo first'); return; }
   const hasSignature = psStrokes.length > 0;
   const nameText = document.getElementById('psNameInput')?.value.trim() || '';
-  const photoW = psPhoto.width;
-  const photoH = psPhoto.height;
+  const photoW = psPhoto.width, photoH = psPhoto.height;
   const photoAreaH = photoH;
   const sigAreaH = Math.round(photoH * 0.3);
   const nameAreaH = nameText ? Math.round(photoH * 0.1) : 0;
-  const finalW = photoW;
-  const finalH = photoAreaH + nameAreaH + sigAreaH;
-  const temp = document.createElement('canvas');
-  temp.width = finalW; temp.height = finalH;
+  const finalW = photoW, finalH = photoAreaH + nameAreaH + sigAreaH;
+  const temp = document.createElement('canvas'); temp.width = finalW; temp.height = finalH;
   const tctx = temp.getContext('2d');
   tctx.fillStyle = '#ffffff'; tctx.fillRect(0, 0, finalW, finalH);
   tctx.drawImage(psPhoto, 0, 0, photoW, photoH);
@@ -329,13 +287,7 @@ function mergePhotoSignature() {
   showToast('Merged ✨');
 }
 
-function downloadPhotoSignature() {
-  if (!psResult) { showToast('Merge first'); return; }
-  const fileName = 'picly-photo-signature-' + Date.now() + '.jpg';
-  downloadFile(psResult, fileName);
-  addHistory('Photo + Signature', fileName, psResult);
-  showToast('Downloaded! 🎉');
-}
+function downloadPhotoSignature() { if (!psResult) { showToast('Merge first'); return; } const fileName = 'picly-photo-signature-' + Date.now() + '.jpg'; downloadFile(psResult, fileName); addHistory('Photo + Signature', fileName, psResult); showToast('Downloaded! 🎉'); }
 
 // ==================== BUILD CONTROLS ====================
 function buildControls(type) {
@@ -355,7 +307,7 @@ function buildControls(type) {
   else if (type === 'text') { c.innerHTML = '<div class="control-label">Add Text</div><div class="manual-row"><input type="text" id="textInput" placeholder="Type text..." class="manual-input"></div><div class="manual-row"><input type="number" id="textSize" value="60" class="manual-input"></div><div class="control-row"><button class="ctrl-btn primary" onclick="addTextDrag()">Add Text</button></div>'; }
   else if (type === 'stickers') { c.innerHTML = '<div class="control-label">Stickers</div><div class="sticker-grid">' + ['😂','🥰','😎','❤️','🌟','💯','🦁','🎉'].map(e => '<button class="sticker-btn" onclick="addStickerDrag(\'' + e + '\')">' + e + '</button>').join('') + '</div>'; }
   else if (type === 'passport') { c.innerHTML = '<div class="control-label">Size</div><div class="control-row"><button class="ctrl-btn" onclick="makePassport(35,45)">35×45mm</button><button class="ctrl-btn" onclick="makePassport(51,51)">2×2 inch</button></div>'; }
-  else if (type === 'photo-signature') { c.innerHTML = '<input type="file" id="psPhotoInput" accept="image/*" onchange="loadPhotoSigImage(this)" style="display:none;"><div id="psPhotoActive" style="display:none;"><img id="psPhotoPreview" style="width:100%;max-height:280px;object-fit:contain;border-radius:18px;margin-bottom:12px;"><div class="control-label">Name (Optional)</div><input type="text" id="psNameInput" placeholder="Type your name..." class="manual-input" style="width:100%;margin-bottom:12px;"><div class="control-label">Signature (Draw below)</div><div style="position:relative;background:#fff;border-radius:12px;margin-bottom:12px;overflow:hidden;"><canvas id="psSignCanvas" style="width:100%;height:160px;display:block;touch-action:none;cursor:crosshair;"></canvas></div><div class="control-row" style="margin-bottom:8px;"><button class="ctrl-btn active" onclick="setPsColor(\'#000000\', this)" style="flex:1;">⚫ Black</button><button class="ctrl-btn" onclick="setPsColor(\'#0033cc\', this)" style="flex:1;">🔵 Blue</button></div><div class="control-row" style="margin-bottom:8px;"><button class="ctrl-btn" onclick="setPsBrush(2, this)" style="flex:1;">Thin</button><button class="ctrl-btn active" onclick="setPsBrush(3, this)" style="flex:1;">Normal</button><button class="ctrl-btn" onclick="setPsBrush(5, this)" style="flex:1;">Thick</button></div><div class="control-row" style="margin-bottom:8px;"><button class="ctrl-btn" onclick="undoPsSignature()" style="flex:1;">↶ Undo</button><button class="ctrl-btn" onclick="clearPsSignature()" style="flex:1;">🗑️ Clear</button></div><button class="ctrl-btn primary" onclick="mergePhotoSignature()" style="width:100%;padding:18px;margin-top:8px;">✨ Merge & Preview</button><div id="psResultBox" style="display:none;margin-top:16px;"><img id="psResultImg" style="width:100%;border-radius:18px;margin-bottom:12px;"><button class="ctrl-btn primary" onclick="downloadPhotoSignature()" style="width:100%;padding:16px;">⬇️ Download</button></div></div>'; }
+  else if (type === 'photo-signature') { c.innerHTML = '<div id="psPhotoActive" style="display:none;"><img id="psPhotoPreview" style="width:100%;max-height:280px;object-fit:contain;border-radius:18px;margin-bottom:12px;"><div class="control-label">Name (Optional)</div><input type="text" id="psNameInput" placeholder="Type your name..." class="manual-input" style="width:100%;margin-bottom:12px;"><div class="control-label">Signature (Draw below)</div><div style="position:relative;background:#fff;border-radius:12px;margin-bottom:12px;overflow:hidden;"><canvas id="psSignCanvas" style="width:100%;height:160px;display:block;touch-action:none;cursor:crosshair;"></canvas></div><div class="control-row" style="margin-bottom:8px;"><button class="ctrl-btn active" onclick="setPsColor(\'#000000\', this)" style="flex:1;">⚫ Black</button><button class="ctrl-btn" onclick="setPsColor(\'#0033cc\', this)" style="flex:1;">🔵 Blue</button></div><div class="control-row" style="margin-bottom:8px;"><button class="ctrl-btn" onclick="setPsBrush(2, this)" style="flex:1;">Thin</button><button class="ctrl-btn active" onclick="setPsBrush(3, this)" style="flex:1;">Normal</button><button class="ctrl-btn" onclick="setPsBrush(5, this)" style="flex:1;">Thick</button></div><div class="control-row" style="margin-bottom:8px;"><button class="ctrl-btn" onclick="undoPsSignature()" style="flex:1;">↶ Undo</button><button class="ctrl-btn" onclick="clearPsSignature()" style="flex:1;">🗑️ Clear</button></div><button class="ctrl-btn primary" onclick="mergePhotoSignature()" style="width:100%;padding:18px;margin-top:8px;">✨ Merge & Preview</button><div id="psResultBox" style="display:none;margin-top:16px;"><img id="psResultImg" style="width:100%;border-radius:18px;margin-bottom:12px;"><button class="ctrl-btn primary" onclick="downloadPhotoSignature()" style="width:100%;padding:16px;">⬇️ Download</button></div></div>'; }
   else if (type === 'compress') { c.innerHTML = '<div class="control-label">Quality</div><div class="control-row"><button class="ctrl-btn" onclick="compressImage(0.9)">High</button><button class="ctrl-btn" onclick="compressImage(0.6)">Medium</button><button class="ctrl-btn" onclick="compressImage(0.3)">Low</button></div>'; }
   else if (type === 'pdf') { c.innerHTML = '<div class="control-label">PDF</div><div class="control-row"><button class="ctrl-btn primary" onclick="exportPDF()">Download PDF</button></div>'; }
   else if (type === 'convert') { c.innerHTML = '<div class="control-label">Format</div><div class="control-row"><button class="ctrl-btn" onclick="convertFormat(\'jpeg\')">JPG</button><button class="ctrl-btn" onclick="convertFormat(\'png\')">PNG</button><button class="ctrl-btn" onclick="convertFormat(\'webp\')">WEBP</button></div>'; }
@@ -403,52 +355,12 @@ function makeDraggable(el) { let drag = false, sx, sy, sl, st; const start = (e)
 function applyOverlay() { if (overlayItems.length === 0 || !canvas) return; const cr = canvas.getBoundingClientRect(); overlayItems.forEach(item => { const ir = item.getBoundingClientRect(); const x = ir.left - cr.left, y = ir.top - cr.top; if (item.dataset.type === 'text') { ctx.font = 'bold ' + item.dataset.size + 'px ' + selectedFont; ctx.fillStyle = selectedTextColor; ctx.strokeStyle = selectedTextColor === '#000000' ? '#ffffff' : '#000000'; ctx.lineWidth = Math.round(item.dataset.size/15); ctx.textAlign = 'left'; ctx.textBaseline = 'top'; ctx.strokeText(item.textContent, x, y); ctx.fillText(item.textContent, x, y); } else if (item.dataset.type === 'sticker') { ctx.font = item.dataset.size + 'px sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'top'; ctx.fillText(item.dataset.emoji, x, y); } }); overlayItems = []; if (overlayLayer) overlayLayer.innerHTML = ''; showToast('Applied! ✨'); }
 
 // ==================== DOWNLOAD ====================
-function downloadImage() {
-  if (!currentImage) { showToast('No image'); return; }
-  if (overlayItems.length > 0) applyOverlay();
-  const fileName = 'picly-' + Date.now() + '.jpg';
-  const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
-  downloadFile(dataUrl, fileName);
-  addHistory('Edit', fileName, dataUrl);
-  showToast('Downloaded! 🎉');
-}
-function downloadCleanup() {
-  if (!currentCleanupResult) { showToast('No result yet'); return; }
-  const fileName = 'picly-cleanup-' + Date.now() + '.jpg';
-  downloadFile(currentCleanupResult, fileName);
-  addHistory('Cleanup', fileName, currentCleanupResult);
-  showToast('✅ Downloaded!');
-}
-function downloadRestore() {
-  if (!currentRestoreResult) { showToast('No result yet'); return; }
-  const ext = currentRestoreExt || 'png';
-  const fileName = 'picly-restored-' + Date.now() + '.' + ext;
-  downloadFile(currentRestoreResult, fileName);
-  addHistory('Photo Restore', fileName, currentRestoreResult);
-  showToast('✅ Downloaded!');
-}
-function downloadUpscale() {
-  if (!currentUpscaleResult) return;
-  const fileName = 'picly-upscaled-' + selectedUpscaleScale + 'x-' + Date.now() + '.png';
-  downloadFile(currentUpscaleResult, fileName);
-  addHistory('AI Upscale', fileName, currentUpscaleResult);
-  showToast('✅ Downloaded!');
-}
-function downloadAiImage() {
-  if (!currentAiImageResult) { showToast('No image yet'); return; }
-  const fileName = 'picly-ai-' + Date.now() + '.png';
-  const dataUrl = 'data:image/png;base64,' + currentAiImageResult;
-  downloadFile(dataUrl, fileName);
-  addHistory('Text to Image', fileName, dataUrl);
-  showToast('✅ Downloaded!');
-}
-function downloadEditorResult() {
-  if (!currentEditorResult) { showToast('No result yet'); return; }
-  const fileName = 'picly-edited-' + Date.now() + '.png';
-  downloadFile(currentEditorResult, fileName);
-  addHistory('AI Editor', fileName, currentEditorResult);
-  showToast('✅ Downloaded!');
-}
+function downloadImage() { if (!currentImage) { showToast('No image'); return; } if (overlayItems.length > 0) applyOverlay(); const fileName = 'picly-' + Date.now() + '.jpg'; const dataUrl = canvas.toDataURL('image/jpeg', 0.95); downloadFile(dataUrl, fileName); addHistory('Edit', fileName, dataUrl); showToast('Downloaded! 🎉'); }
+function downloadCleanup() { if (!currentCleanupResult) { showToast('No result yet'); return; } const fileName = 'picly-cleanup-' + Date.now() + '.jpg'; downloadFile(currentCleanupResult, fileName); addHistory('Cleanup', fileName, currentCleanupResult); showToast('✅ Downloaded!'); }
+function downloadRestore() { if (!currentRestoreResult) { showToast('No result yet'); return; } const ext = currentRestoreExt || 'png'; const fileName = 'picly-restored-' + Date.now() + '.' + ext; downloadFile(currentRestoreResult, fileName); addHistory('Photo Restore', fileName, currentRestoreResult); showToast('✅ Downloaded!'); }
+function downloadUpscale() { if (!currentUpscaleResult) return; const fileName = 'picly-upscaled-' + selectedUpscaleScale + 'x-' + Date.now() + '.png'; downloadFile(currentUpscaleResult, fileName); addHistory('AI Upscale', fileName, currentUpscaleResult); showToast('✅ Downloaded!'); }
+function downloadAiImage() { if (!currentAiImageResult) { showToast('No image yet'); return; } const fileName = 'picly-ai-' + Date.now() + '.png'; const dataUrl = 'data:image/png;base64,' + currentAiImageResult; downloadFile(dataUrl, fileName); addHistory('Text to Image', fileName, dataUrl); showToast('✅ Downloaded!'); }
+function downloadEditorResult() { if (!currentEditorResult) { showToast('No result yet'); return; } const fileName = 'picly-edited-' + Date.now() + '.png'; downloadFile(currentEditorResult, fileName); addHistory('AI Editor', fileName, currentEditorResult); showToast('✅ Downloaded!'); }
 
 // ==================== VIDEO ====================
 async function trimVideo() { 
@@ -539,32 +451,26 @@ window.downloadFile = downloadFile;
 // Init
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', function() {
-    canvas = document.getElementById('canvas');
-    if (canvas) ctx = canvas.getContext('2d');
+    canvas = document.getElementById('canvas'); if (canvas) ctx = canvas.getContext('2d');
     overlayLayer = document.getElementById('overlayLayer');
-    const slider = document.getElementById('slider');
-    const dots = document.querySelectorAll('#dots .dot');
+    const slider = document.getElementById('slider'); const dots = document.querySelectorAll('#dots .dot');
     let cs = 0, iv;
     function ud(i) { dots.forEach((d,x) => d.classList.toggle('active', x===i)); }
     function ss(i) { if (!slider || !slider.children[i]) return; slider.scrollTo({ left: slider.children[i].offsetLeft - 20, behavior: 'smooth' }); ud(i); }
     function ns() { if (!slider) return; cs = (cs + 1) % slider.children.length; ss(cs); }
-    function st() { iv = setInterval(ns, 3000); }
-    function sp() { clearInterval(iv); }
+    function st() { iv = setInterval(ns, 3000); } function sp() { clearInterval(iv); }
     if (slider) { st(); slider.addEventListener('touchstart', sp); slider.addEventListener('touchend', () => setTimeout(st, 4000)); slider.addEventListener('mouseenter', sp); slider.addEventListener('mouseleave', st); }
     updateStats(); updateNotifBadge(); renderNotifications();
   });
 } else {
-  canvas = document.getElementById('canvas');
-  if (canvas) ctx = canvas.getContext('2d');
+  canvas = document.getElementById('canvas'); if (canvas) ctx = canvas.getContext('2d');
   overlayLayer = document.getElementById('overlayLayer');
-  const slider = document.getElementById('slider');
-  const dots = document.querySelectorAll('#dots .dot');
+  const slider = document.getElementById('slider'); const dots = document.querySelectorAll('#dots .dot');
   let cs = 0, iv;
   function ud(i) { dots.forEach((d,x) => d.classList.toggle('active', x===i)); }
   function ss(i) { if (!slider || !slider.children[i]) return; slider.scrollTo({ left: slider.children[i].offsetLeft - 20, behavior: 'smooth' }); ud(i); }
   function ns() { if (!slider) return; cs = (cs + 1) % slider.children.length; ss(cs); }
-  function st() { iv = setInterval(ns, 3000); }
-  function sp() { clearInterval(iv); }
+  function st() { iv = setInterval(ns, 3000); } function sp() { clearInterval(iv); }
   if (slider) { st(); slider.addEventListener('touchstart', sp); slider.addEventListener('touchend', () => setTimeout(st, 4000)); slider.addEventListener('mouseenter', sp); slider.addEventListener('mouseleave', st); }
   updateStats(); updateNotifBadge(); renderNotifications();
 }
