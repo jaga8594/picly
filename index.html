@@ -261,6 +261,7 @@
   <div class="tools-list" id="toolsList"></div>
 </div>
 
+<!-- EDITOR SCREEN WITH BOTTOM NAV -->
 <div id="editorScreen" class="screen">
   <div class="cat-page-header">
     <button class="back-btn" onclick="backToCategory()"><svg viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg></button>
@@ -286,6 +287,22 @@
         <button class="action-btn secondary" onclick="resetImage()">Reset</button>
         <button class="action-btn" onclick="downloadImage()">Download</button>
       </div>
+    </div>
+  </div>
+
+  <!-- ✅ NEW: Bottom Nav for Tools -->
+  <div class="bottom-nav">
+    <div class="nav-item active" onclick="goHome()">
+      <svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      <span>Home</span>
+    </div>
+    <div class="nav-item" onclick="navTo('search')">
+      <svg class="nav-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <span>Search</span>
+    </div>
+    <div class="nav-item" onclick="navTo('profile')">
+      <svg class="nav-icon" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      <span>Profile</span>
     </div>
   </div>
 </div>
