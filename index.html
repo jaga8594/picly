@@ -17,9 +17,16 @@
 <meta property="og:type" content="website"/>
 <link rel="apple-touch-icon" href="/icon-192.png">
 
-<!-- ✅ YAHAN TUMHARA ADSENSE CODE ADD KIYA HAI -->
-<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6379672274518750"
-     crossorigin="anonymous"></script>
+<!-- ✅ NAYA DYNAMIC ADSENSE CODE (APK MEIN NAHI CHALEGA, SIRF BROWSER MEIN) -->
+<script>
+  if (typeof Android === 'undefined') {
+    var adsenseScript = document.createElement('script');
+    adsenseScript.src = "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6379672274518750";
+    adsenseScript.async = true;
+    adsenseScript.crossOrigin = "anonymous";
+    document.head.appendChild(adsenseScript);
+  }
+</script>
 
 </head>
 <body>
