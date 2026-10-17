@@ -1,5 +1,5 @@
 // ==================== CONFIG ====================
-const SERVER_URL = 'https://picly-server-production.up.railway.app';
+const SERVER_URL = 'https://in-1.shulker.in:10159'; // Yahan naya Shulker URL daala hai
 
 const categories = {
   edit: { name:'Edit', desc:'Crop · filters · text · stickers', tools:[
