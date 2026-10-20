@@ -1,68 +1,25 @@
 // ==================== CONFIG ====================
 const SERVER_URL = 'https://picly-server-production.up.railway.app';
 
-// ==================== MONETAQ ADS (APK ONLY) ====================
-const MONETAQ_BANNER_ZONE = 'YOUR_MONETAQ_BANNER_ZONE_ID'; // Apna zone ID daalna baad mein
-const MONETAQ_INTERSTITIAL_ZONE = 'YOUR_MONETAQ_INTERSTITIAL_ZONE_ID'; // Apna zone ID daalna baad mein
+// ==================== ADSTERRA BANNER SETUP (APK ONLY) ====================
+const ADSTERRA_ZONE_ID = '6137270';
 
-let _monetaqInterstitialCallback = null;
-let _adDownloadCounter = 0;
-
-function loadMonetaqBanner() {
-  if (typeof Android === 'undefined') return;
-  const el = document.getElementById('monetaqBanner');
-  if (!el || el.dataset.loaded || MONETAQ_BANNER_ZONE.indexOf('YOUR_') === 0) return;
+function loadAdsterraBanner() {
+  if (typeof Android === 'undefined') return; // Browser mein nahi chalega
+  const el = document.getElementById('adsterraBanner');
+  if (!el || el.dataset.loaded) return;
   
-  // Monetaq usually uses script tags for their ads
-  const script = document.createElement('script');
-  script.src = 'https://p.monetag.com/' + MONETAQ_BANNER_ZONE + '/invoke.js';
-  script.async = true;
-  el.appendChild(script);
+  const iframe = document.createElement('iframe');
+  iframe.src = 'https://www.highperformanceformat.com/' + ADSTERRA_ZONE_ID + '/invoke.html';
+  iframe.width = '320';
+  iframe.height = '50';
+  iframe.style.cssText = 'border:0;display:block;margin:auto;';
+  iframe.scrolling = 'no';
+  iframe.setAttribute('frameborder', '0');
   
+  el.appendChild(iframe);
   el.style.display = 'block';
   el.dataset.loaded = 'true';
-}
-
-function showMonetaqInterstitial(callback) {
-  if (typeof Android === 'undefined') { if (callback) callback(); return; }
-  const modal = document.getElementById('monetaqInterstitial');
-  if (!modal) { if (callback) callback(); return; }
-  const adEl = document.getElementById('monetaqInterstitialAd');
-  
-  if (adEl && MONETAQ_INTERSTITIAL_ZONE.indexOf('YOUR_') !== 0) {
-    adEl.innerHTML = 'Loading ad...';
-    const iframe = document.createElement('iframe');
-    iframe.src = 'https://p.monetag.com/' + MONETAQ_INTERSTITIAL_ZONE + '/invoke.html';
-    iframe.width = '300';
-    iframe.height = '250';
-    iframe.style.cssText = 'border:0;display:block;';
-    iframe.scrolling = 'no';
-    iframe.setAttribute('frameborder', '0');
-    adEl.innerHTML = '';
-    adEl.appendChild(iframe);
-  }
-  
-  modal.style.display = 'flex';
-  _monetaqInterstitialCallback = callback;
-}
-
-function closeMonetaqInterstitial() {
-  const modal = document.getElementById('monetaqInterstitial');
-  if (modal) modal.style.display = 'none';
-  const cb = _monetaqInterstitialCallback;
-  _monetaqInterstitialCallback = null;
-  if (cb) cb();
-}
-
-function maybeShowAd(callback) {
-  if (typeof Android === 'undefined') { if (callback) callback(); return; }
-  _adDownloadCounter++;
-  // First download free, then every 2nd download shows ad
-  if (_adDownloadCounter > 1 && _adDownloadCounter % 2 === 0) {
-    showMonetaqInterstitial(callback);
-  } else {
-    if (callback) callback();
-  }
 }
 
 // ==================== CATEGORIES ====================
@@ -264,16 +221,26 @@ function hideLoader() { updateProgress(100); setTimeout(() => { const el = docum
 function uploadWithProgress(url, formData, onProgress) { return new Promise((resolve, reject) => { const xhr = new XMLHttpRequest(); xhr.open('POST', url, true); xhr.responseType = 'blob'; xhr.timeout = 180000; xhr.upload.onprogress = (e) => { if (e.lengthComputable) onProgress((e.loaded / e.total) * 40); }; xhr.upload.onload = () => { onProgress(45); let fake = 45; window.serverProgressInterval = setInterval(() => { if (fake < 90) { fake += 1.5; onProgress(fake); } }, 400); }; xhr.onload = () => { if (window.serverProgressInterval) { clearInterval(window.serverProgressInterval); window.serverProgressInterval = null; } if (xhr.status >= 200 && xhr.status < 300) { onProgress(95); resolve(xhr.response); } else reject(new Error('Server error: ' + xhr.status)); }; xhr.onerror = () => { if (window.serverProgressInterval) { clearInterval(window.serverProgressInterval); window.serverProgressInterval = null; } reject(new Error('Network error')); }; xhr.ontimeout = () => { if (window.serverProgressInterval) { clearInterval(window.serverProgressInterval); window.serverProgressInterval = null; } reject(new Error('Request timed out')); }; xhr.send(formData); }); }
 function showToast(msg) { const t = document.getElementById('toast'); if (!t) return; t.textContent = msg; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2000); }
 
-// ==================== DOWNLOAD HELPER (Monetaq integrated) ====================
+// ==================== DOWNLOAD HELPER (Adsterra + Monetaq integrated) ====================
 function downloadFile(url, fileName) {
-  const _doDownload = () => {
-    if (typeof Android !== 'undefined' && Android.downloadBase64) {
-      fetch(url).then(res => res.blob()).then(blob => { const reader = new FileReader(); reader.onloadend = () => { Android.downloadBase64(reader.result, blob.type || 'application/octet-stream'); }; reader.readAsDataURL(blob); }).catch(err => { console.error('Download failed:', err); showToast('Download failed: ' + err.message); });
-    } else {
-      const a = document.createElement('a'); a.href = url; a.download = fileName; document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    }
-  };
-  maybeShowAd(_doDownload);
+  // 1. File Download Trigger
+  if (typeof Android !== 'undefined' && Android.downloadBase64) {
+    fetch(url).then(res => res.blob()).then(blob => { const reader = new FileReader(); reader.onloadend = () => { Android.downloadBase64(reader.result, blob.type || 'application/octet-stream'); }; reader.readAsDataURL(blob); }).catch(err => { console.error('Download failed:', err); showToast('Download failed: ' + err.message); });
+  } else {
+    const a = document.createElement('a'); a.href = url; a.download = fileName; document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  }
+
+  // 2. Monetaq Vignette Ad (Sirf APK mein chalega, download ke baad)
+  if (typeof Android !== 'undefined') {
+    setTimeout(() => {
+      try {
+        (function(s){
+          s.dataset.zone = '12079488';
+          s.src = 'https://n6wxm.com/vignette.min.js';
+        })([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement('script')));
+      } catch (e) { console.error('Vignette Error:', e); }
+    }, 1500); 
+  }
 }
 
 // ==================== PHOTO + SIGNATURE ====================
@@ -529,6 +496,9 @@ if (document.readyState === 'loading') {
     function st() { iv = setInterval(ns, 3000); } function sp() { clearInterval(iv); }
     if (slider) { st(); slider.addEventListener('touchstart', sp); slider.addEventListener('touchend', () => setTimeout(st, 4000)); slider.addEventListener('mouseenter', sp); slider.addEventListener('mouseleave', st); }
     updateStats(); updateNotifBadge(); renderNotifications();
+    
+    // Load Adsterra Banner on APK start
+    if (typeof Android !== 'undefined') { setTimeout(loadAdsterraBanner, 2000); }
   });
 } else {
   canvas = document.getElementById('canvas'); if (canvas) ctx = canvas.getContext('2d');
@@ -541,9 +511,7 @@ if (document.readyState === 'loading') {
   function st() { iv = setInterval(ns, 3000); } function sp() { clearInterval(iv); }
   if (slider) { st(); slider.addEventListener('touchstart', sp); slider.addEventListener('touchend', () => setTimeout(st, 4000)); slider.addEventListener('mouseenter', sp); slider.addEventListener('mouseleave', st); }
   updateStats(); updateNotifBadge(); renderNotifications();
-}
-
-// ==================== MONETAQ BANNER INIT (APK only) ====================
-if (typeof Android !== 'undefined') {
-  setTimeout(loadMonetaqBanner, 2000);
+  
+  // Load Adsterra Banner on APK start
+  if (typeof Android !== 'undefined') { setTimeout(loadAdsterraBanner, 2000); }
 }
