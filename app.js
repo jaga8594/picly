@@ -1,74 +1,116 @@
 // ==================== CONFIG ====================
 const SERVER_URL = 'https://picly-server-production.up.railway.app';
 
-// ==================== MONETAQ BANNER (Bulletproof, one ad only) ====================
+// ==================== MONETAQ BANNER (Bulletproof — whitelist approach) ====================
 let monetaqScriptTag = null;
-let monetaqTimer = null;
 let monetaqSweeper = null;
 let adObserver = null;
+let adBusy = false;
 
-const AD_STYLES = {
-  'position': 'fixed',
-  'top': 'auto',
-  'bottom': '90px',
-  'left': '50%',
-  'right': 'auto',
-  'transform': 'translateX(-50%)',
-  'z-index': '9999',
-  'width': '320px',
-  'max-width': '90vw',
-  'margin': '0',
-  'padding': '0',
-  'border-radius': '12px',
-  'overflow': 'hidden',
-  'box-shadow': '0 4px 15px rgba(0,0,0,0.3)',
-  'display': 'block',
-  'visibility': 'visible',
-  'opacity': '1'
-};
+// Apne app ke saare body-level IDs — yahan ke alawa sab ad
+const PICLY_IDS = new Set([
+  'homeScreen', 'categoryScreen', 'editorScreen', 'searchScreen',
+  'settingsScreen', 'profileScreen', 'notifOverlay', 'notifPanel',
+  'globalUpload', 'toast', 'videoLoader', 'modalUpload', 'canvas'
+]);
 
-function getAdDivs() {
-  const result = [];
-  const children = document.body.children;
-  for (let i = 0; i < children.length; i++) {
-    const el = children[i];
-    if (el.tagName === 'DIV' && !el.id) result.push(el);
-  }
-  return result;
+function isOurElement(el) {
+  const tag = el.tagName;
+  if (tag === 'SCRIPT' || tag === 'LINK' || tag === 'META' || tag === 'STYLE') return true;
+  if (tag === 'INPUT') return true;
+  if (el.id && PICLY_IDS.has(el.id)) return true;
+  return false;
 }
 
-function enforceAdRules() {
-  const ads = getAdDivs();
-  if (ads.length === 0) return;
+function forceAdStyle(el) {
+  const s = {
+    'position': 'fixed', 'top': 'auto', 'bottom': '90px',
+    'left': '50%', 'right': 'auto',
+    'transform': 'translateX(-50%)',
+    'z-index': '9999',
+    'width': '320px', 'max-width': '90vw',
+    'height': 'auto', 'max-height': '280px',
+    'margin': '0', 'padding': '0',
+    'border-radius': '12px', 'overflow': 'hidden',
+    'box-shadow': '0 4px 15px rgba(0,0,0,0.3)',
+    'display': 'block', 'visibility': 'visible', 'opacity': '1'
+  };
+  for (const k in s) el.style.setProperty(k, s[k], 'important');
+}
 
-  if (ads.length > 1) {
-    for (let i = 0; i < ads.length - 1; i++) {
-      try { ads[i].remove(); } catch (e) {}
+function nukeAds() {
+  if (adBusy) return;
+  adBusy = true;
+  try {
+    const ads = [];
+    for (const el of document.body.children) {
+      if (isOurElement(el)) continue;
+      ads.push(el);
     }
-  }
 
-  const survivors = getAdDivs();
-  if (survivors.length === 0) return;
-  const ad = survivors[survivors.length - 1];
+    if (ads.length === 0) return;
 
-  for (const key in AD_STYLES) {
-    ad.style.setProperty(key, AD_STYLES[key], 'important');
+    // Keep only LAST, remove earlier ones (this kills the 2nd ad)
+    for (let i = 0; i < ads.length - 1; i++) {
+      try { ads[i].parentNode && ads[i].parentNode.removeChild(ads[i]); } catch(e) {}
+    }
+
+    const last = ads[ads.length - 1];
+    if (!last || !last.parentNode) return;
+
+    forceAdStyle(last);
+
+    // If wrapper contains multiple iframes, keep only last
+    const iframes = last.querySelectorAll('iframe');
+    if (iframes.length > 1) {
+      for (let i = 0; i < iframes.length - 1; i++) {
+        try { iframes[i].parentNode && iframes[i].parentNode.removeChild(iframes[i]); } catch(e) {}
+      }
+    }
+
+    // Force-style all remaining iframes inside
+    last.querySelectorAll('iframe').forEach(ifr => {
+      ifr.style.setProperty('position', 'relative', 'important');
+      ifr.style.setProperty('top', 'auto', 'important');
+      ifr.style.setProperty('left', 'auto', 'important');
+      ifr.style.setProperty('right', 'auto', 'important');
+      ifr.style.setProperty('bottom', 'auto', 'important');
+      ifr.style.setProperty('width', '100%', 'important');
+      ifr.style.setProperty('height', 'auto', 'important');
+      ifr.style.setProperty('max-height', '280px', 'important');
+      ifr.style.setProperty('display', 'block', 'important');
+    });
+  } finally {
+    adBusy = false;
   }
 }
 
 function startAdObserver() {
   if (adObserver) return;
-  adObserver = new MutationObserver(() => {
-    enforceAdRules();
-    requestAnimationFrame(enforceAdRules);
+  adObserver = new MutationObserver((mutations) => {
+    for (const m of mutations) {
+      if (m.type === 'childList' && m.addedNodes.length > 0) {
+        nukeAds();
+        requestAnimationFrame(nukeAds);
+        return;
+      }
+    }
   });
   adObserver.observe(document.body, { childList: true, subtree: true });
-  enforceAdRules();
+  nukeAds();
 }
 
 function startAdSweeper() {
   if (monetaqSweeper) return;
-  monetaqSweeper = setInterval(enforceAdRules, 800);
+  let ticks = 0;
+  const fast = setInterval(() => {
+    nukeAds();
+    ticks++;
+    if (ticks >= 80) {
+      clearInterval(fast);
+      monetaqSweeper = setInterval(nukeAds, 500);
+    }
+  }, 100);
 }
 
 function loadMonetaqBanner() {
@@ -79,8 +121,6 @@ function loadMonetaqBanner() {
   }
   monetaqScriptTag = null;
 
-  document.querySelectorAll('body > div:not([id])').forEach(el => el.remove());
-
   try {
     var s = document.createElement('script');
     s.dataset.zone = '12081006';
@@ -89,8 +129,8 @@ function loadMonetaqBanner() {
     document.body.appendChild(s);
     monetaqScriptTag = s;
 
-    [100, 300, 600, 1000, 1500, 2500, 4000].forEach(ms => {
-      setTimeout(enforceAdRules, ms);
+    [100, 300, 600, 1000, 1500, 2500, 4000, 6000].forEach(ms => {
+      setTimeout(nukeAds, ms);
     });
   } catch (e) {
     console.error('Banner Error:', e);
@@ -512,8 +552,6 @@ if (document.readyState === 'loading') {
     if (typeof Android !== 'undefined') {
       setTimeout(() => {
         loadMonetaqBanner();
-        if (monetaqTimer) clearInterval(monetaqTimer);
-        monetaqTimer = setInterval(loadMonetaqBanner, 10000);
       }, 2000);
     }
   });
@@ -534,8 +572,6 @@ if (document.readyState === 'loading') {
   if (typeof Android !== 'undefined') {
     setTimeout(() => {
       loadMonetaqBanner();
-      if (monetaqTimer) clearInterval(monetaqTimer);
-      monetaqTimer = setInterval(loadMonetaqBanner, 10000);
     }, 2000);
   }
 }
