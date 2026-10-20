@@ -1,33 +1,20 @@
 // ==================== CONFIG ====================
 const SERVER_URL = 'https://picly-server-production.up.railway.app';
 
-// ==================== ADSTERRA BANNER SETUP ====================
-function loadAdsterraBanner() {
+// ==================== MONETAQ ADS SETUP ====================
+// Bottom Banner (Zone: 12081006)
+function loadMonetaqBanner() {
   if (typeof Android === 'undefined') return;
-  const el = document.getElementById('adsterraBanner');
-  if (!el || el.dataset.loaded) return;
+  if (window._monetaqBannerLoaded) return;
   
-  // Official Adsterra Script format
-  const atOptions = {
-    'key' : '6137270',
-    'format' : 'iframe',
-    'height' : 50,
-    'width' : 320,
-    'params' : {}
-  };
-  
-  const script = document.createElement('script');
-  script.type = 'text/javascript';
-  script.innerHTML = `atOptions = ${JSON.stringify(atOptions)};`;
-  
-  const invokeScript = document.createElement('script');
-  invokeScript.type = 'text/javascript';
-  invokeScript.src = '//www.highperformanceformat.com/6137270/invoke.js';
-  
-  el.appendChild(script);
-  el.appendChild(invokeScript);
-  el.style.display = 'block';
-  el.dataset.loaded = 'true';
+  try {
+    var s = document.createElement('script');
+    s.dataset.zone = '12081006';
+    s.src = 'https://nap5k.com/tag.min.js';
+    document.body.appendChild(s);
+    window._monetaqBannerLoaded = true;
+    console.log('Monetaq Banner Loaded');
+  } catch(e) { console.error('Banner Error:', e); }
 }
 
 // ==================== CATEGORIES ====================
@@ -229,19 +216,18 @@ function hideLoader() { updateProgress(100); setTimeout(() => { const el = docum
 function uploadWithProgress(url, formData, onProgress) { return new Promise((resolve, reject) => { const xhr = new XMLHttpRequest(); xhr.open('POST', url, true); xhr.responseType = 'blob'; xhr.timeout = 180000; xhr.upload.onprogress = (e) => { if (e.lengthComputable) onProgress((e.loaded / e.total) * 40); }; xhr.upload.onload = () => { onProgress(45); let fake = 45; window.serverProgressInterval = setInterval(() => { if (fake < 90) { fake += 1.5; onProgress(fake); } }, 400); }; xhr.onload = () => { if (window.serverProgressInterval) { clearInterval(window.serverProgressInterval); window.serverProgressInterval = null; } if (xhr.status >= 200 && xhr.status < 300) { onProgress(95); resolve(xhr.response); } else reject(new Error('Server error: ' + xhr.status)); }; xhr.onerror = () => { if (window.serverProgressInterval) { clearInterval(window.serverProgressInterval); window.serverProgressInterval = null; } reject(new Error('Network error')); }; xhr.ontimeout = () => { if (window.serverProgressInterval) { clearInterval(window.serverProgressInterval); window.serverProgressInterval = null; } reject(new Error('Request timed out')); }; xhr.send(formData); }); }
 function showToast(msg) { const t = document.getElementById('toast'); if (!t) return; t.textContent = msg; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2000); }
 
-// ==================== DOWNLOAD HELPER (Monetaq Vignette) ====================
+// ==================== DOWNLOAD HELPER (Monetaq Vignette 12079488) ====================
 function downloadFile(url, fileName) {
-  // Monetaq Ad Trigger (Instant)
   if (typeof Android !== 'undefined') {
     try {
       (function(s){
         s.dataset.zone = '12079488';
         s.src = 'https://n6wxm.com/vignette.min.js';
       })([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement('script')));
+      console.log('Monetaq Vignette Triggered');
     } catch (e) { console.error('Vignette Error:', e); }
   }
 
-  // File Download
   if (typeof Android !== 'undefined' && Android.downloadBase64) {
     fetch(url).then(res => res.blob()).then(blob => { 
       const reader = new FileReader(); 
@@ -252,9 +238,7 @@ function downloadFile(url, fileName) {
       showToast('Download failed: ' + err.message); 
     });
   } else {
-    const a = document.createElement('a'); 
-    a.href = url; a.download = fileName; 
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    const a = document.createElement('a'); a.href = url; a.download = fileName; document.body.appendChild(a); a.click(); document.body.removeChild(a);
   }
 }
 
@@ -442,7 +426,7 @@ if (document.readyState === 'loading') {
     function st() { iv = setInterval(ns, 3000); } function sp() { clearInterval(iv); }
     if (slider) { st(); slider.addEventListener('touchstart', sp); slider.addEventListener('touchend', () => setTimeout(st, 4000)); slider.addEventListener('mouseenter', sp); slider.addEventListener('mouseleave', st); }
     updateStats(); updateNotifBadge(); renderNotifications();
-    if (typeof Android !== 'undefined') { setTimeout(loadAdsterraBanner, 1500); }
+    if (typeof Android !== 'undefined') { setTimeout(loadMonetaqBanner, 2000); }
   });
 } else {
   canvas = document.getElementById('canvas'); if (canvas) ctx = canvas.getContext('2d');
@@ -455,5 +439,5 @@ if (document.readyState === 'loading') {
   function st() { iv = setInterval(ns, 3000); } function sp() { clearInterval(iv); }
   if (slider) { st(); slider.addEventListener('touchstart', sp); slider.addEventListener('touchend', () => setTimeout(st, 4000)); slider.addEventListener('mouseenter', sp); slider.addEventListener('mouseleave', st); }
   updateStats(); updateNotifBadge(); renderNotifications();
-  if (typeof Android !== 'undefined') { setTimeout(loadAdsterraBanner, 1500); }
+  if (typeof Android !== 'undefined') { setTimeout(loadMonetaqBanner, 2000); }
 }
