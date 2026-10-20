@@ -10,6 +10,9 @@
 <meta name="google-site-verification" content="ay8l-YewK6X5T3br25O84QYPwenkeFolpv37qmq0pfE" />
 <!-- ✅ YAHAN TUMHARA ADSENSE META TAG ADD KIYA HAI -->
 <meta name="google-adsense-account" content="ca-pub-6379672274518750">
+<!-- ✅ MONETAQ VERIFICATION META TAG -->
+<meta name="monetag" content="48fdb7852895c13070182f6b813ba1e0">
+
 <meta name="description" content="Free online photo editor, passport photo maker, AI image generator, photo compress - Picly"/>
 <meta name="keywords" content="passport photo maker, photo compress online, AI image generator, photo editor free, SSC photo, UPSC photo, signature maker, picly"/>
 <meta name="author" content="Picly"/>
@@ -416,6 +419,18 @@
 
 <input type="file" id="globalUpload" accept="image/*,video/*" style="display:none" onchange="handleGlobalUpload(this)">
 <div class="toast" id="toast"></div>
+
+<!-- MONETAQ APK ADS (browser mein kuch nahi hoga) -->
+<div id="monetaqBanner" style="display:none;position:fixed;bottom:88px;left:50%;transform:translateX(-50%);width:320px;height:50px;z-index:99;background:rgba(10,5,20,0.95);border-radius:10px;overflow:hidden;border:1px solid rgba(168,85,247,0.15);"></div>
+
+<div id="monetaqInterstitial" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);backdrop-filter:blur(12px);z-index:9998;align-items:center;justify-content:center;padding:20px;">
+  <div style="background:linear-gradient(160deg,#140a24,#0a0514);border:1px solid rgba(168,85,247,0.3);border-radius:22px;padding:18px;max-width:340px;width:100%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.7),inset 0 1px 0 rgba(255,255,255,0.1);">
+    <div style="font-size:16px;font-weight:800;color:#fff;margin-bottom:4px;letter-spacing:-0.3px;">Your file is ready ✨</div>
+    <div style="font-size:11px;color:#a99bc4;margin-bottom:14px;">Tap continue to save</div>
+    <div id="monetaqInterstitialAd" style="width:300px;height:250px;margin:0 auto 14px;background:#1a0d2e;border-radius:12px;overflow:hidden;display:flex;align-items:center;justify-content:center;color:#665a7a;font-size:11px;">Loading ad...</div>
+    <button onclick="closeMonetaqInterstitial()" style="width:100%;padding:15px;border-radius:14px;background:linear-gradient(135deg,#ff0080,#a855f7);border:none;color:#fff;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;box-shadow:0 8px 24px rgba(255,0,128,0.4);">Continue</button>
+  </div>
+</div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.17.0/dist/ort.min.js"></script>
