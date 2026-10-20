@@ -18,10 +18,11 @@
 <link rel="apple-touch-icon" href="/icon-192.png">
 
 <style>
+  /* HilltopAds banner container ko bottom me fix karna */
+  body > div[id^="hilltop" i],
   body > div[class*="hilltop" i],
-  body > ins[class*="hilltop" i],
-  body > div[id*="hilltop" i],
-  body > iframe[src*="hilltop" i] {
+  body > iframe[src*="unfoldedtrade" i],
+  body > ins[class*="hilltop" i] {
     position: fixed !important;
     top: auto !important;
     bottom: 90px !important;
@@ -29,9 +30,9 @@
     right: auto !important;
     transform: translateX(-50%) !important;
     z-index: 9999 !important;
-    width: 320px !important;
+    width: 300px !important;
+    height: 100px !important;
     max-width: 90vw !important;
-    max-height: 280px !important;
     margin: 0 !important;
     padding: 0 !important;
     border-radius: 12px !important;
