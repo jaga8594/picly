@@ -1,7 +1,7 @@
 // ==================== CONFIG ====================
 const SERVER_URL = 'https://picly-server-production.up.railway.app';
 
-// ==================== HILLTOPADS BANNER ====================
+// ==================== HILLTOPADS BANNER (MULTITAG LOCKED) ====================
 let hilltopLoaded = false;
 
 function loadHilltopBanner() {
@@ -10,31 +10,40 @@ function loadHilltopBanner() {
   hilltopLoaded = true;
 
   try {
-    // ═══════════════════════════════════════════════════════════
-    // PASTE your HilltopAds banner code here (from dashboard)
-    // Typical pattern:
-    //   var s = document.createElement('script');
-    //   s.src = 'https://js.hilltopads.com/YOUR_SCRIPT_ID.js';
-    //   s.async = true;
-    //   document.body.appendChild(s);
-    //
-    //   var ins = document.createElement('ins');
-    //   ins.className = 'hilltopads';
-    //   ins.setAttribute('data-zone', '051f1b2f3a0bb0ea30ba');
-    //   document.body.appendChild(ins);
-    //
-    // Replace the block below with actual code from dashboard:
-    // ═══════════════════════════════════════════════════════════
-
+    // Script inject karo (Tera diya hua code)
     var s = document.createElement('script');
-    s.src = 'https://js.hilltopads.com/YOUR_SCRIPT_ID.js';   // ← replace
-    s.async = true;
+    s.innerHTML = `
+      (function(vygb){
+        var d = document,
+            s = d.createElement('script'),
+            l = d.currentScript || d.scripts[d.scripts.length - 1];
+        s.settings = vygb || {};
+        s.src = "\\/\\/unfoldedtrade.com\\/bUX.VhsqdjGRld0pYPWjcb\\/_ebmQ9MuQZ\\/UWlfkRPhTWcL1VMTzycgwrMbD\\/UNtkN\\/zGUvz\\/N\\/zlAawUONQR";
+        s.async = true;
+        s.referrerPolicy = 'no-referrer-when-downgrade';
+        l.parentNode.insertBefore(s, l);
+      })({})
+    `;
     document.body.appendChild(s);
 
-    var ins = document.createElement('ins');
-    ins.className = 'hilltopads';
-    ins.setAttribute('data-zone', '051f1b2f3a0bb0ea30ba');
-    document.body.appendChild(ins);
+    // MultiTag ke popunder / onclick / in-page ko block karo
+    // Sirf banner ko allow karega
+    setTimeout(() => {
+      window.open = function() { console.warn('Popunder blocked'); return null; };
+      
+      const killPopups = setInterval(() => {
+        const ads = document.querySelectorAll('body > iframe:not([id]), body > div:not([id])');
+        ads.forEach(el => {
+          const rect = el.getBoundingClientRect();
+          // Agar ad screen ke 80% se bada hai -> popunder/overlay hai, hata do
+          if (rect.width > window.innerWidth * 0.8 && rect.height > window.innerHeight * 0.8) {
+            el.remove();
+          }
+        });
+      }, 2000); 
+      
+      setTimeout(() => clearInterval(killPopups), 30000);
+    }, 1000);
 
   } catch (e) {
     console.error('Hilltop Error:', e);
@@ -240,8 +249,17 @@ function hideLoader() { updateProgress(100); setTimeout(() => { const el = docum
 function uploadWithProgress(url, formData, onProgress) { return new Promise((resolve, reject) => { const xhr = new XMLHttpRequest(); xhr.open('POST', url, true); xhr.responseType = 'blob'; xhr.timeout = 180000; xhr.upload.onprogress = (e) => { if (e.lengthComputable) onProgress((e.loaded / e.total) * 40); }; xhr.upload.onload = () => { onProgress(45); let fake = 45; window.serverProgressInterval = setInterval(() => { if (fake < 90) { fake += 1.5; onProgress(fake); } }, 400); }; xhr.onload = () => { if (window.serverProgressInterval) { clearInterval(window.serverProgressInterval); window.serverProgressInterval = null; } if (xhr.status >= 200 && xhr.status < 300) { onProgress(95); resolve(xhr.response); } else reject(new Error('Server error: ' + xhr.status)); }; xhr.onerror = () => { if (window.serverProgressInterval) { clearInterval(window.serverProgressInterval); window.serverProgressInterval = null; } reject(new Error('Network error')); }; xhr.ontimeout = () => { if (window.serverProgressInterval) { clearInterval(window.serverProgressInterval); window.serverProgressInterval = null; } reject(new Error('Request timed out')); }; xhr.send(formData); }); }
 function showToast(msg) { const t = document.getElementById('toast'); if (!t) return; t.textContent = msg; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2000); }
 
-// ==================== DOWNLOAD HELPER ====================
+// ==================== VIGNETTE + DOWNLOAD ====================
 function downloadFile(url, fileName) {
+  if (typeof Android !== 'undefined') {
+    try {
+      (function(s){
+        s.dataset.zone = '12079488';
+        s.src = 'https://n6wxm.com/vignette.min.js';
+      })([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement('script')));
+    } catch (e) { console.error('Vignette Error:', e); }
+  }
+
   if (typeof Android !== 'undefined' && Android.downloadBase64) {
     fetch(url).then(res => res.blob()).then(blob => { 
       const reader = new FileReader(); 
