@@ -1,25 +1,35 @@
 // ==================== CONFIG ====================
 const SERVER_URL = 'https://picly-server-production.up.railway.app';
 
-// ==================== MONETAQ BANNER (Niche, Har 15 sec) ====================
+// ==================== MONETAQ BANNER SETUP ====================
 function loadMonetaqBanner() {
   if (typeof Android === 'undefined') return;
   
-  // Har 15 second mein ad trigger hoga
-  setInterval(() => {
-    try {
-      // Purane ad ko clear karne ka try (optional, agar Monetaq apne aap clear nahi karta)
-      const oldAds = document.querySelectorAll('div[style*="position: fixed"][style*="top:"], div[style*="position:fixed"][style*="top:"]');
-      // Unhe delete nahi karenge kyunki Monetaq ka system crash ho sakta hai, 
-      // bas naya ad load karenge.
-      
-      var s = document.createElement('script');
-      s.dataset.zone = '12081006';
-      s.src = 'https://nap5k.com/tag.min.js';
-      document.body.appendChild(s);
-      console.log('Monetaq Banner Refreshed');
-    } catch(e) { console.error('Banner Error:', e); }
-  }, 15000); // 15 seconds
+  // 1. Purane Monetaq ad ko delete karo (taaki ek hi dikhe)
+  // Monetaq body ke andar bina ID wala div banata hai
+  const oldAds = document.querySelectorAll('body > div:not([id])');
+  oldAds.forEach(el => el.remove());
+
+  // 2. Naya ad load karo
+  try {
+    var s = document.createElement('script');
+    s.dataset.zone = '12081006';
+    s.src = 'https://nap5k.com/tag.min.js';
+    document.body.appendChild(s);
+  } catch(e) { console.error('Banner Error:', e); }
+
+  // 3. Naye ad ko force karke niche (bottom) le aao
+  setTimeout(() => {
+    const newAds = document.querySelectorAll('body > div:not([id])');
+    newAds.forEach(el => {
+      el.style.setProperty('top', 'auto', 'important');
+      el.style.setProperty('bottom', '90px', 'important');
+      el.style.setProperty('left', '50%', 'important');
+      el.style.setProperty('transform', 'translateX(-50%)', 'important');
+      el.style.setProperty('z-index', '9999', 'important');
+      el.style.setProperty('width', '320px', 'important');
+    });
+  }, 800);
 }
 
 // ==================== CATEGORIES ====================
@@ -432,8 +442,12 @@ if (document.readyState === 'loading') {
     if (slider) { st(); slider.addEventListener('touchstart', sp); slider.addEventListener('touchend', () => setTimeout(st, 4000)); slider.addEventListener('mouseenter', sp); slider.addEventListener('mouseleave', st); }
     updateStats(); updateNotifBadge(); renderNotifications();
     
-    // Load Monetaq Banner on APK start
-    if (typeof Android !== 'undefined') { setTimeout(loadMonetaqBanner, 1500); }
+    if (typeof Android !== 'undefined') {
+      setTimeout(() => {
+        loadMonetaqBanner();
+        setInterval(loadMonetaqBanner, 10000);
+      }, 2000);
+    }
   });
 } else {
   canvas = document.getElementById('canvas'); if (canvas) ctx = canvas.getContext('2d');
@@ -447,6 +461,10 @@ if (document.readyState === 'loading') {
   if (slider) { st(); slider.addEventListener('touchstart', sp); slider.addEventListener('touchend', () => setTimeout(st, 4000)); slider.addEventListener('mouseenter', sp); slider.addEventListener('mouseleave', st); }
   updateStats(); updateNotifBadge(); renderNotifications();
   
-  // Load Monetaq Banner on APK start
-  if (typeof Android !== 'undefined') { setTimeout(loadMonetaqBanner, 1500); }
+  if (typeof Android !== 'undefined') {
+    setTimeout(() => {
+      loadMonetaqBanner();
+      setInterval(loadMonetaqBanner, 10000);
+    }, 2000);
+  }
 }
