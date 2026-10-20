@@ -16,17 +16,20 @@
 <meta name="author" content="Picly"/>
 <link rel="apple-touch-icon" href="/icon-192.png">
 
-<!-- 🎯 MONETAQ AD KO NICHE FIX KARNE KA CSS 🎯 -->
+<!-- 🎯 MONETAQ AD — ONLY ONE, BOTTOM FIXED 🎯 -->
 <style>
   body > div:not([id]) {
+    position: fixed !important;
     top: auto !important;
     bottom: 90px !important;
     left: 50% !important;
     transform: translateX(-50%) !important;
     z-index: 9999 !important;
     width: 320px !important;
+    max-width: 90vw !important;
     border-radius: 12px !important;
     box-shadow: 0 4px 15px rgba(0,0,0,0.3) !important;
+    overflow: hidden !important;
   }
 </style>
 
