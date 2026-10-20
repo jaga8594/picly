@@ -1,21 +1,43 @@
 // ==================== CONFIG ====================
 const SERVER_URL = 'https://picly-server-production.up.railway.app';
 
-// ==================== MONETAQ BANNER (simple, one load) ====================
-let monetaqLoaded = false;
+// ==================== HILLTOPADS BANNER ====================
+let hilltopLoaded = false;
 
-function loadMonetaqBanner() {
+function loadHilltopBanner() {
   if (typeof Android === 'undefined') return;
-  if (monetaqLoaded) return;
-  monetaqLoaded = true;
+  if (hilltopLoaded) return;
+  hilltopLoaded = true;
+
   try {
+    // ═══════════════════════════════════════════════════════════
+    // PASTE your HilltopAds banner code here (from dashboard)
+    // Typical pattern:
+    //   var s = document.createElement('script');
+    //   s.src = 'https://js.hilltopads.com/YOUR_SCRIPT_ID.js';
+    //   s.async = true;
+    //   document.body.appendChild(s);
+    //
+    //   var ins = document.createElement('ins');
+    //   ins.className = 'hilltopads';
+    //   ins.setAttribute('data-zone', '051f1b2f3a0bb0ea30ba');
+    //   document.body.appendChild(ins);
+    //
+    // Replace the block below with actual code from dashboard:
+    // ═══════════════════════════════════════════════════════════
+
     var s = document.createElement('script');
-    s.dataset.zone = '12081006';
-    s.src = 'https://nap5k.com/tag.min.js';
+    s.src = 'https://js.hilltopads.com/YOUR_SCRIPT_ID.js';   // ← replace
     s.async = true;
     document.body.appendChild(s);
+
+    var ins = document.createElement('ins');
+    ins.className = 'hilltopads';
+    ins.setAttribute('data-zone', '051f1b2f3a0bb0ea30ba');
+    document.body.appendChild(ins);
+
   } catch (e) {
-    console.error('Banner Error:', e);
+    console.error('Hilltop Error:', e);
   }
 }
 
@@ -218,18 +240,8 @@ function hideLoader() { updateProgress(100); setTimeout(() => { const el = docum
 function uploadWithProgress(url, formData, onProgress) { return new Promise((resolve, reject) => { const xhr = new XMLHttpRequest(); xhr.open('POST', url, true); xhr.responseType = 'blob'; xhr.timeout = 180000; xhr.upload.onprogress = (e) => { if (e.lengthComputable) onProgress((e.loaded / e.total) * 40); }; xhr.upload.onload = () => { onProgress(45); let fake = 45; window.serverProgressInterval = setInterval(() => { if (fake < 90) { fake += 1.5; onProgress(fake); } }, 400); }; xhr.onload = () => { if (window.serverProgressInterval) { clearInterval(window.serverProgressInterval); window.serverProgressInterval = null; } if (xhr.status >= 200 && xhr.status < 300) { onProgress(95); resolve(xhr.response); } else reject(new Error('Server error: ' + xhr.status)); }; xhr.onerror = () => { if (window.serverProgressInterval) { clearInterval(window.serverProgressInterval); window.serverProgressInterval = null; } reject(new Error('Network error')); }; xhr.ontimeout = () => { if (window.serverProgressInterval) { clearInterval(window.serverProgressInterval); window.serverProgressInterval = null; } reject(new Error('Request timed out')); }; xhr.send(formData); }); }
 function showToast(msg) { const t = document.getElementById('toast'); if (!t) return; t.textContent = msg; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2000); }
 
-// ==================== DOWNLOAD HELPER (Monetaq Vignette 12079488) ====================
+// ==================== DOWNLOAD HELPER ====================
 function downloadFile(url, fileName) {
-  if (typeof Android !== 'undefined') {
-    try {
-      (function(s){
-        s.dataset.zone = '12079488';
-        s.src = 'https://n6wxm.com/vignette.min.js';
-      })([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement('script')));
-      console.log('Monetaq Vignette Triggered');
-    } catch (e) { console.error('Vignette Error:', e); }
-  }
-
   if (typeof Android !== 'undefined' && Android.downloadBase64) {
     fetch(url).then(res => res.blob()).then(blob => { 
       const reader = new FileReader(); 
@@ -430,7 +442,7 @@ if (document.readyState === 'loading') {
     updateStats(); updateNotifBadge(); renderNotifications();
 
     if (typeof Android !== 'undefined') {
-      setTimeout(loadMonetaqBanner, 2000);
+      setTimeout(loadHilltopBanner, 2000);
     }
   });
 } else {
@@ -446,6 +458,6 @@ if (document.readyState === 'loading') {
   updateStats(); updateNotifBadge(); renderNotifications();
 
   if (typeof Android !== 'undefined') {
-    setTimeout(loadMonetaqBanner, 2000);
+    setTimeout(loadHilltopBanner, 2000);
   }
 }
