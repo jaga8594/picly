@@ -9,18 +9,51 @@ function loadAdsterraBanner() {
   const el = document.getElementById('adsterraBanner');
   if (!el || el.dataset.loaded) return;
   
+  // Isolated Iframe Trick for WebView
   const iframe = document.createElement('iframe');
-  iframe.src = '//www.highperformanceformat.com/' + ADSTERRA_ZONE_ID + '/invoke.html';
   iframe.width = '320';
   iframe.height = '50';
-  iframe.style.cssText = 'border:0;display:block;margin:auto;';
+  iframe.style.cssText = 'border:0;display:block;margin:auto;overflow:hidden;background:transparent;';
   iframe.scrolling = 'no';
   iframe.setAttribute('frameborder', '0');
   
   el.innerHTML = '';
   el.appendChild(iframe);
+  
+  const doc = iframe.contentWindow.document;
+  doc.open();
+  doc.write(`
+    <html>
+      <head><style>body { margin: 0; padding: 0; background: transparent; display: flex; justify-content: center; }</style></head>
+      <body>
+        <script type="text/javascript">
+          atOptions = {
+            'key' : '${ADSTERRA_ZONE_ID}',
+            'format' : 'iframe',
+            'height' : 50,
+            'width' : 320,
+            'params' : {}
+          };
+        </script>
+        <script type="text/javascript" src="//www.highperformanceformat.com/${ADSTERRA_ZONE_ID}/invoke.js"></script>
+      </body>
+    </html>
+  `);
+  doc.close();
+  
   el.style.display = 'block';
   el.dataset.loaded = 'true';
+
+  // Auto-Hide if Ad fails to load (Prevents "Web page not available")
+  setTimeout(() => {
+    try {
+      if (doc.body.innerText.includes('not available') || doc.body.innerHTML.trim() === '') {
+        el.style.display = 'none';
+      }
+    } catch(e) {
+      el.style.display = 'none'; // Cross-origin error fallback
+    }
+  }, 4000);
 }
 
 // ==================== CATEGORIES ====================
@@ -498,7 +531,6 @@ if (document.readyState === 'loading') {
     if (slider) { st(); slider.addEventListener('touchstart', sp); slider.addEventListener('touchend', () => setTimeout(st, 4000)); slider.addEventListener('mouseenter', sp); slider.addEventListener('mouseleave', st); }
     updateStats(); updateNotifBadge(); renderNotifications();
     
-    // Load Adsterra Banner on APK start
     if (typeof Android !== 'undefined') { setTimeout(loadAdsterraBanner, 2000); }
   });
 } else {
@@ -513,6 +545,5 @@ if (document.readyState === 'loading') {
   if (slider) { st(); slider.addEventListener('touchstart', sp); slider.addEventListener('touchend', () => setTimeout(st, 4000)); slider.addEventListener('mouseenter', sp); slider.addEventListener('mouseleave', st); }
   updateStats(); updateNotifBadge(); renderNotifications();
   
-  // Load Adsterra Banner on APK start
   if (typeof Android !== 'undefined') { setTimeout(loadAdsterraBanner, 2000); }
 }
