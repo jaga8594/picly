@@ -20,23 +20,6 @@
 <meta property="og:type" content="website"/>
 <link rel="apple-touch-icon" href="/icon-192.png">
 
-<!-- YEH CSS MONETAQ KE AD KO NICHE LAAYEGA -->
-<style>
-  /* Monetaq Push Ad - Bottom Fix */
-  div[style*="position: fixed"][style*="top:"],
-  div[style*="position:fixed"][style*="top:"] {
-      top: auto !important;
-      bottom: 88px !important; /* Bottom nav ke thoda upar */
-      left: 50% !important;
-      transform: translateX(-50%) !important;
-      width: 90% !important;
-      max-width: 350px !important;
-      border-radius: 12px !important;
-      z-index: 99999 !important;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.6) !important;
-  }
-</style>
-
 <script>
   if (typeof Android === 'undefined') {
     var adsenseScript = document.createElement('script');
@@ -51,7 +34,6 @@
 <body>
 
 <div id="homeScreen" class="screen active">
-
   <div class="header">
     <div class="logo-camera">
       <div class="camera-inner">
@@ -63,12 +45,7 @@
       </div>
     </div>
     <div class="logo-text">
-      <span class="letter">P</span>
-      <span class="letter">i</span>
-      <span class="letter">c</span>
-      <span class="letter">l</span>
-      <span class="letter">y</span>
-      <span class="dot">.</span>
+      <span class="letter">P</span><span class="letter">i</span><span class="letter">c</span><span class="letter">l</span><span class="letter">y</span><span class="dot">.</span>
     </div>
     <div class="dance-wrap">
       <img class="anime-gif" src="https://i.ibb.co/8gKn7Q6X/Lonely-Vtuber-Sticker.gif" alt="anime">
@@ -95,97 +72,24 @@
   </div>
 
   <div class="featured-scroll" id="slider">
-    <div class="feature-slide fs-1" onclick="openToolFromHome('ai-text-image')">
-      <img class="bg-img" src="https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=800&q=80" alt="">
-      <div class="fs-hook">AI NEW</div>
-      <div class="fs-content">
-        <div class="fs-icon"><svg viewBox="0 0 24 24"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg></div>
-        <div class="fs-text"><div class="fs-tag">🤖 AI STUDIO</div><div class="fs-title">Text to Image</div><div class="fs-desc">Prompt → HD image in seconds</div></div>
-      </div>
-    </div>
-    <div class="feature-slide fs-2" onclick="openToolFromHome('video-trim')">
-      <img class="bg-img" src="https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=800&q=80" alt="">
-      <div class="fs-hook">NEW</div>
-      <div class="fs-content">
-        <div class="fs-icon"><svg viewBox="0 0 24 24"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg></div>
-        <div class="fs-text"><div class="fs-tag">🎬 VIDEO</div><div class="fs-title">Video Trimmer</div><div class="fs-desc">Cut · trim · compress</div></div>
-      </div>
-    </div>
-    <div class="feature-slide fs-3" onclick="openToolFromHome('passport')">
-      <img class="bg-img" src="https://i.ibb.co/Q7BVycWY/us-passport-size-diagram.webp" alt="">
-      <div class="fs-hook">1 TAP MAGIC</div>
-      <div class="fs-content">
-        <div class="fs-icon"><svg viewBox="0 0 24 24"><rect x="4" y="2" width="16" height="20" rx="2"/><circle cx="12" cy="10" r="3"/><path d="M8 20h8"/></svg></div>
-        <div class="fs-text"><div class="fs-tag">📸 MOST USED</div><div class="fs-title">Passport Photo Maker</div><div class="fs-desc">35×45mm · print-ready</div></div>
-      </div>
-    </div>
-    <div class="feature-slide fs-4" onclick="openToolFromHome('photo-signature')">
-      <img class="bg-img" src="https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=800&q=80" alt="">
-      <div class="fs-hook">EXAM FORMS</div>
-      <div class="fs-content">
-        <div class="fs-icon"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
-        <div class="fs-text"><div class="fs-tag">📄 DOCUMENT</div><div class="fs-title">Photo + Signature</div><div class="fs-desc">SSC · UPSC · Railway</div></div>
-      </div>
-    </div>
-    <div class="feature-slide fs-5" onclick="openToolFromHome('compress')">
-      <img class="bg-img" src="https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=800&q=80" alt="">
-      <div class="fs-hook">EXACT SIZE</div>
-      <div class="fs-content">
-        <div class="fs-icon"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></div>
-        <div class="fs-text"><div class="fs-tag">📄 DOCUMENT</div><div class="fs-title">Image Compress</div><div class="fs-desc">20KB · 50KB · exact</div></div>
-      </div>
-    </div>
+    <div class="feature-slide fs-1" onclick="openToolFromHome('ai-text-image')"><img class="bg-img" src="https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=800&q=80" alt=""><div class="fs-hook">AI NEW</div><div class="fs-content"><div class="fs-icon"><svg viewBox="0 0 24 24"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg></div><div class="fs-text"><div class="fs-tag">🤖 AI STUDIO</div><div class="fs-title">Text to Image</div><div class="fs-desc">Prompt → HD image in seconds</div></div></div></div>
+    <div class="feature-slide fs-2" onclick="openToolFromHome('video-trim')"><img class="bg-img" src="https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=800&q=80" alt=""><div class="fs-hook">NEW</div><div class="fs-content"><div class="fs-icon"><svg viewBox="0 0 24 24"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg></div><div class="fs-text"><div class="fs-tag">🎬 VIDEO</div><div class="fs-title">Video Trimmer</div><div class="fs-desc">Cut · trim · compress</div></div></div></div>
+    <div class="feature-slide fs-3" onclick="openToolFromHome('passport')"><img class="bg-img" src="https://i.ibb.co/Q7BVycWY/us-passport-size-diagram.webp" alt=""><div class="fs-hook">1 TAP MAGIC</div><div class="fs-content"><div class="fs-icon"><svg viewBox="0 0 24 24"><rect x="4" y="2" width="16" height="20" rx="2"/><circle cx="12" cy="10" r="3"/><path d="M8 20h8"/></svg></div><div class="fs-text"><div class="fs-tag">📸 MOST USED</div><div class="fs-title">Passport Photo Maker</div><div class="fs-desc">35×45mm · print-ready</div></div></div></div>
+    <div class="feature-slide fs-4" onclick="openToolFromHome('photo-signature')"><img class="bg-img" src="https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=800&q=80" alt=""><div class="fs-hook">EXAM FORMS</div><div class="fs-content"><div class="fs-icon"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div><div class="fs-text"><div class="fs-tag">📄 DOCUMENT</div><div class="fs-title">Photo + Signature</div><div class="fs-desc">SSC · UPSC · Railway</div></div></div></div>
+    <div class="feature-slide fs-5" onclick="openToolFromHome('compress')"><img class="bg-img" src="https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=800&q=80" alt=""><div class="fs-hook">EXACT SIZE</div><div class="fs-content"><div class="fs-icon"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></div><div class="fs-text"><div class="fs-tag">📄 DOCUMENT</div><div class="fs-title">Image Compress</div><div class="fs-desc">20KB · 50KB · exact</div></div></div></div>
   </div>
 
-  <div class="slider-dots" id="dots">
-    <div class="dot active"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div>
-  </div>
+  <div class="slider-dots" id="dots"><div class="dot active"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
 
   <div class="section-label">Browse Categories</div>
 
   <div class="category-grid">
-    <div class="category-card cc-1" onclick="openCategory('aistudio')">
-      <img class="cat-img" src="https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=500&q=80" alt=""><div class="cc-overlay"></div><div class="cat-hook hot">AI NEW</div>
-      <div class="cat-content">
-        <div class="cat-thumbs"><img class="cat-thumb" src="https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=100&q=80" alt=""><img class="cat-thumb" src="https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?w=100&q=80" alt=""><img class="cat-thumb" src="https://images.unsplash.com/photo-1578632767115-351597cf2477?w=100&q=80" alt=""></div>
-        <div class="cat-bottom"><div class="cat-name">AI Studio</div><div class="cat-desc">5 AI tools</div><div class="cat-badge">5 tools</div></div>
-      </div>
-    </div>
-    <div class="category-card cc-4" onclick="openCategory('video')">
-      <img class="cat-img" src="https://images.unsplash.com/photo-1513151233558-d860c5398176?w=500&q=80" alt=""><div class="cc-overlay"></div><div class="cat-hook hot">NEW</div>
-      <div class="cat-content">
-        <div class="cat-thumbs"><img class="cat-thumb" src="https://images.unsplash.com/photo-1513151233558-d860c5398176?w=100&q=80" alt=""><img class="cat-thumb" src="https://images.unsplash.com/photo-1530103862676-de8c9debad1d?w=100&q=80" alt=""><img class="cat-thumb" src="https://images.unsplash.com/photo-1519741497674-611481863552?w=100&q=80" alt=""></div>
-        <div class="cat-bottom"><div class="cat-name">Video Tools</div><div class="cat-desc">Trim · compress · GIF · MP3</div><div class="cat-badge">5 tools</div></div>
-      </div>
-    </div>
-    <div class="category-card cc-3" onclick="openCategory('edit')">
-      <img class="cat-img" src="https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=500&q=80" alt=""><div class="cc-overlay"></div><div class="cat-hook hot">HOT</div>
-      <div class="cat-content">
-        <div class="cat-thumbs"><img class="cat-thumb" src="https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=100&q=80" alt=""><img class="cat-thumb" src="https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=100&q=80" alt=""><img class="cat-thumb" src="https://images.unsplash.com/photo-1521737604893-d14cc237f11d?w=100&q=80" alt=""></div>
-        <div class="cat-bottom"><div class="cat-name">Edit</div><div class="cat-desc">Crop · filters · text · stickers</div><div class="cat-badge">7 tools</div></div>
-      </div>
-    </div>
-    <div class="category-card cc-2" onclick="openCategory('documents')">
-      <img class="cat-img" src="https://i.ibb.co/Q7BVycWY/us-passport-size-diagram.webp" alt=""><div class="cc-overlay"></div><div class="cat-hook new">NEW</div>
-      <div class="cat-content">
-        <div class="cat-thumbs"><img class="cat-thumb" src="https://i.ibb.co/Q7BVycWY/us-passport-size-diagram.webp" alt=""><img class="cat-thumb" src="https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=100&q=80" alt=""><img class="cat-thumb" src="https://images.unsplash.com/photo-1618044733300-9472054094ee?w=100&q=80" alt=""></div>
-        <div class="cat-bottom"><div class="cat-name">Documents</div><div class="cat-desc">Passport · signature · PDF</div><div class="cat-badge">5 tools</div></div>
-      </div>
-    </div>
-    <div class="category-card cc-1" onclick="openCategory('utility')">
-      <img class="cat-img" src="https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=500&q=80" alt=""><div class="cc-overlay"></div>
-      <div class="cat-content">
-        <div class="cat-thumbs"><img class="cat-thumb" src="https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=100&q=80" alt=""><img class="cat-thumb" src="https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?w=100&q=80" alt=""><img class="cat-thumb" src="https://images.unsplash.com/photo-1614064641938-3bbee52942c7?w=100&q=80" alt=""></div>
-        <div class="cat-bottom"><div class="cat-name">Utility</div><div class="cat-desc">EMI · GST · age · BMI · QR</div><div class="cat-badge">6 tools</div></div>
-      </div>
-    </div>
-    <div class="category-card cc-6" onclick="openCategory('fun')">
-      <img class="cat-img" src="https://images.unsplash.com/photo-1533228100845-08145b01de14?w=500&q=80" alt=""><div class="cc-overlay"></div>
-      <div class="cat-content">
-        <div class="cat-thumbs"><img class="cat-thumb" src="https://images.unsplash.com/photo-1578632767115-351597cf2477?w=100&q=80" alt=""><img class="cat-thumb" src="https://images.unsplash.com/photo-1560972550-aba3456b5564?w=100&q=80" alt=""><img class="cat-thumb" src="https://images.unsplash.com/photo-1533228100845-08145b01de14?w=100&q=80" alt=""></div>
-        <div class="cat-bottom"><div class="cat-name">Fun</div><div class="cat-desc">Filters · frames · collage</div><div class="cat-badge">2 tools</div></div>
-      </div>
-    </div>
+    <div class="category-card cc-1" onclick="openCategory('aistudio')"><img class="cat-img" src="https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=500&q=80" alt=""><div class="cc-overlay"></div><div class="cat-hook hot">AI NEW</div><div class="cat-content"><div class="cat-thumbs"><img class="cat-thumb" src="https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=100&q=80" alt=""><img class="cat-thumb" src="https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?w=100&q=80" alt=""><img class="cat-thumb" src="https://images.unsplash.com/photo-1578632767115-351597cf2477?w=100&q=80" alt=""></div><div class="cat-bottom"><div class="cat-name">AI Studio</div><div class="cat-desc">5 AI tools</div><div class="cat-badge">5 tools</div></div></div></div>
+    <div class="category-card cc-4" onclick="openCategory('video')"><img class="cat-img" src="https://images.unsplash.com/photo-1513151233558-d860c5398176?w=500&q=80" alt=""><div class="cc-overlay"></div><div class="cat-hook hot">NEW</div><div class="cat-content"><div class="cat-thumbs"><img class="cat-thumb" src="https://images.unsplash.com/photo-1513151233558-d860c5398176?w=100&q=80" alt=""><img class="cat-thumb" src="https://images.unsplash.com/photo-1530103862676-de8c9debad1d?w=100&q=80" alt=""><img class="cat-thumb" src="https://images.unsplash.com/photo-1519741497674-611481863552?w=100&q=80" alt=""></div><div class="cat-bottom"><div class="cat-name">Video Tools</div><div class="cat-desc">Trim · compress · GIF · MP3</div><div class="cat-badge">5 tools</div></div></div></div>
+    <div class="category-card cc-3" onclick="openCategory('edit')"><img class="cat-img" src="https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=500&q=80" alt=""><div class="cc-overlay"></div><div class="cat-hook hot">HOT</div><div class="cat-content"><div class="cat-thumbs"><img class="cat-thumb" src="https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=100&q=80" alt=""><img class="cat-thumb" src="https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=100&q=80" alt=""><img class="cat-thumb" src="https://images.unsplash.com/photo-1521737604893-d14cc237f11d?w=100&q=80" alt=""></div><div class="cat-bottom"><div class="cat-name">Edit</div><div class="cat-desc">Crop · filters · text · stickers</div><div class="cat-badge">7 tools</div></div></div></div>
+    <div class="category-card cc-2" onclick="openCategory('documents')"><img class="cat-img" src="https://i.ibb.co/Q7BVycWY/us-passport-size-diagram.webp" alt=""><div class="cc-overlay"></div><div class="cat-hook new">NEW</div><div class="cat-content"><div class="cat-thumbs"><img class="cat-thumb" src="https://i.ibb.co/Q7BVycWY/us-passport-size-diagram.webp" alt=""><img class="cat-thumb" src="https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=100&q=80" alt=""><img class="cat-thumb" src="https://images.unsplash.com/photo-1618044733300-9472054094ee?w=100&q=80" alt=""></div><div class="cat-bottom"><div class="cat-name">Documents</div><div class="cat-desc">Passport · signature · PDF</div><div class="cat-badge">5 tools</div></div></div></div>
+    <div class="category-card cc-1" onclick="openCategory('utility')"><img class="cat-img" src="https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=500&q=80" alt=""><div class="cc-overlay"></div><div class="cat-content"><div class="cat-thumbs"><img class="cat-thumb" src="https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=100&q=80" alt=""><img class="cat-thumb" src="https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?w=100&q=80" alt=""><img class="cat-thumb" src="https://images.unsplash.com/photo-1614064641938-3bbee52942c7?w=100&q=80" alt=""></div><div class="cat-bottom"><div class="cat-name">Utility</div><div class="cat-desc">EMI · GST · age · BMI · QR</div><div class="cat-badge">6 tools</div></div></div></div>
+    <div class="category-card cc-6" onclick="openCategory('fun')"><img class="cat-img" src="https://images.unsplash.com/photo-1533228100845-08145b01de14?w=500&q=80" alt=""><div class="cc-overlay"></div><div class="cat-content"><div class="cat-thumbs"><img class="cat-thumb" src="https://images.unsplash.com/photo-1578632767115-351597cf2477?w=100&q=80" alt=""><img class="cat-thumb" src="https://images.unsplash.com/photo-1560972550-aba3456b5564?w=100&q=80" alt=""><img class="cat-thumb" src="https://images.unsplash.com/photo-1533228100845-08145b01de14?w=100&q=80" alt=""></div><div class="cat-bottom"><div class="cat-name">Fun</div><div class="cat-desc">Filters · frames · collage</div><div class="cat-badge">2 tools</div></div></div></div>
   </div>
 
   <div class="bottom-nav">
@@ -196,45 +100,26 @@
 </div>
 
 <div id="categoryScreen" class="screen">
-  <div class="cat-page-header">
-    <button class="back-btn" onclick="goHome()"><svg viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg></button>
-    <div class="cat-page-title" id="catPageTitle">Category</div>
-  </div>
-  <div class="cat-page-hero">
-    <div class="cat-hero-name" id="catHeroName">Category</div>
-    <div class="cat-hero-desc" id="catHeroDesc">Description</div>
-  </div>
+  <div class="cat-page-header"><button class="back-btn" onclick="goHome()"><svg viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg></button><div class="cat-page-title" id="catPageTitle">Category</div></div>
+  <div class="cat-page-hero"><div class="cat-hero-name" id="catHeroName">Category</div><div class="cat-hero-desc" id="catHeroDesc">Description</div></div>
   <div class="tools-list" id="toolsList"></div>
 </div>
 
 <div id="editorScreen" class="screen">
-  <div class="cat-page-header">
-    <button class="back-btn" onclick="backToCategory()"><svg viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg></button>
-    <div class="cat-page-title" id="editorTitle">Editor</div>
-  </div>
+  <div class="cat-page-header"><button class="back-btn" onclick="backToCategory()"><svg viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg></button><div class="cat-page-title" id="editorTitle">Editor</div></div>
   <div class="editor-body">
     <div class="upload-area" id="uploadArea" onclick="document.getElementById('modalUpload').click()">
       <input type="file" id="modalUpload" accept="image/*,video/*" onchange="loadImage(this)">
       <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-      <p id="uploadTitle">Tap to upload photo</p>
-      <span id="uploadHint">JPG, PNG, WEBP — max 10MB</span>
+      <p id="uploadTitle">Tap to upload photo</p><span id="uploadHint">JPG, PNG, WEBP — max 10MB</span>
     </div>
-
     <video id="videoPreview" style="display:none;width:100%;max-height:400px;border-radius:16px;margin-bottom:20px;background:#000;" controls></video>
-
     <div id="canvasWrap" style="display:none">
-      <div class="canvas-container">
-        <canvas id="canvas"></canvas>
-        <div id="overlayLayer"></div>
-      </div>
+      <div class="canvas-container"><canvas id="canvas"></canvas><div id="overlayLayer"></div></div>
       <div id="dynamicControls"></div>
-      <div class="action-btns">
-        <button class="action-btn secondary" onclick="resetImage()">Reset</button>
-        <button class="action-btn" onclick="downloadImage()">Download</button>
-      </div>
+      <div class="action-btns"><button class="action-btn secondary" onclick="resetImage()">Reset</button><button class="action-btn" onclick="downloadImage()">Download</button></div>
     </div>
   </div>
-
   <div class="bottom-nav">
     <div class="nav-item active" onclick="goHome()"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>Home</span></div>
     <div class="create-btn" onclick="document.getElementById('globalUpload').click()"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div>
@@ -243,74 +128,31 @@
 </div>
 
 <div class="screen" id="searchScreen">
-  <div class="cat-page-header">
-    <button class="back-btn" onclick="goHome()"><svg viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg></button>
-    <div class="cat-page-title">Search Tools</div>
-  </div>
-  <div style="padding:20px;">
-    <input type="text" id="searchInputPage" placeholder="Search tools..." oninput="searchTools(this.value)" style="width:100%;padding:14px 18px;border-radius:14px;border:1.5px solid rgba(168,85,247,0.3);background:rgba(168,85,247,0.05);color:#fff;font-size:15px;font-family:inherit;outline:none;margin-bottom:20px;">
-    <div id="searchResults"></div>
-  </div>
+  <div class="cat-page-header"><button class="back-btn" onclick="goHome()"><svg viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg></button><div class="cat-page-title">Search Tools</div></div>
+  <div style="padding:20px;"><input type="text" id="searchInputPage" placeholder="Search tools..." oninput="searchTools(this.value)" style="width:100%;padding:14px 18px;border-radius:14px;border:1.5px solid rgba(168,85,247,0.3);background:rgba(168,85,247,0.05);color:#fff;font-size:15px;font-family:inherit;outline:none;margin-bottom:20px;"><div id="searchResults"></div></div>
 </div>
 
 <div class="screen" id="settingsScreen">
-  <div class="cat-page-header">
-    <button class="back-btn" onclick="goHome()"><svg viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg></button>
-    <div class="cat-page-title">Settings</div>
-  </div>
+  <div class="cat-page-header"><button class="back-btn" onclick="goHome()"><svg viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg></button><div class="cat-page-title">Settings</div></div>
   <div style="padding:20px;display:flex;flex-direction:column;gap:12px;">
-    <div style="padding:20px;background:linear-gradient(135deg, rgba(168,85,247,0.1), rgba(0,212,255,0.05));border:1px solid rgba(168,85,247,0.2);border-radius:16px;">
-      <div style="font-size:15px;font-weight:700;margin-bottom:4px;">🌙 Dark Mode</div>
-      <div style="font-size:12px;color:#a99bc4;">Always on</div>
-    </div>
-    <div style="padding:20px;background:linear-gradient(135deg, rgba(168,85,247,0.1), rgba(0,212,255,0.05));border:1px solid rgba(168,85,247,0.2);border-radius:16px;cursor:pointer;" onclick="clearAllData()">
-      <div style="font-size:15px;font-weight:700;margin-bottom:4px;">🗑️ Clear All Data</div>
-      <div style="font-size:12px;color:#a99bc4;">History + notifications delete</div>
-    </div>
-    <div style="padding:20px;background:linear-gradient(135deg, rgba(168,85,247,0.1), rgba(0,212,255,0.05));border:1px solid rgba(168,85,247,0.2);border-radius:16px;">
-      <div style="font-size:15px;font-weight:700;margin-bottom:4px;">ℹ️ About Picly</div>
-      <div style="font-size:12px;color:#a99bc4;">Version 1.0</div>
-    </div>
-    <a href="/about.html" style="text-decoration:none;display:block;">
-      <div style="padding:20px;background:linear-gradient(135deg, rgba(168,85,247,0.1), rgba(0,212,255,0.05));border:1px solid rgba(168,85,247,0.2);border-radius:16px;">
-        <div style="font-size:15px;font-weight:700;margin-bottom:4px;color:#fff;">ℹ️ About Us</div>
-        <div style="font-size:12px;color:#a99bc4;">Know more about Picly</div>
-      </div>
-    </a>
-    <a href="/privacy.html" style="text-decoration:none;display:block;">
-      <div style="padding:20px;background:linear-gradient(135deg, rgba(168,85,247,0.1), rgba(0,212,255,0.05));border:1px solid rgba(168,85,247,0.2);border-radius:16px;">
-        <div style="font-size:15px;font-weight:700;margin-bottom:4px;color:#fff;">🔒 Privacy Policy</div>
-        <div style="font-size:12px;color:#a99bc4;">How we handle your data</div>
-      </div>
-    </a>
-    <a href="https://apkpure.com/p/com.picly.app" target="_blank" style="text-decoration:none;display:block;">
-      <div style="padding:20px;background:linear-gradient(135deg, rgba(168,85,247,0.1), rgba(0,212,255,0.05));border:1px solid rgba(168,85,247,0.2);border-radius:16px;">
-        <div style="font-size:15px;font-weight:700;margin-bottom:4px;color:#fff;">📥 Download App</div>
-        <div style="font-size:12px;color:#a99bc4;">Get Picly on APKPure</div>
-      </div>
-    </a>
+    <div style="padding:20px;background:linear-gradient(135deg, rgba(168,85,247,0.1), rgba(0,212,255,0.05));border:1px solid rgba(168,85,247,0.2);border-radius:16px;"><div style="font-size:15px;font-weight:700;margin-bottom:4px;">🌙 Dark Mode</div><div style="font-size:12px;color:#a99bc4;">Always on</div></div>
+    <div style="padding:20px;background:linear-gradient(135deg, rgba(168,85,247,0.1), rgba(0,212,255,0.05));border:1px solid rgba(168,85,247,0.2);border-radius:16px;cursor:pointer;" onclick="clearAllData()"><div style="font-size:15px;font-weight:700;margin-bottom:4px;">🗑️ Clear All Data</div><div style="font-size:12px;color:#a99bc4;">History + notifications delete</div></div>
+    <div style="padding:20px;background:linear-gradient(135deg, rgba(168,85,247,0.1), rgba(0,212,255,0.05));border:1px solid rgba(168,85,247,0.2);border-radius:16px;"><div style="font-size:15px;font-weight:700;margin-bottom:4px;">ℹ️ About Picly</div><div style="font-size:12px;color:#a99bc4;">Version 1.0</div></div>
+    <a href="/about.html" style="text-decoration:none;display:block;"><div style="padding:20px;background:linear-gradient(135deg, rgba(168,85,247,0.1), rgba(0,212,255,0.05));border:1px solid rgba(168,85,247,0.2);border-radius:16px;"><div style="font-size:15px;font-weight:700;margin-bottom:4px;color:#fff;">ℹ️ About Us</div><div style="font-size:12px;color:#a99bc4;">Know more about Picly</div></div></a>
+    <a href="/privacy.html" style="text-decoration:none;display:block;"><div style="padding:20px;background:linear-gradient(135deg, rgba(168,85,247,0.1), rgba(0,212,255,0.05));border:1px solid rgba(168,85,247,0.2);border-radius:16px;"><div style="font-size:15px;font-weight:700;margin-bottom:4px;color:#fff;">🔒 Privacy Policy</div><div style="font-size:12px;color:#a99bc4;">How we handle your data</div></div></a>
+    <a href="https://apkpure.com/p/com.picly.app" target="_blank" style="text-decoration:none;display:block;"><div style="padding:20px;background:linear-gradient(135deg, rgba(168,85,247,0.1), rgba(0,212,255,0.05));border:1px solid rgba(168,85,247,0.2);border-radius:16px;"><div style="font-size:15px;font-weight:700;margin-bottom:4px;color:#fff;">📥 Download App</div><div style="font-size:12px;color:#a99bc4;">Get Picly on APKPure</div></div></a>
   </div>
 </div>
 
 <div class="screen" id="profileScreen">
-  <div class="cat-page-header">
-    <button class="back-btn" onclick="goHome()"><svg viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg></button>
-    <div class="cat-page-title">Profile</div>
-  </div>
+  <div class="cat-page-header"><button class="back-btn" onclick="goHome()"><svg viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg></button><div class="cat-page-title">Profile</div></div>
   <div style="text-align:center;padding:24px 20px;">
     <div style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,#ff0080,#a855f7,#00d4ff);display:flex;align-items:center;justify-content:center;font-size:36px;margin:0 auto 14px;">👤</div>
-    <div style="font-size:20px;font-weight:800;margin-bottom:4px;">Picly User</div>
-    <div style="font-size:13px;color:#a99bc4;">Free Account</div>
+    <div style="font-size:20px;font-weight:800;margin-bottom:4px;">Picly User</div><div style="font-size:13px;color:#a99bc4;">Free Account</div>
   </div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:0 20px 20px;">
-    <div style="padding:20px;background:linear-gradient(135deg, rgba(168,85,247,0.1), rgba(0,212,255,0.05));border:1px solid rgba(168,85,247,0.2);border-radius:16px;text-align:center;">
-      <div style="font-size:28px;font-weight:900;background:linear-gradient(135deg,#ff0080,#a855f7,#00d4ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;" id="statDownloads">0</div>
-      <div style="font-size:11px;color:#a99bc4;font-weight:700;margin-top:4px;">Downloads</div>
-    </div>
-    <div style="padding:20px;background:linear-gradient(135deg, rgba(168,85,247,0.1), rgba(0,212,255,0.05));border:1px solid rgba(168,85,247,0.2);border-radius:16px;text-align:center;">
-      <div style="font-size:28px;font-weight:900;background:linear-gradient(135deg,#ff0080,#a855f7,#00d4ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;" id="statTools">0</div>
-      <div style="font-size:11px;color:#a99bc4;font-weight:700;margin-top:4px;">Tools Used</div>
-    </div>
+    <div style="padding:20px;background:linear-gradient(135deg, rgba(168,85,247,0.1), rgba(0,212,255,0.05));border:1px solid rgba(168,85,247,0.2);border-radius:16px;text-align:center;"><div style="font-size:28px;font-weight:900;background:linear-gradient(135deg,#ff0080,#a855f7,#00d4ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;" id="statDownloads">0</div><div style="font-size:11px;color:#a99bc4;font-weight:700;margin-top:4px;">Downloads</div></div>
+    <div style="padding:20px;background:linear-gradient(135deg, rgba(168,85,247,0.1), rgba(0,212,255,0.05));border:1px solid rgba(168,85,247,0.2);border-radius:16px;text-align:center;"><div style="font-size:28px;font-weight:900;background:linear-gradient(135deg,#ff0080,#a855f7,#00d4ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;" id="statTools">0</div><div style="font-size:11px;color:#a99bc4;font-weight:700;margin-top:4px;">Tools Used</div></div>
   </div>
   <div style="display:flex;gap:8px;padding:0 20px 16px;">
     <button class="profile-tab active" id="tabHistory" onclick="switchProfileTab('history', this)" style="flex:1;padding:12px;border-radius:12px;background:linear-gradient(135deg,#ff0080,#a855f7);color:#fff;border:none;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">📜 History</button>
@@ -338,9 +180,7 @@
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/service-worker.js')
-        .then(reg => console.log('SW registered'))
-        .catch(err => console.log('SW error:', err));
+      navigator.serviceWorker.register('/service-worker.js').then(reg => console.log('SW registered')).catch(err => console.log('SW error:', err));
     });
   }
 </script>
