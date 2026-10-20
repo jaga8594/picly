@@ -1,208 +1,19 @@
 // ==================== CONFIG ====================
 const SERVER_URL = 'https://picly-server-production.up.railway.app';
 
-// ==================== MONETAQ NUCLEAR CLEANER ====================
-let monetaqScriptTag = null;
-let monetaqSweeper = null;
-let adObserver = null;
-let adBusy = false;
-let adDebugBadge = null;
-
-const PICLY_IDS = new Set([
-  'homeScreen', 'categoryScreen', 'editorScreen', 'searchScreen',
-  'settingsScreen', 'profileScreen', 'notifOverlay', 'notifPanel',
-  'globalUpload', 'toast', 'videoLoader', 'modalUpload', 'canvas',
-  'debugBadge'
-]);
-
-function isOurElement(el) {
-  const tag = el.tagName;
-  if (!tag) return true;
-  if (tag === 'SCRIPT' || tag === 'LINK' || tag === 'META' || tag === 'STYLE' || tag === 'TITLE') return true;
-  if (tag === 'INPUT' || tag === 'HEAD' || tag === 'BODY') return true;
-  if (el.id && PICLY_IDS.has(el.id)) return true;
-  return false;
-}
-
-function isInsideOurApp(el) {
-  let cur = el.parentElement;
-  while (cur) {
-    if (cur.id && PICLY_IDS.has(cur.id)) return true;
-    cur = cur.parentElement;
-  }
-  return false;
-}
-
-function collectAdRoots() {
-  const roots = new Set();
-
-  try {
-    Array.from(document.documentElement.children).forEach(el => {
-      if (el.tagName === 'HEAD' || el.tagName === 'BODY') return;
-      roots.add(el);
-    });
-  } catch(e) {}
-
-  try {
-    Array.from(document.body.children).forEach(el => {
-      if (isOurElement(el)) return;
-      roots.add(el);
-    });
-  } catch(e) {}
-
-  try {
-    const selectors = [
-      '[id*="monetag" i]', '[class*="monetag" i]',
-      '[id*="ad-" i]', '[class*="ad-" i]',
-      '[id^="ad" i]', '[class^="ad" i]',
-      '[data-ad]', '[data-zone]',
-      'ins.adsbygoogle', 'ins[class*="ad"]',
-      'iframe[name*="ad"]', 'iframe[src*="monetag"]',
-      'iframe[src*="nap5k"]', 'iframe[src*="adsterra"]'
-    ];
-    document.querySelectorAll(selectors.join(',')).forEach(el => {
-      if (isInsideOurApp(el)) return;
-      if (el.tagName === 'SCRIPT') return;
-      let cur = el;
-      while (cur.parentElement && cur.parentElement !== document.body && cur.parentElement !== document.documentElement) {
-        cur = cur.parentElement;
-      }
-      roots.add(cur);
-    });
-  } catch(e) {}
-
-  return Array.from(roots);
-}
-
-function forceAdStyle(el) {
-  if (!el || !el.style) return;
-  const s = {
-    'position': 'fixed', 'top': 'auto', 'bottom': '90px',
-    'left': '50%', 'right': 'auto',
-    'transform': 'translateX(-50%)',
-    'z-index': '99999',
-    'width': '320px', 'max-width': '90vw',
-    'height': 'auto', 'max-height': '280px',
-    'margin': '0', 'padding': '0',
-    'border-radius': '12px', 'overflow': 'hidden',
-    'box-shadow': '0 4px 15px rgba(0,0,0,0.3)',
-    'display': 'block', 'visibility': 'visible', 'opacity': '1',
-    'float': 'none', 'clear': 'both'
-  };
-  for (const k in s) el.style.setProperty(k, s[k], 'important');
-}
-
-function killInnerAds(wrapper) {
-  if (!wrapper || !wrapper.querySelectorAll) return;
-  const inner = wrapper.querySelectorAll('div, iframe, ins');
-  if (inner.length <= 1) return;
-  const withContent = [];
-  inner.forEach(c => {
-    const r = c.getBoundingClientRect();
-    if (r.width > 20 && r.height > 20) withContent.push(c);
-  });
-  if (withContent.length > 1) {
-    for (let i = 0; i < withContent.length - 1; i++) {
-      try { withContent[i].remove(); } catch(e) {}
-    }
-  }
-}
-
-function nukeAds() {
-  if (adBusy) return;
-  adBusy = true;
-  try {
-    const roots = collectAdRoots();
-
-    if (roots.length === 0) {
-      updateDebugBadge(0, 'none');
-      return;
-    }
-
-    for (let i = 0; i < roots.length - 1; i++) {
-      try { roots[i].parentNode && roots[i].parentNode.removeChild(roots[i]); } catch(e) {}
-    }
-
-    const survivor = roots[roots.length - 1];
-    if (!survivor || !survivor.parentNode) { updateDebugBadge(0, 'none'); return; }
-
-    forceAdStyle(survivor);
-    killInnerAds(survivor);
-
-    try {
-      survivor.querySelectorAll('iframe').forEach(ifr => {
-        ifr.style.setProperty('position', 'relative', 'important');
-        ifr.style.setProperty('top', 'auto', 'important');
-        ifr.style.setProperty('left', 'auto', 'important');
-        ifr.style.setProperty('right', 'auto', 'important');
-        ifr.style.setProperty('bottom', 'auto', 'important');
-        ifr.style.setProperty('width', '100%', 'important');
-        ifr.style.setProperty('height', 'auto', 'important');
-        ifr.style.setProperty('max-height', '280px', 'important');
-        ifr.style.setProperty('display', 'block', 'important');
-      });
-    } catch(e) {}
-
-    updateDebugBadge(1, survivor.tagName + (survivor.id ? '#' + survivor.id : ''));
-  } finally {
-    adBusy = false;
-  }
-}
-
-function updateDebugBadge(count, tag) {
-  try {
-    if (!adDebugBadge) {
-      adDebugBadge = document.createElement('div');
-      adDebugBadge.id = 'debugBadge';
-      adDebugBadge.style.cssText = 'position:fixed;top:4px;left:4px;background:rgba(0,0,0,0.75);color:#0f0;font:11px monospace;padding:3px 6px;border-radius:4px;z-index:2147483647;pointer-events:none;';
-      document.body.appendChild(adDebugBadge);
-    }
-    adDebugBadge.textContent = 'AD:' + count + ' ' + (tag || '');
-  } catch(e) {}
-}
-
-function startAdObserver() {
-  if (adObserver) return;
-  adObserver = new MutationObserver(() => {
-    nukeAds();
-    requestAnimationFrame(nukeAds);
-  });
-  adObserver.observe(document.documentElement, { childList: true, subtree: true });
-  nukeAds();
-}
-
-function startAdSweeper() {
-  if (monetaqSweeper) return;
-  let ticks = 0;
-  const fast = setInterval(() => {
-    nukeAds();
-    ticks++;
-    if (ticks >= 150) {
-      clearInterval(fast);
-      monetaqSweeper = setInterval(nukeAds, 600);
-    }
-  }, 100);
-}
+// ==================== MONETAQ BANNER (simple, one load) ====================
+let monetaqLoaded = false;
 
 function loadMonetaqBanner() {
   if (typeof Android === 'undefined') return;
-
-  if (monetaqScriptTag && monetaqScriptTag.parentNode) {
-    monetaqScriptTag.parentNode.removeChild(monetaqScriptTag);
-  }
-  monetaqScriptTag = null;
-
+  if (monetaqLoaded) return;
+  monetaqLoaded = true;
   try {
     var s = document.createElement('script');
     s.dataset.zone = '12081006';
     s.src = 'https://nap5k.com/tag.min.js';
     s.async = true;
     document.body.appendChild(s);
-    monetaqScriptTag = s;
-
-    [50, 200, 500, 1000, 1500, 2500, 4000, 6000, 8000].forEach(ms => {
-      setTimeout(nukeAds, ms);
-    });
   } catch (e) {
     console.error('Banner Error:', e);
   }
@@ -618,10 +429,8 @@ if (document.readyState === 'loading') {
     if (slider) { st(); slider.addEventListener('touchstart', sp); slider.addEventListener('touchend', () => setTimeout(st, 4000)); slider.addEventListener('mouseenter', sp); slider.addEventListener('mouseleave', st); }
     updateStats(); updateNotifBadge(); renderNotifications();
 
-    startAdObserver();
-    startAdSweeper();
     if (typeof Android !== 'undefined') {
-      setTimeout(() => { loadMonetaqBanner(); }, 2000);
+      setTimeout(loadMonetaqBanner, 2000);
     }
   });
 } else {
@@ -636,9 +445,7 @@ if (document.readyState === 'loading') {
   if (slider) { st(); slider.addEventListener('touchstart', sp); slider.addEventListener('touchend', () => setTimeout(st, 4000)); slider.addEventListener('mouseenter', sp); slider.addEventListener('mouseleave', st); }
   updateStats(); updateNotifBadge(); renderNotifications();
 
-  startAdObserver();
-  startAdSweeper();
   if (typeof Android !== 'undefined') {
-    setTimeout(() => { loadMonetaqBanner(); }, 2000);
+    setTimeout(loadMonetaqBanner, 2000);
   }
 }
