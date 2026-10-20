@@ -16,9 +16,13 @@
 <meta name="author" content="Picly"/>
 <link rel="apple-touch-icon" href="/icon-192.png">
 
-<!-- 🎯 MONETAQ AD — ONLY ONE, BOTTOM FIXED 🎯 -->
+<!-- 🎯 MONETAQ AD — BOTTOM FIXED 🎯 -->
 <style>
   body > div:not([id]),
+  body > div[id*="monetag" i],
+  body > div[class*="monetag" i],
+  body > div[id^="ad" i],
+  body > div[class^="ad-" i],
   body > iframe:not([id]),
   body > ins {
     position: fixed !important;
@@ -38,17 +42,6 @@
     box-shadow: 0 4px 15px rgba(0,0,0,0.3) !important;
     display: block !important;
     visibility: visible !important;
-  }
-  body > div:not([id]) iframe,
-  body > iframe iframe {
-    position: relative !important;
-    top: auto !important;
-    left: auto !important;
-    right: auto !important;
-    bottom: auto !important;
-    width: 100% !important;
-    max-height: 280px !important;
-    display: block !important;
   }
 </style>
 
