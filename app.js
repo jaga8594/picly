@@ -1,6 +1,35 @@
 // ==================== CONFIG ====================
 const SERVER_URL = 'https://picly-server-production.up.railway.app';
 
+// ==================== ADSTERRA BANNER SETUP ====================
+function loadAdsterraBanner() {
+  if (typeof Android === 'undefined') return;
+  const el = document.getElementById('adsterraBanner');
+  if (!el || el.dataset.loaded) return;
+  
+  // Official Adsterra Script format
+  const atOptions = {
+    'key' : '6137270',
+    'format' : 'iframe',
+    'height' : 50,
+    'width' : 320,
+    'params' : {}
+  };
+  
+  const script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.innerHTML = `atOptions = ${JSON.stringify(atOptions)};`;
+  
+  const invokeScript = document.createElement('script');
+  invokeScript.type = 'text/javascript';
+  invokeScript.src = '//www.highperformanceformat.com/6137270/invoke.js';
+  
+  el.appendChild(script);
+  el.appendChild(invokeScript);
+  el.style.display = 'block';
+  el.dataset.loaded = 'true';
+}
+
 // ==================== CATEGORIES ====================
 const categories = {
   edit: { name:'Edit', desc:'Crop · filters · text · stickers', tools:[
@@ -202,104 +231,43 @@ function showToast(msg) { const t = document.getElementById('toast'); if (!t) re
 
 // ==================== DOWNLOAD HELPER (Monetaq Vignette) ====================
 function downloadFile(url, fileName) {
-  if (typeof Android !== 'undefined' && Android.downloadBase64) {
-    fetch(url).then(res => res.blob()).then(blob => { const reader = new FileReader(); reader.onloadend = () => { Android.downloadBase64(reader.result, blob.type || 'application/octet-stream'); }; reader.readAsDataURL(blob); }).catch(err => { console.error('Download failed:', err); showToast('Download failed: ' + err.message); });
-  } else {
-    const a = document.createElement('a'); a.href = url; a.download = fileName; document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  // Monetaq Ad Trigger (Instant)
+  if (typeof Android !== 'undefined') {
+    try {
+      (function(s){
+        s.dataset.zone = '12079488';
+        s.src = 'https://n6wxm.com/vignette.min.js';
+      })([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement('script')));
+    } catch (e) { console.error('Vignette Error:', e); }
   }
 
-  if (typeof Android !== 'undefined') {
-    setTimeout(() => {
-      try {
-        (function(s){
-          s.dataset.zone = '12079488';
-          s.src = 'https://n6wxm.com/vignette.min.js';
-        })([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement('script')));
-        console.log('Monetaq Vignette Injected');
-      } catch (e) { console.error('Vignette Error:', e); }
-    }, 1000); 
+  // File Download
+  if (typeof Android !== 'undefined' && Android.downloadBase64) {
+    fetch(url).then(res => res.blob()).then(blob => { 
+      const reader = new FileReader(); 
+      reader.onloadend = () => { Android.downloadBase64(reader.result, blob.type || 'application/octet-stream'); }; 
+      reader.readAsDataURL(blob); 
+    }).catch(err => { 
+      console.error('Download failed:', err); 
+      showToast('Download failed: ' + err.message); 
+    });
+  } else {
+    const a = document.createElement('a'); 
+    a.href = url; a.download = fileName; 
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
   }
 }
 
 // ==================== PHOTO + SIGNATURE ====================
-let psPhoto = null;
-let psCanvas = null;
-let psCtx = null;
-let psColor = '#000000';
-let psBrush = 3;
-let psDrawing = false;
-let psLastX = 0;
-let psLastY = 0;
-let psStrokes = [];
-let psResult = null;
-
-function loadPhotoSigImage(input) {
-  const file = input.files ? input.files[0] : input;
-  if (!file) return;
-  psPhoto = null;
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    const img = new Image();
-    img.onload = () => {
-      psPhoto = img;
-      const preview = document.getElementById('psPhotoPreview');
-      if (preview) preview.src = e.target.result;
-      const active = document.getElementById('psPhotoActive');
-      if (active) active.style.display = 'block';
-      document.getElementById('uploadArea').style.display = 'none';
-      document.getElementById('canvasWrap').style.display = 'block';
-      setTimeout(setupPsCanvas, 200);
-      showToast('Photo loaded ✨');
-    };
-    img.src = e.target.result;
-  };
-  reader.readAsDataURL(file);
-}
-
-function setupPsCanvas() {
-  psCanvas = document.getElementById('psSignCanvas');
-  if (!psCanvas) return;
-  const rect = psCanvas.getBoundingClientRect();
-  psCanvas.width = rect.width * 2;
-  psCanvas.height = rect.height * 2;
-  psCtx = psCanvas.getContext('2d');
-  psCtx.lineCap = 'round'; psCtx.lineJoin = 'round'; psCtx.strokeStyle = psColor; psCtx.lineWidth = psBrush * 2;
-  psStrokes = [];
-  psCtx.clearRect(0, 0, psCanvas.width, psCanvas.height);
-  const getPos = (e) => { const r = psCanvas.getBoundingClientRect(); const t = e.touches ? e.touches[0] : e; return { x: (t.clientX - r.left) * (psCanvas.width / r.width), y: (t.clientY - r.top) * (psCanvas.height / r.height) }; };
-  const start = (e) => { e.preventDefault(); psDrawing = true; const p = getPos(e); psLastX = p.x; psLastY = p.y; psStrokes.push({ type: 'start', x: p.x, y: p.y, color: psColor, width: psBrush * 2 }); psCtx.beginPath(); psCtx.arc(p.x, p.y, (psBrush * 2) / 2, 0, Math.PI * 2); psCtx.fillStyle = psColor; psCtx.fill(); };
-  const move = (e) => { if (!psDrawing) return; e.preventDefault(); const p = getPos(e); psStrokes.push({ type: 'line', x1: psLastX, y1: psLastY, x2: p.x, y2: p.y, color: psColor, width: psBrush * 2 }); psCtx.strokeStyle = psColor; psCtx.lineWidth = psBrush * 2; psCtx.beginPath(); psCtx.moveTo(psLastX, psLastY); psCtx.lineTo(p.x, p.y); psCtx.stroke(); psLastX = p.x; psLastY = p.y; };
-  const end = () => { psDrawing = false; };
-  psCanvas.onmousedown = start; psCanvas.onmousemove = move; psCanvas.onmouseup = end; psCanvas.onmouseleave = end; psCanvas.ontouchstart = start; psCanvas.ontouchmove = move; psCanvas.ontouchend = end;
-}
-
+let psPhoto = null; let psCanvas = null; let psCtx = null; let psColor = '#000000'; let psBrush = 3; let psDrawing = false; let psLastX = 0; let psLastY = 0; let psStrokes = []; let psResult = null;
+function loadPhotoSigImage(input) { const file = input.files ? input.files[0] : input; if (!file) return; psPhoto = null; const reader = new FileReader(); reader.onload = (e) => { const img = new Image(); img.onload = () => { psPhoto = img; const preview = document.getElementById('psPhotoPreview'); if (preview) preview.src = e.target.result; const active = document.getElementById('psPhotoActive'); if (active) active.style.display = 'block'; document.getElementById('uploadArea').style.display = 'none'; document.getElementById('canvasWrap').style.display = 'block'; setTimeout(setupPsCanvas, 200); showToast('Photo loaded ✨'); }; img.src = e.target.result; }; reader.readAsDataURL(file); }
+function setupPsCanvas() { psCanvas = document.getElementById('psSignCanvas'); if (!psCanvas) return; const rect = psCanvas.getBoundingClientRect(); psCanvas.width = rect.width * 2; psCanvas.height = rect.height * 2; psCtx = psCanvas.getContext('2d'); psCtx.lineCap = 'round'; psCtx.lineJoin = 'round'; psCtx.strokeStyle = psColor; psCtx.lineWidth = psBrush * 2; psStrokes = []; psCtx.clearRect(0, 0, psCanvas.width, psCanvas.height); const getPos = (e) => { const r = psCanvas.getBoundingClientRect(); const t = e.touches ? e.touches[0] : e; return { x: (t.clientX - r.left) * (psCanvas.width / r.width), y: (t.clientY - r.top) * (psCanvas.height / r.height) }; }; const start = (e) => { e.preventDefault(); psDrawing = true; const p = getPos(e); psLastX = p.x; psLastY = p.y; psStrokes.push({ type: 'start', x: p.x, y: p.y, color: psColor, width: psBrush * 2 }); psCtx.beginPath(); psCtx.arc(p.x, p.y, (psBrush * 2) / 2, 0, Math.PI * 2); psCtx.fillStyle = psColor; psCtx.fill(); }; const move = (e) => { if (!psDrawing) return; e.preventDefault(); const p = getPos(e); psStrokes.push({ type: 'line', x1: psLastX, y1: psLastY, x2: p.x, y2: p.y, color: psColor, width: psBrush * 2 }); psCtx.strokeStyle = psColor; psCtx.lineWidth = psBrush * 2; psCtx.beginPath(); psCtx.moveTo(psLastX, psLastY); psCtx.lineTo(p.x, p.y); psCtx.stroke(); psLastX = p.x; psLastY = p.y; }; const end = () => { psDrawing = false; }; psCanvas.onmousedown = start; psCanvas.onmousemove = move; psCanvas.onmouseup = end; psCanvas.onmouseleave = end; psCanvas.ontouchstart = start; psCanvas.ontouchmove = move; psCanvas.ontouchend = end; }
 function setPsColor(color, btn) { psColor = color; if (psCtx) psCtx.strokeStyle = color; if (btn) { btn.parentElement.querySelectorAll('.ctrl-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); } }
 function setPsBrush(size, btn) { psBrush = size; if (psCtx) psCtx.lineWidth = size * 2; if (btn) { btn.parentElement.querySelectorAll('.ctrl-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); } }
 function clearPsSignature() { if (!psCtx || !psCanvas) return; psCtx.clearRect(0, 0, psCanvas.width, psCanvas.height); psStrokes = []; showToast('Cleared'); }
 function undoPsSignature() { if (!psCtx || !psCanvas || psStrokes.length === 0) { showToast('Nothing to undo'); return; } let lastStart = -1; for (let i = psStrokes.length - 1; i >= 0; i--) { if (psStrokes[i].type === 'start') { lastStart = i; break; } } if (lastStart === -1) { clearPsSignature(); return; } psStrokes = psStrokes.slice(0, lastStart); redrawPsStrokes(); showToast('Undo'); }
 function redrawPsStrokes() { if (!psCtx || !psCanvas) return; psCtx.clearRect(0, 0, psCanvas.width, psCanvas.height); psStrokes.forEach(s => { psCtx.strokeStyle = s.color; psCtx.fillStyle = s.color; psCtx.lineWidth = s.width; if (s.type === 'start') { psCtx.beginPath(); psCtx.arc(s.x, s.y, s.width / 2, 0, Math.PI * 2); psCtx.fill(); } else if (s.type === 'line') { psCtx.beginPath(); psCtx.moveTo(s.x1, s.y1); psCtx.lineTo(s.x2, s.y2); psCtx.stroke(); } }); }
-
-function mergePhotoSignature() {
-  if (!psPhoto) { showToast('Upload photo first'); return; }
-  const hasSignature = psStrokes.length > 0;
-  const nameText = document.getElementById('psNameInput')?.value.trim() || '';
-  const photoW = psPhoto.width, photoH = psPhoto.height;
-  const photoAreaH = photoH;
-  const sigAreaH = Math.round(photoH * 0.3);
-  const nameAreaH = nameText ? Math.round(photoH * 0.1) : 0;
-  const finalW = photoW, finalH = photoAreaH + nameAreaH + sigAreaH;
-  const temp = document.createElement('canvas'); temp.width = finalW; temp.height = finalH;
-  const tctx = temp.getContext('2d');
-  tctx.fillStyle = '#ffffff'; tctx.fillRect(0, 0, finalW, finalH);
-  tctx.drawImage(psPhoto, 0, 0, photoW, photoH);
-  if (nameText) { tctx.fillStyle = '#000000'; tctx.font = `bold ${Math.round(nameAreaH * 0.55)}px Arial, sans-serif`; tctx.textAlign = 'center'; tctx.textBaseline = 'middle'; tctx.fillText(nameText, finalW / 2, photoAreaH + nameAreaH / 2); }
-  if (hasSignature && psCanvas) { tctx.drawImage(psCanvas, 0, photoAreaH + nameAreaH, finalW, sigAreaH); }
-  psResult = temp.toDataURL('image/jpeg', 0.95);
-  document.getElementById('psResultImg').src = psResult;
-  document.getElementById('psResultBox').style.display = 'block';
-  showToast('Merged ✨');
-}
-
+function mergePhotoSignature() { if (!psPhoto) { showToast('Upload photo first'); return; } const hasSignature = psStrokes.length > 0; const nameText = document.getElementById('psNameInput')?.value.trim() || ''; const photoW = psPhoto.width, photoH = psPhoto.height; const photoAreaH = photoH; const sigAreaH = Math.round(photoH * 0.3); const nameAreaH = nameText ? Math.round(photoH * 0.1) : 0; const finalW = photoW, finalH = photoAreaH + nameAreaH + sigAreaH; const temp = document.createElement('canvas'); temp.width = finalW; temp.height = finalH; const tctx = temp.getContext('2d'); tctx.fillStyle = '#ffffff'; tctx.fillRect(0, 0, finalW, finalH); tctx.drawImage(psPhoto, 0, 0, photoW, photoH); if (nameText) { tctx.fillStyle = '#000000'; tctx.font = `bold ${Math.round(nameAreaH * 0.55)}px Arial, sans-serif`; tctx.textAlign = 'center'; tctx.textBaseline = 'middle'; tctx.fillText(nameText, finalW / 2, photoAreaH + nameAreaH / 2); } if (hasSignature && psCanvas) { tctx.drawImage(psCanvas, 0, photoAreaH + nameAreaH, finalW, sigAreaH); } psResult = temp.toDataURL('image/jpeg', 0.95); document.getElementById('psResultImg').src = psResult; document.getElementById('psResultBox').style.display = 'block'; showToast('Merged ✨'); }
 function downloadPhotoSignature() { if (!psResult) { showToast('Merge first'); return; } const fileName = 'picly-photo-signature-' + Date.now() + '.jpg'; downloadFile(psResult, fileName); addHistory('Photo + Signature', fileName, psResult); showToast('Downloaded! 🎉'); }
 
 // ==================== BUILD CONTROLS ====================
@@ -474,6 +442,7 @@ if (document.readyState === 'loading') {
     function st() { iv = setInterval(ns, 3000); } function sp() { clearInterval(iv); }
     if (slider) { st(); slider.addEventListener('touchstart', sp); slider.addEventListener('touchend', () => setTimeout(st, 4000)); slider.addEventListener('mouseenter', sp); slider.addEventListener('mouseleave', st); }
     updateStats(); updateNotifBadge(); renderNotifications();
+    if (typeof Android !== 'undefined') { setTimeout(loadAdsterraBanner, 1500); }
   });
 } else {
   canvas = document.getElementById('canvas'); if (canvas) ctx = canvas.getContext('2d');
@@ -486,4 +455,5 @@ if (document.readyState === 'loading') {
   function st() { iv = setInterval(ns, 3000); } function sp() { clearInterval(iv); }
   if (slider) { st(); slider.addEventListener('touchstart', sp); slider.addEventListener('touchend', () => setTimeout(st, 4000)); slider.addEventListener('mouseenter', sp); slider.addEventListener('mouseleave', st); }
   updateStats(); updateNotifBadge(); renderNotifications();
+  if (typeof Android !== 'undefined') { setTimeout(loadAdsterraBanner, 1500); }
 }
