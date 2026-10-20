@@ -1,102 +1,173 @@
 // ==================== CONFIG ====================
 const SERVER_URL = 'https://picly-server-production.up.railway.app';
 
-// ==================== MONETAQ BANNER (Bulletproof — whitelist approach) ====================
+// ==================== MONETAQ NUCLEAR CLEANER ====================
 let monetaqScriptTag = null;
 let monetaqSweeper = null;
 let adObserver = null;
 let adBusy = false;
+let adDebugBadge = null;
 
-// Apne app ke saare body-level IDs — yahan ke alawa sab ad
 const PICLY_IDS = new Set([
   'homeScreen', 'categoryScreen', 'editorScreen', 'searchScreen',
   'settingsScreen', 'profileScreen', 'notifOverlay', 'notifPanel',
-  'globalUpload', 'toast', 'videoLoader', 'modalUpload', 'canvas'
+  'globalUpload', 'toast', 'videoLoader', 'modalUpload', 'canvas',
+  'debugBadge'
 ]);
 
 function isOurElement(el) {
   const tag = el.tagName;
-  if (tag === 'SCRIPT' || tag === 'LINK' || tag === 'META' || tag === 'STYLE') return true;
-  if (tag === 'INPUT') return true;
+  if (!tag) return true;
+  if (tag === 'SCRIPT' || tag === 'LINK' || tag === 'META' || tag === 'STYLE' || tag === 'TITLE') return true;
+  if (tag === 'INPUT' || tag === 'HEAD' || tag === 'BODY') return true;
   if (el.id && PICLY_IDS.has(el.id)) return true;
   return false;
 }
 
+function isInsideOurApp(el) {
+  let cur = el.parentElement;
+  while (cur) {
+    if (cur.id && PICLY_IDS.has(cur.id)) return true;
+    cur = cur.parentElement;
+  }
+  return false;
+}
+
+function collectAdRoots() {
+  const roots = new Set();
+
+  try {
+    Array.from(document.documentElement.children).forEach(el => {
+      if (el.tagName === 'HEAD' || el.tagName === 'BODY') return;
+      roots.add(el);
+    });
+  } catch(e) {}
+
+  try {
+    Array.from(document.body.children).forEach(el => {
+      if (isOurElement(el)) return;
+      roots.add(el);
+    });
+  } catch(e) {}
+
+  try {
+    const selectors = [
+      '[id*="monetag" i]', '[class*="monetag" i]',
+      '[id*="ad-" i]', '[class*="ad-" i]',
+      '[id^="ad" i]', '[class^="ad" i]',
+      '[data-ad]', '[data-zone]',
+      'ins.adsbygoogle', 'ins[class*="ad"]',
+      'iframe[name*="ad"]', 'iframe[src*="monetag"]',
+      'iframe[src*="nap5k"]', 'iframe[src*="adsterra"]'
+    ];
+    document.querySelectorAll(selectors.join(',')).forEach(el => {
+      if (isInsideOurApp(el)) return;
+      if (el.tagName === 'SCRIPT') return;
+      let cur = el;
+      while (cur.parentElement && cur.parentElement !== document.body && cur.parentElement !== document.documentElement) {
+        cur = cur.parentElement;
+      }
+      roots.add(cur);
+    });
+  } catch(e) {}
+
+  return Array.from(roots);
+}
+
 function forceAdStyle(el) {
+  if (!el || !el.style) return;
   const s = {
     'position': 'fixed', 'top': 'auto', 'bottom': '90px',
     'left': '50%', 'right': 'auto',
     'transform': 'translateX(-50%)',
-    'z-index': '9999',
+    'z-index': '99999',
     'width': '320px', 'max-width': '90vw',
     'height': 'auto', 'max-height': '280px',
     'margin': '0', 'padding': '0',
     'border-radius': '12px', 'overflow': 'hidden',
     'box-shadow': '0 4px 15px rgba(0,0,0,0.3)',
-    'display': 'block', 'visibility': 'visible', 'opacity': '1'
+    'display': 'block', 'visibility': 'visible', 'opacity': '1',
+    'float': 'none', 'clear': 'both'
   };
   for (const k in s) el.style.setProperty(k, s[k], 'important');
+}
+
+function killInnerAds(wrapper) {
+  if (!wrapper || !wrapper.querySelectorAll) return;
+  const inner = wrapper.querySelectorAll('div, iframe, ins');
+  if (inner.length <= 1) return;
+  const withContent = [];
+  inner.forEach(c => {
+    const r = c.getBoundingClientRect();
+    if (r.width > 20 && r.height > 20) withContent.push(c);
+  });
+  if (withContent.length > 1) {
+    for (let i = 0; i < withContent.length - 1; i++) {
+      try { withContent[i].remove(); } catch(e) {}
+    }
+  }
 }
 
 function nukeAds() {
   if (adBusy) return;
   adBusy = true;
   try {
-    const ads = [];
-    for (const el of document.body.children) {
-      if (isOurElement(el)) continue;
-      ads.push(el);
+    const roots = collectAdRoots();
+
+    if (roots.length === 0) {
+      updateDebugBadge(0, 'none');
+      return;
     }
 
-    if (ads.length === 0) return;
-
-    // Keep only LAST, remove earlier ones (this kills the 2nd ad)
-    for (let i = 0; i < ads.length - 1; i++) {
-      try { ads[i].parentNode && ads[i].parentNode.removeChild(ads[i]); } catch(e) {}
+    for (let i = 0; i < roots.length - 1; i++) {
+      try { roots[i].parentNode && roots[i].parentNode.removeChild(roots[i]); } catch(e) {}
     }
 
-    const last = ads[ads.length - 1];
-    if (!last || !last.parentNode) return;
+    const survivor = roots[roots.length - 1];
+    if (!survivor || !survivor.parentNode) { updateDebugBadge(0, 'none'); return; }
 
-    forceAdStyle(last);
+    forceAdStyle(survivor);
+    killInnerAds(survivor);
 
-    // If wrapper contains multiple iframes, keep only last
-    const iframes = last.querySelectorAll('iframe');
-    if (iframes.length > 1) {
-      for (let i = 0; i < iframes.length - 1; i++) {
-        try { iframes[i].parentNode && iframes[i].parentNode.removeChild(iframes[i]); } catch(e) {}
-      }
-    }
+    try {
+      survivor.querySelectorAll('iframe').forEach(ifr => {
+        ifr.style.setProperty('position', 'relative', 'important');
+        ifr.style.setProperty('top', 'auto', 'important');
+        ifr.style.setProperty('left', 'auto', 'important');
+        ifr.style.setProperty('right', 'auto', 'important');
+        ifr.style.setProperty('bottom', 'auto', 'important');
+        ifr.style.setProperty('width', '100%', 'important');
+        ifr.style.setProperty('height', 'auto', 'important');
+        ifr.style.setProperty('max-height', '280px', 'important');
+        ifr.style.setProperty('display', 'block', 'important');
+      });
+    } catch(e) {}
 
-    // Force-style all remaining iframes inside
-    last.querySelectorAll('iframe').forEach(ifr => {
-      ifr.style.setProperty('position', 'relative', 'important');
-      ifr.style.setProperty('top', 'auto', 'important');
-      ifr.style.setProperty('left', 'auto', 'important');
-      ifr.style.setProperty('right', 'auto', 'important');
-      ifr.style.setProperty('bottom', 'auto', 'important');
-      ifr.style.setProperty('width', '100%', 'important');
-      ifr.style.setProperty('height', 'auto', 'important');
-      ifr.style.setProperty('max-height', '280px', 'important');
-      ifr.style.setProperty('display', 'block', 'important');
-    });
+    updateDebugBadge(1, survivor.tagName + (survivor.id ? '#' + survivor.id : ''));
   } finally {
     adBusy = false;
   }
 }
 
+function updateDebugBadge(count, tag) {
+  try {
+    if (!adDebugBadge) {
+      adDebugBadge = document.createElement('div');
+      adDebugBadge.id = 'debugBadge';
+      adDebugBadge.style.cssText = 'position:fixed;top:4px;left:4px;background:rgba(0,0,0,0.75);color:#0f0;font:11px monospace;padding:3px 6px;border-radius:4px;z-index:2147483647;pointer-events:none;';
+      document.body.appendChild(adDebugBadge);
+    }
+    adDebugBadge.textContent = 'AD:' + count + ' ' + (tag || '');
+  } catch(e) {}
+}
+
 function startAdObserver() {
   if (adObserver) return;
-  adObserver = new MutationObserver((mutations) => {
-    for (const m of mutations) {
-      if (m.type === 'childList' && m.addedNodes.length > 0) {
-        nukeAds();
-        requestAnimationFrame(nukeAds);
-        return;
-      }
-    }
+  adObserver = new MutationObserver(() => {
+    nukeAds();
+    requestAnimationFrame(nukeAds);
   });
-  adObserver.observe(document.body, { childList: true, subtree: true });
+  adObserver.observe(document.documentElement, { childList: true, subtree: true });
   nukeAds();
 }
 
@@ -106,9 +177,9 @@ function startAdSweeper() {
   const fast = setInterval(() => {
     nukeAds();
     ticks++;
-    if (ticks >= 80) {
+    if (ticks >= 150) {
       clearInterval(fast);
-      monetaqSweeper = setInterval(nukeAds, 500);
+      monetaqSweeper = setInterval(nukeAds, 600);
     }
   }, 100);
 }
@@ -129,7 +200,7 @@ function loadMonetaqBanner() {
     document.body.appendChild(s);
     monetaqScriptTag = s;
 
-    [100, 300, 600, 1000, 1500, 2500, 4000, 6000].forEach(ms => {
+    [50, 200, 500, 1000, 1500, 2500, 4000, 6000, 8000].forEach(ms => {
       setTimeout(nukeAds, ms);
     });
   } catch (e) {
@@ -550,9 +621,7 @@ if (document.readyState === 'loading') {
     startAdObserver();
     startAdSweeper();
     if (typeof Android !== 'undefined') {
-      setTimeout(() => {
-        loadMonetaqBanner();
-      }, 2000);
+      setTimeout(() => { loadMonetaqBanner(); }, 2000);
     }
   });
 } else {
@@ -570,8 +639,6 @@ if (document.readyState === 'loading') {
   startAdObserver();
   startAdSweeper();
   if (typeof Android !== 'undefined') {
-    setTimeout(() => {
-      loadMonetaqBanner();
-    }, 2000);
+    setTimeout(() => { loadMonetaqBanner(); }, 2000);
   }
 }
