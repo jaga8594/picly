@@ -1,23 +1,86 @@
 // ==================== CONFIG ====================
 const SERVER_URL = 'https://picly-server-production.up.railway.app';
 
-// ==================== MONETAQ BANNER (Niche, only one, 10s refresh) ====================
+// ==================== MONETAQ BANNER (Bulletproof, one ad only) ====================
 let monetaqScriptTag = null;
 let monetaqTimer = null;
+let monetaqSweeper = null;
+let adObserver = null;
+
+const AD_STYLES = {
+  'position': 'fixed',
+  'top': 'auto',
+  'bottom': '90px',
+  'left': '50%',
+  'right': 'auto',
+  'transform': 'translateX(-50%)',
+  'z-index': '9999',
+  'width': '320px',
+  'max-width': '90vw',
+  'margin': '0',
+  'padding': '0',
+  'border-radius': '12px',
+  'overflow': 'hidden',
+  'box-shadow': '0 4px 15px rgba(0,0,0,0.3)',
+  'display': 'block',
+  'visibility': 'visible',
+  'opacity': '1'
+};
+
+function getAdDivs() {
+  const result = [];
+  const children = document.body.children;
+  for (let i = 0; i < children.length; i++) {
+    const el = children[i];
+    if (el.tagName === 'DIV' && !el.id) result.push(el);
+  }
+  return result;
+}
+
+function enforceAdRules() {
+  const ads = getAdDivs();
+  if (ads.length === 0) return;
+
+  if (ads.length > 1) {
+    for (let i = 0; i < ads.length - 1; i++) {
+      try { ads[i].remove(); } catch (e) {}
+    }
+  }
+
+  const survivors = getAdDivs();
+  if (survivors.length === 0) return;
+  const ad = survivors[survivors.length - 1];
+
+  for (const key in AD_STYLES) {
+    ad.style.setProperty(key, AD_STYLES[key], 'important');
+  }
+}
+
+function startAdObserver() {
+  if (adObserver) return;
+  adObserver = new MutationObserver(() => {
+    enforceAdRules();
+    requestAnimationFrame(enforceAdRules);
+  });
+  adObserver.observe(document.body, { childList: true, subtree: true });
+  enforceAdRules();
+}
+
+function startAdSweeper() {
+  if (monetaqSweeper) return;
+  monetaqSweeper = setInterval(enforceAdRules, 800);
+}
 
 function loadMonetaqBanner() {
   if (typeof Android === 'undefined') return;
 
-  // 1. Purana injected script tag remove karo
   if (monetaqScriptTag && monetaqScriptTag.parentNode) {
     monetaqScriptTag.parentNode.removeChild(monetaqScriptTag);
   }
   monetaqScriptTag = null;
 
-  // 2. Purane saare ad containers remove karo
   document.querySelectorAll('body > div:not([id])').forEach(el => el.remove());
 
-  // 3. Naya ad inject karo
   try {
     var s = document.createElement('script');
     s.dataset.zone = '12081006';
@@ -26,16 +89,9 @@ function loadMonetaqBanner() {
     document.body.appendChild(s);
     monetaqScriptTag = s;
 
-    // 4. 2 sec baad — agar ek se zyada div aa gaye,
-    //    sirf LAST wala rakho, baaki remove karo
-    setTimeout(() => {
-      const ads = document.querySelectorAll('body > div:not([id])');
-      if (ads.length > 1) {
-        ads.forEach((el, i) => {
-          if (i < ads.length - 1) el.remove();
-        });
-      }
-    }, 2000);
+    [100, 300, 600, 1000, 1500, 2500, 4000].forEach(ms => {
+      setTimeout(enforceAdRules, ms);
+    });
   } catch (e) {
     console.error('Banner Error:', e);
   }
@@ -450,7 +506,9 @@ if (document.readyState === 'loading') {
     function st() { iv = setInterval(ns, 3000); } function sp() { clearInterval(iv); }
     if (slider) { st(); slider.addEventListener('touchstart', sp); slider.addEventListener('touchend', () => setTimeout(st, 4000)); slider.addEventListener('mouseenter', sp); slider.addEventListener('mouseleave', st); }
     updateStats(); updateNotifBadge(); renderNotifications();
-    
+
+    startAdObserver();
+    startAdSweeper();
     if (typeof Android !== 'undefined') {
       setTimeout(() => {
         loadMonetaqBanner();
@@ -470,7 +528,9 @@ if (document.readyState === 'loading') {
   function st() { iv = setInterval(ns, 3000); } function sp() { clearInterval(iv); }
   if (slider) { st(); slider.addEventListener('touchstart', sp); slider.addEventListener('touchend', () => setTimeout(st, 4000)); slider.addEventListener('mouseenter', sp); slider.addEventListener('mouseleave', st); }
   updateStats(); updateNotifBadge(); renderNotifications();
-  
+
+  startAdObserver();
+  startAdSweeper();
   if (typeof Android !== 'undefined') {
     setTimeout(() => {
       loadMonetaqBanner();
