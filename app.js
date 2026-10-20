@@ -1,20 +1,44 @@
 // ==================== CONFIG ====================
 const SERVER_URL = 'https://picly-server-production.up.railway.app';
 
-// ==================== MONETAQ BANNER (Niche, 10 sec) ====================
+// ==================== MONETAQ BANNER (Niche, only one, 10s refresh) ====================
+let monetaqScriptTag = null;
+let monetaqTimer = null;
+
 function loadMonetaqBanner() {
   if (typeof Android === 'undefined') return;
-  
-  // 1. Purane saare ads delete karo (taaki double na dikhein)
+
+  // 1. Purana injected script tag remove karo
+  if (monetaqScriptTag && monetaqScriptTag.parentNode) {
+    monetaqScriptTag.parentNode.removeChild(monetaqScriptTag);
+  }
+  monetaqScriptTag = null;
+
+  // 2. Purane saare ad containers remove karo
   document.querySelectorAll('body > div:not([id])').forEach(el => el.remove());
 
-  // 2. Naya ad load karo
+  // 3. Naya ad inject karo
   try {
     var s = document.createElement('script');
     s.dataset.zone = '12081006';
     s.src = 'https://nap5k.com/tag.min.js';
+    s.async = true;
     document.body.appendChild(s);
-  } catch(e) { console.error('Banner Error:', e); }
+    monetaqScriptTag = s;
+
+    // 4. 2 sec baad — agar ek se zyada div aa gaye,
+    //    sirf LAST wala rakho, baaki remove karo
+    setTimeout(() => {
+      const ads = document.querySelectorAll('body > div:not([id])');
+      if (ads.length > 1) {
+        ads.forEach((el, i) => {
+          if (i < ads.length - 1) el.remove();
+        });
+      }
+    }, 2000);
+  } catch (e) {
+    console.error('Banner Error:', e);
+  }
 }
 
 // ==================== CATEGORIES ====================
@@ -430,7 +454,8 @@ if (document.readyState === 'loading') {
     if (typeof Android !== 'undefined') {
       setTimeout(() => {
         loadMonetaqBanner();
-        setInterval(loadMonetaqBanner, 10000);
+        if (monetaqTimer) clearInterval(monetaqTimer);
+        monetaqTimer = setInterval(loadMonetaqBanner, 10000);
       }, 2000);
     }
   });
@@ -449,7 +474,8 @@ if (document.readyState === 'loading') {
   if (typeof Android !== 'undefined') {
     setTimeout(() => {
       loadMonetaqBanner();
-      setInterval(loadMonetaqBanner, 10000);
+      if (monetaqTimer) clearInterval(monetaqTimer);
+      monetaqTimer = setInterval(loadMonetaqBanner, 10000);
     }, 2000);
   }
 }
