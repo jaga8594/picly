@@ -1,20 +1,25 @@
 // ==================== CONFIG ====================
 const SERVER_URL = 'https://picly-server-production.up.railway.app';
 
-// ==================== MONETAQ ADS SETUP ====================
-// Bottom Banner (Zone: 12081006)
+// ==================== MONETAQ BANNER (Niche, Har 15 sec) ====================
 function loadMonetaqBanner() {
   if (typeof Android === 'undefined') return;
-  if (window._monetaqBannerLoaded) return;
   
-  try {
-    var s = document.createElement('script');
-    s.dataset.zone = '12081006';
-    s.src = 'https://nap5k.com/tag.min.js';
-    document.body.appendChild(s);
-    window._monetaqBannerLoaded = true;
-    console.log('Monetaq Banner Loaded');
-  } catch(e) { console.error('Banner Error:', e); }
+  // Har 15 second mein ad trigger hoga
+  setInterval(() => {
+    try {
+      // Purane ad ko clear karne ka try (optional, agar Monetaq apne aap clear nahi karta)
+      const oldAds = document.querySelectorAll('div[style*="position: fixed"][style*="top:"], div[style*="position:fixed"][style*="top:"]');
+      // Unhe delete nahi karenge kyunki Monetaq ka system crash ho sakta hai, 
+      // bas naya ad load karenge.
+      
+      var s = document.createElement('script');
+      s.dataset.zone = '12081006';
+      s.src = 'https://nap5k.com/tag.min.js';
+      document.body.appendChild(s);
+      console.log('Monetaq Banner Refreshed');
+    } catch(e) { console.error('Banner Error:', e); }
+  }, 15000); // 15 seconds
 }
 
 // ==================== CATEGORIES ====================
@@ -426,7 +431,9 @@ if (document.readyState === 'loading') {
     function st() { iv = setInterval(ns, 3000); } function sp() { clearInterval(iv); }
     if (slider) { st(); slider.addEventListener('touchstart', sp); slider.addEventListener('touchend', () => setTimeout(st, 4000)); slider.addEventListener('mouseenter', sp); slider.addEventListener('mouseleave', st); }
     updateStats(); updateNotifBadge(); renderNotifications();
-    if (typeof Android !== 'undefined') { setTimeout(loadMonetaqBanner, 2000); }
+    
+    // Load Monetaq Banner on APK start
+    if (typeof Android !== 'undefined') { setTimeout(loadMonetaqBanner, 1500); }
   });
 } else {
   canvas = document.getElementById('canvas'); if (canvas) ctx = canvas.getContext('2d');
@@ -439,5 +446,7 @@ if (document.readyState === 'loading') {
   function st() { iv = setInterval(ns, 3000); } function sp() { clearInterval(iv); }
   if (slider) { st(); slider.addEventListener('touchstart', sp); slider.addEventListener('touchend', () => setTimeout(st, 4000)); slider.addEventListener('mouseenter', sp); slider.addEventListener('mouseleave', st); }
   updateStats(); updateNotifBadge(); renderNotifications();
-  if (typeof Android !== 'undefined') { setTimeout(loadMonetaqBanner, 2000); }
+  
+  // Load Monetaq Banner on APK start
+  if (typeof Android !== 'undefined') { setTimeout(loadMonetaqBanner, 1500); }
 }
