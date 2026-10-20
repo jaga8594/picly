@@ -9,15 +9,28 @@ function loadAdsterraBanner() {
   const el = document.getElementById('adsterraBanner');
   if (!el || el.dataset.loaded) return;
   
-  const iframe = document.createElement('iframe');
-  iframe.src = 'https://www.highperformanceformat.com/' + ADSTERRA_ZONE_ID + '/invoke.html';
-  iframe.width = '320';
-  iframe.height = '50';
-  iframe.style.cssText = 'border:0;display:block;margin:auto;';
-  iframe.scrolling = 'no';
-  iframe.setAttribute('frameborder', '0');
+  el.innerHTML = ''; // clear previous
+
+  // Adsterra ka official script tag (Yeh WebView mein iframe se zyada reliable hai)
+  const scriptOpts = document.createElement('script');
+  scriptOpts.type = 'text/javascript';
+  scriptOpts.innerHTML = `
+    atOptions = {
+      'key' : '${ADSTERRA_ZONE_ID}',
+      'format' : 'iframe',
+      'height' : 50,
+      'width' : 320,
+      'params' : {}
+    };
+  `;
   
-  el.appendChild(iframe);
+  const scriptInvoke = document.createElement('script');
+  scriptInvoke.type = 'text/javascript';
+  scriptInvoke.src = 'https://www.highperformanceformat.com/' + ADSTERRA_ZONE_ID + '/invoke.js';
+  
+  el.appendChild(scriptOpts);
+  el.appendChild(scriptInvoke);
+  
   el.style.display = 'block';
   el.dataset.loaded = 'true';
 }
