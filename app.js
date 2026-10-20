@@ -1,14 +1,12 @@
 // ==================== CONFIG ====================
 const SERVER_URL = 'https://picly-server-production.up.railway.app';
 
-// ==================== MONETAQ BANNER SETUP ====================
+// ==================== MONETAQ BANNER (Niche, 10 sec) ====================
 function loadMonetaqBanner() {
   if (typeof Android === 'undefined') return;
   
-  // 1. Purane Monetaq ad ko delete karo (taaki ek hi dikhe)
-  // Monetaq body ke andar bina ID wala div banata hai
-  const oldAds = document.querySelectorAll('body > div:not([id])');
-  oldAds.forEach(el => el.remove());
+  // 1. Purane saare ads delete karo (taaki double na dikhein)
+  document.querySelectorAll('body > div:not([id])').forEach(el => el.remove());
 
   // 2. Naya ad load karo
   try {
@@ -17,19 +15,6 @@ function loadMonetaqBanner() {
     s.src = 'https://nap5k.com/tag.min.js';
     document.body.appendChild(s);
   } catch(e) { console.error('Banner Error:', e); }
-
-  // 3. Naye ad ko force karke niche (bottom) le aao
-  setTimeout(() => {
-    const newAds = document.querySelectorAll('body > div:not([id])');
-    newAds.forEach(el => {
-      el.style.setProperty('top', 'auto', 'important');
-      el.style.setProperty('bottom', '90px', 'important');
-      el.style.setProperty('left', '50%', 'important');
-      el.style.setProperty('transform', 'translateX(-50%)', 'important');
-      el.style.setProperty('z-index', '9999', 'important');
-      el.style.setProperty('width', '320px', 'important');
-    });
-  }, 800);
 }
 
 // ==================== CATEGORIES ====================
